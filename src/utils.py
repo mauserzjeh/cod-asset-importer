@@ -73,3 +73,11 @@ def read_float(file):
 
 def read_double(file):
     return read_fmt(file, 'd')
+
+def read_nullstr(file):
+    string = b''
+    character = None
+    while(character != b'\x00'):
+        character = file.read(1)
+        string += character
+    return string.rstrip(b'\x00').decode('ascii')
