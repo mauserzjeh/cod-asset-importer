@@ -12,7 +12,7 @@ class BaseEnum(type):
         return iter(_attr_values)
             
 
-class FMT_CHARS(metaclass = BaseEnum):
+class FMT_CHARACTER_CONSTANTS(metaclass = BaseEnum):
     CHAR =                  'c' # char
     SIGNED_CHAR =           'b' # signed char
     UNSIGNED_CHAR =         'B' # unsigned char
@@ -39,7 +39,7 @@ def read_fmt(file, fmt_str: str, namedtuple = False, fmt_byte_order: str = '<'):
         except Exception as e:
             print(type(e).__name__ + ' - unpacked data will not be returned as namedtuple')
 
-    if fmt_str in FMT_CHARS:
+    if fmt_str in FMT_CHARACTER_CONSTANTS:
         return data_unpacked[0]
 
     return data_unpacked
@@ -47,43 +47,43 @@ def read_fmt(file, fmt_str: str, namedtuple = False, fmt_byte_order: str = '<'):
 
 
 def read_char(file):
-    return read_fmt(file, FMT_CHARS.CHAR)
+    return read_fmt(file, FMT_CHARACTER_CONSTANTS.CHAR)
 
 def read_schar(file):
-    return read_fmt(file, FMT_CHARS.SIGNED_CHAR)
+    return read_fmt(file, FMT_CHARACTER_CONSTANTS.SIGNED_CHAR)
 
 def read_uchar(file):
-    return read_fmt(file, FMT_CHARS.UNSIGNED_CHAR)
+    return read_fmt(file, FMT_CHARACTER_CONSTANTS.UNSIGNED_CHAR)
 
 def read_short(file):
-    return read_fmt(file, FMT_CHARS.SHORT)
+    return read_fmt(file, FMT_CHARACTER_CONSTANTS.SHORT)
 
 def read_ushort(file):
-    return read_fmt(file, FMT_CHARS.UNSIGNED_SHORT)
+    return read_fmt(file, FMT_CHARACTER_CONSTANTS.UNSIGNED_SHORT)
 
 def read_int(file):
-    return read_fmt(file, FMT_CHARS.INTEGER)
+    return read_fmt(file, FMT_CHARACTER_CONSTANTS.INTEGER)
 
 def read_uint(file):
-    return read_fmt(file, FMT_CHARS.UNSIGNED_INTEGER)
+    return read_fmt(file, FMT_CHARACTER_CONSTANTS.UNSIGNED_INTEGER)
 
 def read_long(file):
-    return read_fmt(file, FMT_CHARS.LONG)
+    return read_fmt(file, FMT_CHARACTER_CONSTANTS.LONG)
 
 def read_ulong(file):
-    return read_fmt(file, FMT_CHARS.UNSIGNED_LONG)
+    return read_fmt(file, FMT_CHARACTER_CONSTANTS.UNSIGNED_LONG)
 
 def read_longlong(file):
-    return read_fmt(file, FMT_CHARS.LONG_LONG)
+    return read_fmt(file, FMT_CHARACTER_CONSTANTS.LONG_LONG)
 
 def read_ulonglong(file):
-    return read_fmt(file, FMT_CHARS.UNSIGNED_LONG_LONG)
+    return read_fmt(file, FMT_CHARACTER_CONSTANTS.UNSIGNED_LONG_LONG)
 
 def read_float(file):
-    return read_fmt(file, FMT_CHARS.FLOAT)
+    return read_fmt(file, FMT_CHARACTER_CONSTANTS.FLOAT)
 
 def read_double(file):
-    return read_fmt(file, FMT_CHARS.DOUBLE)
+    return read_fmt(file, FMT_CHARACTER_CONSTANTS.DOUBLE)
 
 def read_nullstr(file):
     string = b''
