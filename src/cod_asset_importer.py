@@ -1,0 +1,3 @@
+
+class CoDAssetImporter:
+    pass
