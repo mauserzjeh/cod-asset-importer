@@ -1,3 +1,4 @@
+import inspect
 import struct
 
 from collections import namedtuple
@@ -11,6 +12,7 @@ class BaseEnum(type):
                 _attr_values.append(_value)
         return iter(_attr_values)
             
+# -------------------- Binary utilities --------------------
 
 class FMT_CHARACTER_CONSTANTS(metaclass = BaseEnum):
     CHAR =                  'c' # char
@@ -27,7 +29,7 @@ class FMT_CHARACTER_CONSTANTS(metaclass = BaseEnum):
     FLOAT =                 'f' # float
     DOUBLE =                'd' # double
 
-def read_fmt(file, fmt_str: str, namedtuple = False, fmt_byte_order: str = '<'):
+def read_fmt(file, fmt_str: str, namedtuple: namedtuple = False, fmt_byte_order: str = '<'):
     fmt = fmt_byte_order + fmt_str
     size = struct.calcsize(fmt)
     data_raw = file.read(size)
@@ -37,7 +39,7 @@ def read_fmt(file, fmt_str: str, namedtuple = False, fmt_byte_order: str = '<'):
         try:
             return namedtuple._make(data_unpacked)
         except Exception as e:
-            print(type(e).__name__ + ' - unpacked data will not be returned as namedtuple')
+            error_log(e)
 
     if fmt_str in FMT_CHARACTER_CONSTANTS:
         return data_unpacked[0]
@@ -92,3 +94,36 @@ def read_nullstr(file):
         character = file.read(1)
         string += character
     return string.rstrip(b'\x00').decode('ascii')
+
+# -------------------- Logging utilities --------------------
+
+class LOG_CONSTANTS(metaclass = BaseEnum):
+    ERROR = '[ERROR]'
+    DEBUG = '[DEBUG]'
+    INFO = '[INFO]'
+
+def _log(message: str, log_type: str = LOG_CONSTANTS.INFO):
+    caller = inspect.getframeinfo(inspect.stack()[2][0])
+    msg = f' {caller.filename}:{caller.lineno} ' + message 
+    if(log_type == LOG_CONSTANTS.ERROR):
+        msg = LOG_CONSTANTS.ERROR + msg
+
+    elif(log_type == LOG_CONSTANTS.DEBUG):
+        msg = LOG_CONSTANTS.DEBUG + msg
+        
+    elif(log_type == LOG_CONSTANTS.INFO):
+        msg = LOG_CONSTANTS.INFO + msg
+
+    print(msg)
+
+def error_log(message):
+    _log(str(message), LOG_CONSTANTS.ERROR)
+
+def debug_log(message):
+    _log(str(message), LOG_CONSTANTS.DEBUG)
+
+def info_log(message):
+    _log(str(message), LOG_CONSTANTS.INFO)
+        
+
+
