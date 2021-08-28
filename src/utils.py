@@ -1,4 +1,6 @@
 import inspect
+import math
+import os
 import struct
 
 from collections import namedtuple
@@ -12,7 +14,7 @@ class BaseEnum(type):
                 _attr_values.append(_value)
         return iter(_attr_values)
             
-# -------------------- Binary utilities --------------------
+# -------------------- File reading utilities --------------------
 
 class FMT_CHARACTER_CONSTANTS(metaclass = BaseEnum):
     CHAR =                  'c' # char
@@ -104,14 +106,15 @@ class LOG_CONSTANTS(metaclass = BaseEnum):
 
 def _log(message: str, log_type: str = LOG_CONSTANTS.INFO):
     caller = inspect.getframeinfo(inspect.stack()[2][0])
-    msg = f' {caller.filename}:{caller.lineno} ' + message 
-    if(log_type == LOG_CONSTANTS.ERROR):
+    file_base_name = os.path.basename(caller.filename)
+    msg = f' {file_base_name}:{caller.lineno} ' + message 
+    if log_type == LOG_CONSTANTS.ERROR:
         msg = LOG_CONSTANTS.ERROR + msg
 
-    elif(log_type == LOG_CONSTANTS.DEBUG):
+    elif log_type == LOG_CONSTANTS.DEBUG:
         msg = LOG_CONSTANTS.DEBUG + msg
         
-    elif(log_type == LOG_CONSTANTS.INFO):
+    elif log_type == LOG_CONSTANTS.INFO:
         msg = LOG_CONSTANTS.INFO + msg
 
     print(msg)
@@ -124,6 +127,57 @@ def debug_log(message):
 
 def info_log(message):
     _log(str(message), LOG_CONSTANTS.INFO)
-        
+
+
+# -------------------- Math --------------------
+def transform_vector(quaternion: tuple, vector3: tuple):
+    if len(quaternion) != 4 or len(vector3) != 3:
+        return None
+
+    qx = quaternion[0]
+    qy = quaternion[1]
+    qz = quaternion[2]
+    qw = quaternion[3]
+
+    vx = vector3[0]
+    vy = vector3[1]
+    vz = vector3[2]
+
+    ax = (qy * vz) - (qz * vy) + (vx * qw)
+    ay = (qz * vx) - (qx * vz) + (vy * qw)
+    az = (qx * vy) - (qy * vx) + (vz * qw)
+
+    bx = (qy * az) - (qz * ay)
+    by = (qz * ax) - (qx * az)
+    bz = (qx * ay) - (qy * ax)
+
+    rx = (vx + bx + bx)
+    ry = (vy + by + by)
+    rz = (vz + bz + bz)
+
+    return (rx, ry, rz)
+
+def multiply_quaternion(a: tuple, b: tuple):
+    if len(a) != 4 or len(b) != 4:
+        return None
+
+    ax = a[0]
+    ay = a[1]
+    az = a[2]
+    aw = a[3]
+    
+    bx = b[0]
+    by = b[1]
+    bz = b[2]
+    bw = b[3]
+
+    x = aw * bx + ax * bw + ay * bz - az * by
+    y = aw * by - ax * bz + ay * bw + az * bx
+    z = aw * bz + ax * by - ay * bx + az * bw 
+    w = aw * bw - ax * bx - ay * by - az * bz
+
+    return (x, y, z, w)
+
+
 
 

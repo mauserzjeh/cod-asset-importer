@@ -15,7 +15,7 @@ class XModel:
 
     def __init__(self):
         self.name = ''
-        self.lods = []
+        self.data = {}
 
     def load(self, asset_path, xmodel_name):
         self.name = xmodel_name
@@ -25,6 +25,8 @@ class XModel:
                 version = utils.read_ushort(file)
                 if version != self.VERSION:
                     return False
+                
+                self.data['lods'] = []
 
                 file.read(25) # padding
                 for _ in range(4):
@@ -35,7 +37,7 @@ class XModel:
 
                     # only add valid lods
                     if len(lod['name']):
-                        self.lods.append(lod)
+                        self.data['lods'].append(lod)
 
                 file.read(4) # padding
 
@@ -45,14 +47,14 @@ class XModel:
                     sub_padding_count = utils.read_uint(file)
                     file.read(((sub_padding_count*48)+36))
 
-                for k in range(len(self.lods)):
+                for k in range(len(self.data['lods'])):
                     material_count = utils.read_ushort(file)
                     lodmaterials = []
                     for _ in range(material_count):
                         lodmaterial = utils.read_nullstr(file)
                         lodmaterials.append(lodmaterial)
 
-                    self.lods[k]['materials'] = lodmaterials
+                    self.data['lods'][k]['materials'] = lodmaterials
 
                 return True
         except:
