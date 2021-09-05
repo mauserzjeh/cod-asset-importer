@@ -93,7 +93,7 @@ class XModelSurf:
                             clr[0] / 255,
                             clr[1] / 255,
                             clr[2] / 255,
-                            clr[3] / 255,
+                            clr[3] / 255
                         )
 
                         uv = file_io.read_fmt(file, '2f')

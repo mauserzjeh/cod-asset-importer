@@ -66,17 +66,17 @@ class XModelPart:
                     self.bones.append(bone)
 
                 for _ in range(header.bone_count):
-                    raw_bone_data = file_io.read_fmt(file, 'B3f3h', collections.namedtuple('raw_bone_data', 'parent, pos_x, pos_y, pos_z, rot_x, rot_y, rot_z'))
+                    raw_bone_data = file_io.read_fmt(file, 'B3f3h', collections.namedtuple('raw_bone_data', 'parent, px, py, pz, rx, ry, rz'))
                     
                     rotation = quaternion.Quaternion(
-                        raw_bone_data.rot_x / self.ROTATION_DIVISOR,
-                        raw_bone_data.rot_y / self.ROTATION_DIVISOR,
-                        raw_bone_data.rot_z / self.ROTATION_DIVISOR
+                        raw_bone_data.rx / self.ROTATION_DIVISOR,
+                        raw_bone_data.ry / self.ROTATION_DIVISOR,
+                        raw_bone_data.rz / self.ROTATION_DIVISOR
                     )
                     position = vector.Vector3(
-                        raw_bone_data.pos_x,
-                        raw_bone_data.pos_y,
-                        raw_bone_data.pos_z
+                        raw_bone_data.px,
+                        raw_bone_data.py,
+                        raw_bone_data.pz
                     )
 
                     bone_transform = self._bone_transform(rotation, position)
