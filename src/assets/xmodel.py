@@ -9,11 +9,6 @@ class XModel:
     PATH = 'xmodel'
     VERSION = 20
 
-    ENTITY_KEY_MODEL = 'model'
-    ENTITY_KEY_ANGLES = 'angles'
-    ENTITY_KEY_ORIGIN = 'origin'
-    ENTITY_KEY_MODELSCALE = 'modelscale'
-
     # --------------------------------------------------------------------------------------------
     class _lod:
     
