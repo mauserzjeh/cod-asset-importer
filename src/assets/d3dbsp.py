@@ -1,5 +1,9 @@
+from __future__ import annotations
+
 import collections
+import json
 import os
+import re
 import struct
 import traceback
 
@@ -44,10 +48,16 @@ class LUMPS(metaclass = enum.BaseEnum):
     PATHS = 38
 
 class LUMPSIZES(metaclass = enum.BaseEnum):
-    MATERIALS = struct.calcsize('64sQ')
-    TRIANGLESOUPS = struct.calcsize('2HI2HI')
-    VERTICES = struct.calcsize('3f3f4B2f32x')
-    TRIANGLES = struct.calcsize('3H')
+    MATERIALS = '64sQ'
+    TRIANGLESOUPS = '2HI2HI'
+    VERTICES = '3f3f4B2f32x'
+    TRIANGLES = '3H'
+
+class ENTITY_KEYS(metaclass = enum.BaseEnum):
+    MODEL = 'model'
+    ANGLES = 'angles'
+    ORIGIN = 'origin'
+    MODELSCALE = 'modelscale'
 
 class D3DBSP:
 
@@ -57,7 +67,7 @@ class D3DBSP:
 
     # --------------------------------------------------------------------------------------------
     class _uv:
-        def __init__(self, u: float, v: float) -> None:
+        def __init__(self, u: float = 0.0, v: float = 0.0) -> None:
             self.u = u
             self.v = v
 
@@ -65,7 +75,7 @@ class D3DBSP:
             return (self.u, self.v)
     
     class _color:
-        def __init__(self, red: int, green: int, blue: int, alpha: int) -> None:
+        def __init__(self, red: int = 0, green: int = 0, blue: int = 0, alpha: int = 0) -> None:
             self.red = red
             self.green = green
             self.blue = blue
@@ -75,14 +85,14 @@ class D3DBSP:
             return (self.red, self.green, self.blue, self.alpha)
     
     class _lump:
-        def __init__(self, length: int, offset: int) -> None:
+        def __init__(self, length: int = 0, offset: int = 0) -> None:
             self.length = length
             self.offset = offset
 
     class _material:
-        def __init__(self) -> None:
-            self.name = ''
-            self.flag = 0
+        def __init__(self, name: str = '', flag: int = 0) -> None:
+            self.name = name
+            self.flag = flag
 
         def read(self, file) -> None:
             material = file_io.read_fmt(file, LUMPSIZES.MATERIALS, collections.namedtuple('material', 'name, flag'))
@@ -90,13 +100,13 @@ class D3DBSP:
             self.flag = material.flag
 
     class _trianglesoup:
-        def __init__(self) -> None:
-            self.material_id = 0
-            self.draw_order = 0
-            self.vertices_offset = 0
-            self.vertices_length = 0
-            self.triangles_offset = 0
-            self.triangles_length = 0
+        def __init__(self, material_id: int = 0, draw_order: int = 0, vertices_offset: int = 0, vertices_length: int = 0, triangles_offset: int = 0, triangles_length: int = 0) -> None:
+            self.material_id = material_id
+            self.draw_order = draw_order
+            self.vertices_offset = vertices_offset
+            self.vertices_length = vertices_length
+            self.triangles_offset = triangles_offset
+            self.triangles_length = triangles_length
 
         def read(self, file) -> None:
             trianglesoup = file_io.read_fmt(file, LUMPSIZES.TRIANGLESOUPS, collections.namedtuple('trianglesoup', 'material_id, draw_order, vertices_offset, vertices_length, triangles_length, triangles_offset'))
@@ -137,19 +147,6 @@ class D3DBSP:
                 vertex.u,
                 vertex.v
             )
-        
-
-    class _triangle:
-        def __init__(self) -> None:
-            self.vertex1 = 0
-            self.vertex2 = 0
-            self.vertex3 = 0
-
-        def read(self, file) -> None:
-            triangle = file_io.read_fmt(file, LUMPSIZES.TRIANGLES, collections.namedtuple('triangle', 'v1, v2, v3'))
-            self.vertex1 = triangle.v1
-            self.vertex2 = triangle.v2
-            self.vertex3 = triangle.v3
 
     class _entity:
         def __init__(self, name: str = '', angles: vector.Vector3 = vector.Vector3, origin: vector.Vector3 = vector.Vector3, scale: float = 1.0) -> None:
@@ -158,10 +155,18 @@ class D3DBSP:
             self.origin = origin
             self.scale = scale
 
+    class _surface:
+        def __init__(self, material: str, triangles: list[tuple], vertices: dict[int, D3DBSP._vertex]) -> None:
+            self.material = material
+            self.vertices = vertices
+            self.triangles = triangles
+
     # --------------------------------------------------------------------------------------------
 
     def __init__(self) -> None:
         self.name = ''
+        self.surfaces = []
+        self.entities = []
 
     def _read_lumps(self, file) -> list[_lump]:
         lumps = []
@@ -174,7 +179,7 @@ class D3DBSP:
     def _read_materials(self, file, materials_lump: _lump) -> list[_material]:
         materials = []
         file.seek(materials_lump.offset, os.SEEK_SET)
-        for _ in range(0, materials_lump.length, LUMPSIZES.MATERIALS):
+        for _ in range(0, materials_lump.length, struct.calcsize(LUMPSIZES.MATERIALS)):
             material = self._material()
             material.read(file)
             materials.append(material)
@@ -184,7 +189,7 @@ class D3DBSP:
     def _read_trianglesoups(self, file, trianglesoups_lump: _lump) -> list[_trianglesoup]:
         trianglesoups = []
         file.seek(trianglesoups_lump.offset, os.SEEK_SET)
-        for _ in range(0, trianglesoups_lump.length, LUMPSIZES.TRIANGLESOUPS):
+        for _ in range(0, trianglesoups_lump.length, struct.calcsize(LUMPSIZES.TRIANGLESOUPS)):
             trianglesoup = self._trianglesoup()
             trianglesoup.read(file)
             trianglesoups.append(trianglesoup)
@@ -194,24 +199,68 @@ class D3DBSP:
     def _read_vertices(self, file, vertices_lump: _lump) -> list[_vertex]:
         vertices = []
         file.seek(vertices_lump.offset, os.SEEK_SET)    
-        for _ in range(0, vertices_lump.length, LUMPSIZES.VERTICES):
+        for _ in range(0, vertices_lump.length, struct.calcsize(LUMPSIZES.VERTICES)):
             vertex = self._vertex()
             vertex.read(file)
             vertices.append(vertex)
 
         return vertices
 
-    def _read_triangles(self, file, triangles_lump: _lump) -> list[_triangle]:
+    def _read_triangles(self, file, triangles_lump: _lump) -> list[tuple]:
         triangles = []
         file.seek(triangles_lump.offset, os.SEEK_SET)
-        for _ in range(0, triangles_lump.length, LUMPSIZES.TRIANGLES):
-            triangle = self._triangle()
-            triangle.read(file)
+        for _ in range(0, triangles_lump.length, struct.calcsize(LUMPSIZES.TRIANGLES)):
+            triangle = file_io.read_fmt(file, LUMPSIZES.TRIANGLES)
             triangles.append(triangle)
 
+        return triangles
+
     def _read_entities(self, file, entities_lump: _lump) -> list[_entity]:
-        pass
-    
+        entities = []
+        file.seek(entities_lump.offset, os.SEEK_SET)
+        entity_data = file.read(entities_lump.length)
+        
+        # create a valid json string and parse it
+        entity_string = entity_data.rstrip(b'\x00').decode('ascii')
+        entity_string = f'[\n{entity_string}]'
+        entity_string = re.sub(r'\}\n\{\n', '},\n{\n', entity_string)
+        entity_string = re.sub(r'\"\n\"', '",\n"', entity_string)
+        entity_string = re.sub(r'\"[^\n]\"', '":"', entity_string)
+        entity_json = json.loads(entity_string)
+
+        for entity in entity_json:
+            if ENTITY_KEYS.MODEL not in entity:
+                continue
+            
+            name = entity[ENTITY_KEYS.MODEL]
+            model = re.match('^xmodel\/(.*)', name)
+            if model:
+                name = model.group(1)
+
+            angles = vector.Vector3()
+            if ENTITY_KEYS.ANGLES in entity:
+                a = entity[ENTITY_KEYS.ANGLES].split(' ')
+                angles.x = float(a[0])
+                angles.y = float(a[1])
+                angles.z = float(a[2])
+
+            origin = vector.Vector3()
+            if ENTITY_KEYS.ORIGIN in entity:
+                o = entity[ENTITY_KEYS.ORIGIN].split(' ')
+                origin.x = float(o[0])
+                origin.y = float(o[1])
+                origin.z = float(o[2])
+
+            scale = 1.0
+            if ENTITY_KEYS.MODELSCALE in entity:
+                scale = float(entity[ENTITY_KEYS.MODELSCALE])
+
+            e = self._entity(name, angles, origin, scale)
+            entities.append(e)
+
+        return entities
+
+
     def load(self, asset_path: str, map_name: str) -> bool:
         self.name = map_name
         filepath = os.path.join(asset_path, self.PATH, map_name)
@@ -244,9 +293,29 @@ class D3DBSP:
                
                 # entities
                 entities_lump = lumps[LUMPS.ENTITIES]
-                entities = self._read_entities(file, entities_lump)
-                
-                
+                self.entities = self._read_entities(file, entities_lump)
+
+                for trianglesoup in trianglesoups:
+                    surface_material = materials[trianglesoup.material_id].name
+                    surface_triangles = []
+                    surface_vertices = {}
+                    
+                    triangle_count = int(trianglesoup.triangles_length / 3)
+                    for i in range(triangle_count):
+                        triangle_id = int(trianglesoup.triangles_offset / 3 + i)
+                        triangle = triangles[triangle_id]
+
+                        vertex1_id = int(trianglesoup.vertices_offset + triangle[0])
+                        vertex2_id = int(trianglesoup.vertices_offset + triangle[1])
+                        vertex3_id = int(trianglesoup.vertices_offset + triangle[2])
+
+                        surface_triangles.append((vertex1_id, vertex2_id, vertex3_id))
+
+                        for j in (vertex1_id, vertex2_id, vertex3_id):
+                            surface_vertices[j] = vertices[j]
+
+                    self.surfaces.append(self._surface(surface_material, surface_triangles, surface_vertices))
+
                 return True
         except:
             traceback.print_exc()
