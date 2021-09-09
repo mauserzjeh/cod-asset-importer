@@ -167,6 +167,7 @@ class D3DBSP:
         self.name = ''
         self.surfaces = []
         self.entities = []
+        self.materials = []
 
     def _read_lumps(self, file) -> list[_lump]:
         lumps = []
@@ -277,7 +278,7 @@ class D3DBSP:
 
                 # materials
                 materials_lump = lumps[LUMPS.MATERIALS]
-                materials = self._read_materials(file, materials_lump)
+                self.materials = self._read_materials(file, materials_lump)
                 
                 # trianglesoups
                 trianglesoups_lump = lumps[LUMPS.TRIANGLESOUPS]
@@ -296,7 +297,7 @@ class D3DBSP:
                 self.entities = self._read_entities(file, entities_lump)
 
                 for trianglesoup in trianglesoups:
-                    surface_material = materials[trianglesoup.material_id].name
+                    surface_material = self.materials[trianglesoup.material_id].name
                     surface_triangles = []
                     surface_vertices = {}
                     
