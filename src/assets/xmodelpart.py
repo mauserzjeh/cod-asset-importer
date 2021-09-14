@@ -5,10 +5,12 @@ import copy
 import os
 import traceback
 
-from utils import file_io
-from utils import log
-from utils import quaternion
-from utils import vector
+from .. utils import (
+    file_io,
+    log,
+    quaternion,
+    vector
+)
 
 class XModelPart:
     

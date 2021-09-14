@@ -1,8 +1,10 @@
 import collections
 import struct
 
-from . import log
-from . import enum
+from . import (
+    log,
+    enum,
+)
 
 class FMT_CHARACTER_CONSTANTS(metaclass = enum.BaseEnum):
     CHAR =                  'c' # char

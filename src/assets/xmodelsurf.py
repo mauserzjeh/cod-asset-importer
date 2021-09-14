@@ -5,9 +5,11 @@ import os
 import traceback
 
 from . import xmodelpart
-from utils import file_io
-from utils import log
-from utils import vector
+from .. utils import (
+    file_io,
+    log,
+    vector
+)
 
 
 class XModelSurf:

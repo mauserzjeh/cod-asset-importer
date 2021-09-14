@@ -7,10 +7,12 @@ import re
 import struct
 import traceback
 
-from utils import enum
-from utils import file_io
-from utils import log
-from utils import vector
+from .. utils import (
+    enum,
+    file_io,
+    log,
+    vector,
+)
 
 class LUMPS(metaclass = enum.BaseEnum):
     MATERIALS = 0

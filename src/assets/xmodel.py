@@ -1,8 +1,10 @@
 import os
 import traceback
 
-from utils import file_io
-from utils import log
+from .. utils import (
+    file_io,
+    log
+)
 
 class XModel:
 
