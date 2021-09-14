@@ -1,13 +1,24 @@
 
 import bpy
 
+from . import importer
+
 class D3DBSPImporter(bpy.types.Operator):
     bl_idname = 'cod_asset_importer.d3dbsp_importer'
     bl_label = 'Import'
     bl_options = {'UNDO'}
 
+    filepath : bpy.props.StringProperty(subtype='FILE_PATH')
+    filename_ext = '.d3dbsp'
+    filter_glob : bpy.props.StringProperty(default='*.d3dbsp', options={'HIDDEN'})
+
+    assetpath : bpy.props.StringProperty(
+        name = 'Asset path',
+        description = 'Directory containing extracted assets'
+    )
+
     def execute(self, context):
-        print("d3dbsp")
+        importer.import_d3dbsp(self.filepath, self.assetpath)
         return {'FINISHED'}
 
     def invoke(self, context, event):
@@ -25,4 +36,4 @@ class XModelImporter(bpy.types.Operator):
 
     def invoke(self, context, event):
         bpy.context.window_manager.fileselect_add(self)
-        return {'RUNNIN_MODAL'}
+        return {'RUNNING_MODAL'}

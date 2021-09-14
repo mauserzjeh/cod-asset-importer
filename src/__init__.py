@@ -1,6 +1,6 @@
 import bpy
 
-from . import cod_asset_importer
+from . addon import operators
 
 bl_info = {
     "name": "Call of Duty Asset Importer",
@@ -13,14 +13,14 @@ bl_info = {
     "warning": "This addon is still in development",
 }
 
-operators = (
+operators_list = (
     {
-        "class": cod_asset_importer.D3DBSPImporter,
+        "class": operators.D3DBSPImporter,
         "text": "Call of Duty map (d3dbsp)",
         "function": None
     },
     {
-        "class": cod_asset_importer.XModelImporter,
+        "class": operators.XModelImporter,
         "text": "Call of Duty model (xmodel)",
         "function": None
     }
@@ -34,13 +34,13 @@ def menu_function(cls: object, text: str) -> callable:
     return menu_func
 
 def register():
-    for operator in operators:
+    for operator in operators_list:
         bpy.utils.register_class(operator["class"])
         operator["function"] = menu_function(operator["class"], operator["text"])
         bpy.types.TOPBAR_MT_file_import.append(operator["function"])
 
 
 def unregister():
-    for operator in reversed(operators):
+    for operator in reversed(operators_list):
         bpy.utils.unregister_class(operator["class"])
         bpy.types.TOPBAR_MT_file_import.remove(operator["function"])
