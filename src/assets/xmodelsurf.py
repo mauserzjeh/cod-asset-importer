@@ -64,7 +64,7 @@ class XModelSurf:
         self.name = ''
         self.surfaces = []
 
-    def load(self, asset_path, xmodel_surf_name, xmodel_part: xmodelpart.XModelPart = None) -> bool:
+    def load(self, asset_path: str, xmodel_surf_name: str, xmodel_part: xmodelpart.XModelPart = None) -> bool:
         self.name = xmodel_surf_name
         filepath = os.path.join(asset_path, self.PATH, xmodel_surf_name)
         try:

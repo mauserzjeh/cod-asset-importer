@@ -50,7 +50,7 @@ class XModelPart:
         self.name = ''
         self.bones = []
     
-    def load(self, asset_path, xmodel_part_name) -> bool:
+    def load(self, asset_path: str, xmodel_part_name: str) -> bool:
         self.name = xmodel_part_name
         filepath = os.path.join(asset_path, self.PATH, xmodel_part_name)
         try:
