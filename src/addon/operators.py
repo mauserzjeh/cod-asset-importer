@@ -18,7 +18,7 @@ class D3DBSPImporter(bpy.types.Operator):
     )
 
     def execute(self, context):
-        importer.import_d3dbsp(self.filepath, self.assetpath)
+        importer.import_d3dbsp(self.assetpath, self.filepath)
         return {'FINISHED'}
 
     def invoke(self, context, event):

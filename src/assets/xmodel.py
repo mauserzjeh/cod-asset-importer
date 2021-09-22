@@ -25,11 +25,10 @@ class XModel:
         self.name = ''
         self.lods = []
 
-    def load(self, asset_path: str, xmodel_name: str) -> bool:
-        self.name = xmodel_name
-        filepath = os.path.join(asset_path, self.PATH, xmodel_name)
+    def load(self, xmodel: str) -> bool:
+        self.name = os.path.basename(xmodel)
         try:
-            with open(filepath, 'rb') as file:
+            with open(xmodel, 'rb') as file:
                 version = file_io.read_ushort(file)
                 if version != self.VERSION:
                     log.info_log(f'Xmodel version {version} is not supported!')

@@ -50,11 +50,10 @@ class XModelPart:
         self.name = ''
         self.bones = []
     
-    def load(self, asset_path: str, xmodel_part_name: str) -> bool:
-        self.name = xmodel_part_name
-        filepath = os.path.join(asset_path, self.PATH, xmodel_part_name)
+    def load(self, xmodel_part: str) -> bool:
+        self.name = os.path.basename(xmodel_part)
         try:
-            with open(filepath, 'rb') as file:
+            with open(xmodel_part, 'rb') as file:
                 header = file_io.read_fmt(file, '3H', collections.namedtuple('header', 'version, bone_count, root_bone_count'))
                 if header.version != self.VERSION:
                     log.info_log(f'Xmodel version {header.version} is not supported!')

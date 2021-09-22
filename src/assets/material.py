@@ -23,11 +23,10 @@ class Material:
         self.techset = ''
         self.textures = []
 
-    def load(self, asset_path: str, material_name: str) -> bool:
-        self.name = material_name
-        filepath = os.path.join(asset_path, self.PATH, material_name)
+    def load(self, material: str) -> bool:
+        self.name = os.path.basename(material)
         try:
-            with open(filepath, 'rb') as file:
+            with open(material, 'rb') as file:
                 name_offset = file_io.read_uint(file)
 
                 current_offset = file.tell()

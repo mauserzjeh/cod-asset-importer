@@ -64,11 +64,10 @@ class XModelSurf:
         self.name = ''
         self.surfaces = []
 
-    def load(self, asset_path: str, xmodel_surf_name: str, xmodel_part: xmodelpart.XModelPart = None) -> bool:
-        self.name = xmodel_surf_name
-        filepath = os.path.join(asset_path, self.PATH, xmodel_surf_name)
+    def load(self, xmodel_surf: str, xmodel_part: xmodelpart.XModelPart = None) -> bool:
+        self.name = os.path.basename(xmodel_surf)
         try:
-            with open(filepath, 'rb') as file:
+            with open(xmodel_surf, 'rb') as file:
                 header = file_io.read_fmt(file, '2H', collections.namedtuple('header', 'version, surface_count'))
                 if header.version != self.VERSION:
                     log.info_log(f'Xmodel version {header.version} is not supported!')

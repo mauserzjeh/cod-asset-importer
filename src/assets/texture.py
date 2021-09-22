@@ -36,11 +36,10 @@ class Texture:
         self.height = 0
         self.texture_data = []
 
-    def load(self, asset_path: str, image_name: str) -> bool:
-        self.name = image_name
-        filepath = os.path.join(asset_path, self.PATH, image_name)
+    def load(self, texture: str) -> bool:
+        self.name = os.path.splitext(os.path.basename(texture))[0]
         try:
-            with open(filepath, 'rb') as file:
+            with open(texture, 'rb') as file:
                 header = file_io.read_fmt(file, '3sBBBHH2xIIII', collections.namedtuple('header', 'magic, version, format, usage, width, height, filesize, texture_offset, mipmap1_offset, mipmap2_offset'))
                 header_magic = header.magic.decode('ascii')
                 if header_magic != self.MAGIC and header.version != self.VERSION:

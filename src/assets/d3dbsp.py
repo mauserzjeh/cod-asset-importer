@@ -264,11 +264,10 @@ class D3DBSP:
         return entities
 
 
-    def load(self, asset_path: str, map_name: str) -> bool:
-        self.name = map_name
-        filepath = os.path.join(asset_path, self.PATH, map_name)
+    def load(self, map: str) -> bool:
+        self.name = os.path.splitext(os.path.basename(map))[0]
         try:
-            with open(filepath, 'rb') as file:
+            with open(map, 'rb') as file:
                 header = file_io.read_fmt(file, '4si', collections.namedtuple('header', 'magic, version'))
                 header_magic = header.magic.decode('ascii')
                 if header_magic != self.MAGIC and header.version != self.VERSION:
