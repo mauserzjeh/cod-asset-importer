@@ -27,13 +27,15 @@ class XModelPart:
 
     # --------------------------------------------------------------------------------------------
     class _bone_transform:
+        __slots__ = ('rotation', 'position')
         
         def __init__(self, rotation: quaternion.Quaternion, position: vector.Vector3) -> None:
             self.rotation = rotation
             self.position = position
 
     class _bone:
-        
+        __slots__ = ('name', 'parent', 'local_transform', 'world_transform')
+
         def __init__(self, local_transform: XModelPart._bone_transform, parent: int = -1, name: str = '') -> None:
             self.name = name
             self.parent = parent
@@ -46,6 +48,8 @@ class XModelPart:
 
     # --------------------------------------------------------------------------------------------
     
+    __slots__ = ('name', 'bones')
+
     def __init__(self) -> None:
         self.name = ''
         self.bones = []

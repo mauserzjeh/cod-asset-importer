@@ -20,11 +20,15 @@ class XModelSurf:
     
     # --------------------------------------------------------------------------------------------
     class _weight:
+        __slots__ = ('bone', 'weight')
+
         def __init__(self, bone: int, weight: int) -> None:
             self.bone = bone
             self.weight = weight
     
     class _uv:
+        __slots__ = ('u', 'v')
+
         def __init__(self, u: float, v: float) -> None:
             self.u = u
             self.v = v
@@ -33,6 +37,8 @@ class XModelSurf:
             return (self.u, self.v)
     
     class _color:
+        __slots__ = ('red', 'green', 'blue', 'alpha')
+
         def __init__(self, red: int, green: int, blue: int, alpha: int) -> None:
             self.red = red
             self.green = green
@@ -43,6 +49,8 @@ class XModelSurf:
             return (self.red, self.green, self.blue, self.alpha)
     
     class _vertex:
+        __slots__ = ('normal', 'color', 'uv', 'binormal', 'tangent', 'bone', 'position', 'weights')
+
         def __init__(self, normal: vector.Vector3 , color: XModelSurf._color, uv: XModelSurf._uv, binormal: vector.Vector3, tangent: vector.Vector3, bone: int, position: vector.Vector3, weights: list[XModelSurf._weight]) -> None:
             self.normal = normal
             self.color = color
@@ -54,12 +62,16 @@ class XModelSurf:
             self.weights = weights
     
     class _surface:
+        __slots__ = ('vertices', 'triangles')
+
         def __init__(self, vertices: list[XModelSurf._vertex], triangles: list[tuple]) -> None:
             self.vertices = vertices
             self.triangles = triangles
 
     # --------------------------------------------------------------------------------------------
     
+    __slots__ = ('name', 'surfaces')
+
     def __init__(self) -> None:
         self.name = ''
         self.surfaces = []

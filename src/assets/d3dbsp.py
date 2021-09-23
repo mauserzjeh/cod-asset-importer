@@ -69,6 +69,8 @@ class D3DBSP:
 
     # --------------------------------------------------------------------------------------------
     class _uv:
+        __slots__ = ('u', 'v')
+
         def __init__(self, u: float = 0.0, v: float = 0.0) -> None:
             self.u = u
             self.v = v
@@ -77,6 +79,8 @@ class D3DBSP:
             return (self.u, self.v)
     
     class _color:
+        __slots__ = ('red', 'green', 'blue', 'alpha')
+
         def __init__(self, red: int = 0, green: int = 0, blue: int = 0, alpha: int = 0) -> None:
             self.red = red
             self.green = green
@@ -87,11 +91,15 @@ class D3DBSP:
             return (self.red, self.green, self.blue, self.alpha)
     
     class _lump:
+        __slots__ = ('length', 'offset')
+
         def __init__(self, length: int = 0, offset: int = 0) -> None:
             self.length = length
             self.offset = offset
 
     class _material:
+        __slots__ = ('name', 'flag')
+
         def __init__(self, name: str = '', flag: int = 0) -> None:
             self.name = name
             self.flag = flag
@@ -102,6 +110,8 @@ class D3DBSP:
             self.flag = material.flag
 
     class _trianglesoup:
+        __slots__ = ('material_id', 'draw_order', 'vertices_offset', 'vertices_length', 'triangles_offset', 'triangles_length')
+
         def __init__(self, material_id: int = 0, draw_order: int = 0, vertices_offset: int = 0, vertices_length: int = 0, triangles_offset: int = 0, triangles_length: int = 0) -> None:
             self.material_id = material_id
             self.draw_order = draw_order
@@ -121,6 +131,8 @@ class D3DBSP:
 
 
     class _vertex:
+        __slots__ = ('position', 'normal', 'color', 'uv')
+
         def __init__(self) -> None:
             self.position = vector.Vector3()
             self.normal = vector.Vector3
@@ -151,6 +163,8 @@ class D3DBSP:
             )
 
     class _entity:
+        __slots__ = ('name', 'angles', 'origin', 'scale')
+
         def __init__(self, name: str = '', angles: vector.Vector3 = vector.Vector3, origin: vector.Vector3 = vector.Vector3, scale: float = 1.0) -> None:
             self.name = name
             self.angles = angles
@@ -158,12 +172,16 @@ class D3DBSP:
             self.scale = scale
 
     class _surface:
+        __slots__ = ('material', 'vertices', 'triangles')
+
         def __init__(self, material: str, triangles: list[tuple], vertices: dict[int, D3DBSP._vertex]) -> None:
             self.material = material
             self.vertices = vertices
             self.triangles = triangles
 
     # --------------------------------------------------------------------------------------------
+
+    __slots__ = ('name', 'surfaces', 'entities', 'materials')
 
     def __init__(self) -> None:
         self.name = ''

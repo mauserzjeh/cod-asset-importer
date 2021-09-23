@@ -11,12 +11,16 @@ class Material:
     
      # --------------------------------------------------------------------------------------------
     class _texture:
+        __slots__ = ('type', 'flags', 'name')
+
         def __init__(self, type: str, flags: int, name: str) -> None:
             self.type = type
             self.flags = flags
             self.name = name
     
      # --------------------------------------------------------------------------------------------
+
+    __slots__ = ('name', 'techset', 'textures')
 
     def __init__(self) -> None:
         self.name = ''

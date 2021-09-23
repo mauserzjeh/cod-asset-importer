@@ -28,6 +28,8 @@ class Texture:
     VERSION = 5
     PATH = 'images'
     
+    __slots__ = ('name', 'format', 'usage', 'width', 'height', 'texture_data')
+    
     def __init__(self) -> None:
         self.name = ''
         self.format = None

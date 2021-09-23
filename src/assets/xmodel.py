@@ -13,6 +13,7 @@ class XModel:
 
     # --------------------------------------------------------------------------------------------
     class _lod:
+        __slots__ = ('name', 'distance', 'materials')
     
         def __init__(self, name: str = "", distance: float = 0.0, materials: list[str] = []) -> None:
             self.name = name
@@ -20,6 +21,8 @@ class XModel:
             self.materials = materials
         
     # --------------------------------------------------------------------------------------------
+
+    __slots__ = ('name', 'lods')
 
     def __init__(self) -> None:
         self.name = ''
