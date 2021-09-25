@@ -30,8 +30,14 @@ class XModelImporter(bpy.types.Operator):
     bl_label = 'Import'
     bl_options = {'UNDO'}
 
+    filepath : bpy.props.StringProperty(subtype='FILE_PATH')
+    assetpath : bpy.props.StringProperty(
+        name = 'Asset path',
+        description = 'Directory containing extracted assets'
+    )
+
     def execute(self, context):
-        print('xmodel')
+        importer.import_xmodel(self.assetpath, self.filepath, True)
         return {'FINISHED'}
 
     def invoke(self, context, event):
