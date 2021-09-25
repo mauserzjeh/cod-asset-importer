@@ -254,11 +254,11 @@ class D3DBSP:
                 continue
             
             name = entity[ENTITY_KEYS.MODEL]
-            match = re.match('^xmodel\/(.*)', name)
-            if not match:
+            valid = re.match('^xmodel\/(.*)', name)
+            if not valid:
                 continue
-            
-            name = match.group(1)
+
+            name = valid.group(1)
 
             angles = vector.Vector3()
             if ENTITY_KEYS.ANGLES in entity:
