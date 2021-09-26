@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import collections
 import json
+import mathutils
 import os
 import re
 import struct
@@ -11,7 +12,6 @@ from .. utils import (
     enum,
     file_io,
     log,
-    vector,
 )
 
 class LUMPS(metaclass = enum.BaseEnum):
@@ -134,23 +134,23 @@ class D3DBSP:
         __slots__ = ('position', 'normal', 'color', 'uv')
 
         def __init__(self) -> None:
-            self.position = vector.Vector3()
-            self.normal = vector.Vector3
+            self.position = mathutils.Vector()
+            self.normal = mathutils.Vector()
             self.color = D3DBSP._color()
             self.uv = D3DBSP._uv()
 
         def read(self, file) -> None:
             vertex = file_io.read_fmt(file, LUMPSIZES.VERTICES, collections.namedtuple('vertex', 'px, py, pz, nx, ny, nz, red, green, blue, alpha, u, v'))
-            self.position = vector.Vector3(
+            self.position = mathutils.Vector((
                 vertex.px,
                 vertex.py,
                 vertex.pz
-            )
-            self.normal = vector.Vector3(
+            ))
+            self.normal = mathutils.Vector((
                 vertex.nx,
                 vertex.ny,
                 vertex.nz
-            )
+            ))
             self.color = D3DBSP._color(
                 vertex.red / 255,
                 vertex.green / 255,
@@ -165,7 +165,7 @@ class D3DBSP:
     class _entity:
         __slots__ = ('name', 'angles', 'origin', 'scale')
 
-        def __init__(self, name: str = '', angles: vector.Vector3 = vector.Vector3, origin: vector.Vector3 = vector.Vector3, scale: float = 1.0) -> None:
+        def __init__(self, name: str = '', angles: mathutils.Vector = mathutils.Vector(), origin: mathutils.Vector = mathutils.Vector(), scale: float = 1.0) -> None:
             self.name = name
             self.angles = angles
             self.origin = origin
@@ -260,19 +260,19 @@ class D3DBSP:
 
             name = valid.group(1)
 
-            angles = vector.Vector3()
+            angles = mathutils.Vector()
             if ENTITY_KEYS.ANGLES in entity:
                 a = entity[ENTITY_KEYS.ANGLES].split(' ')
-                angles.x = float(a[0])
-                angles.y = float(a[1])
-                angles.z = float(a[2])
+                angles[0] = float(a[0])
+                angles[1] = float(a[1])
+                angles[2] = float(a[2])
 
-            origin = vector.Vector3()
+            origin = mathutils.Vector()
             if ENTITY_KEYS.ORIGIN in entity:
                 o = entity[ENTITY_KEYS.ORIGIN].split(' ')
-                origin.x = float(o[0])
-                origin.y = float(o[1])
-                origin.z = float(o[2])
+                origin[0] = float(o[0])
+                origin[1] = float(o[1])
+                origin[2] = float(o[2])
 
             scale = 1.0
             if ENTITY_KEYS.MODELSCALE in entity:

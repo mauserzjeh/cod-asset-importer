@@ -2,14 +2,14 @@ from __future__ import annotations
 
 import collections
 import copy
+import math
+import mathutils
 import os
 import traceback
 
 from .. utils import (
     file_io,
-    log,
-    quaternion,
-    vector
+    log
 )
 
 class XModelPart:
@@ -29,7 +29,7 @@ class XModelPart:
     class _bone_transform:
         __slots__ = ('rotation', 'position')
         
-        def __init__(self, rotation: quaternion.Quaternion, position: vector.Vector3) -> None:
+        def __init__(self, rotation: mathutils.Quaternion, position: mathutils.Vector) -> None:
             self.rotation = rotation
             self.position = position
 
@@ -40,11 +40,11 @@ class XModelPart:
             self.name = name
             self.parent = parent
             self.local_transform = local_transform
-            self.world_transform = copy.copy(local_transform)
+            self.world_transform = copy.deepcopy(local_transform)
 
-        def generate_world_transform_by_parent(self, parent: XModelPart._bone, debug = False) -> None:
-            self.world_transform.position = parent.world_transform.position + self.local_transform.position.rotate_by_quaternion(parent.world_transform.rotation)
-            self.world_transform.rotation = parent.world_transform.rotation * self.local_transform.rotation
+        def generate_world_transform_by_parent(self, parent: XModelPart._bone) -> None:
+            self.world_transform.position = parent.world_transform.position + (parent.world_transform.rotation @ self.local_transform.position)        
+            self.world_transform.rotation = parent.world_transform.rotation @ self.local_transform.rotation
 
     # --------------------------------------------------------------------------------------------
     
@@ -64,8 +64,8 @@ class XModelPart:
                     return False
 
                 for _ in range(header.root_bone_count):
-                    rotation = quaternion.Quaternion()
-                    position = vector.Vector3()
+                    rotation = mathutils.Quaternion()
+                    position = mathutils.Vector()
                     bone_transform = self._bone_transform(rotation, position)
                     bone = self._bone(bone_transform)
                     self.bones.append(bone)
@@ -73,16 +73,18 @@ class XModelPart:
                 for _ in range(header.bone_count):
                     raw_bone_data = file_io.read_fmt(file, 'B3f3h', collections.namedtuple('raw_bone_data', 'parent, px, py, pz, rx, ry, rz'))
                     
-                    rotation = quaternion.Quaternion(
-                        raw_bone_data.rx / self.ROTATION_DIVISOR,
-                        raw_bone_data.ry / self.ROTATION_DIVISOR,
-                        raw_bone_data.rz / self.ROTATION_DIVISOR
-                    )
-                    position = vector.Vector3(
+                    qx = raw_bone_data.rx / self.ROTATION_DIVISOR
+                    qy = raw_bone_data.ry / self.ROTATION_DIVISOR
+                    qz = raw_bone_data.rz / self.ROTATION_DIVISOR
+                    qw = math.sqrt((1 - (qx ** 2) - (qy ** 2) - (qz ** 2)))
+
+                    rotation = mathutils.Quaternion((qw, qx, qy, qz))
+
+                    position = mathutils.Vector((
                         raw_bone_data.px,
                         raw_bone_data.py,
                         raw_bone_data.pz
-                    )
+                    ))
 
                     bone_transform = self._bone_transform(rotation, position)
                     bone = self._bone(bone_transform, raw_bone_data.parent)

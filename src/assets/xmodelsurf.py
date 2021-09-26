@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import collections
+import mathutils
 import os
 import traceback
 
@@ -8,7 +9,6 @@ from . import xmodelpart
 from .. utils import (
     file_io,
     log,
-    vector
 )
 
 
@@ -51,7 +51,7 @@ class XModelSurf:
     class _vertex:
         __slots__ = ('normal', 'color', 'uv', 'binormal', 'tangent', 'bone', 'position', 'weights')
 
-        def __init__(self, normal: vector.Vector3 , color: XModelSurf._color, uv: XModelSurf._uv, binormal: vector.Vector3, tangent: vector.Vector3, bone: int, position: vector.Vector3, weights: list[XModelSurf._weight]) -> None:
+        def __init__(self, normal: mathutils.Vector , color: XModelSurf._color, uv: XModelSurf._uv, binormal: mathutils.Vector, tangent: mathutils.Vector, bone: int, position: mathutils.Vector, weights: list[XModelSurf._weight]) -> None:
             self.normal = normal
             self.color = color
             self.uv = uv
@@ -99,7 +99,7 @@ class XModelSurf:
                     for i in range(surface_header.vertex_count):
 
                         vn = file_io.read_fmt(file, '3f')
-                        vertex_normal = vector.Vector3(vn[0], vn[1], vn[2])
+                        vertex_normal = mathutils.Vector((vn[0], vn[1], vn[2]))
 
                         clr = file_io.read_fmt(file, '4B')
                         vertex_color = self._color(
@@ -113,10 +113,10 @@ class XModelSurf:
                         vertex_uv = self._uv(uv[0], uv[1])
 
                         bn = file_io.read_fmt(file, '3f')
-                        vertex_binormal = vector.Vector3(bn[0], bn[1], bn[2])
+                        vertex_binormal = mathutils.Vector((bn[0], bn[1], bn[2]))
 
                         tn = file_io.read_fmt(file, '3f')
-                        vertex_tangent = vector.Vector3(tn[0], tn[1], tn[2])
+                        vertex_tangent = mathutils.Vector((tn[0], tn[1], tn[2]))
 
                         weight_count = 0
                         vertex_bone = 0
@@ -125,7 +125,7 @@ class XModelSurf:
                             vertex_bone = file_io.read_ushort(file)
 
                         vp = file_io.read_fmt(file, '3f')
-                        vertex_position = vector.Vector3(vp[0], vp[1], vp[2])
+                        vertex_position = mathutils.Vector((vp[0], vp[1], vp[2]))
 
                         vertex_weights = []
                         if weight_count > 0:
@@ -141,11 +141,11 @@ class XModelSurf:
                         if xmodel_part != None:
                             xmodel_part_bone = xmodel_part.bones[vertex_bone]
                             
-                            vertex_position = vertex_position.rotate_by_quaternion(xmodel_part_bone.world_transform.rotation)
+                            vertex_position.rotate(xmodel_part_bone.world_transform.rotation)
                             vertex_position += xmodel_part_bone.world_transform.position
 
-                            vertex_normal = vertex_normal.rotate_by_quaternion(xmodel_part_bone.world_transform.rotation)
-                            vertex_tangent = vertex_tangent.rotate_by_quaternion(xmodel_part_bone.world_transform.rotation)
+                            vertex_normal.rotate(xmodel_part_bone.world_transform.rotation)
+                            vertex_tangent.rotate(xmodel_part_bone.world_transform.rotation)
 
                         vertices.append(self._vertex(
                             vertex_normal,

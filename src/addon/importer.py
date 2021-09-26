@@ -17,8 +17,6 @@ from .. assets import (
 from .. utils import log
 
 
-
-
 def import_d3dbsp(assetpath: str, filepath: str) -> bool:
     D3DBSP = d3dbsp.D3DBSP()
     if(not D3DBSP.load(filepath)):
@@ -216,10 +214,8 @@ def import_xmodel(assetpath: str, filepath: str, import_skeleton: bool) -> bpy.t
             new_bone = armature.edit_bones.new(bone.name)
             new_bone.tail = (0, 0.05, 0)
 
-            bone_rotation = bone.local_transform.rotation
-            bone_position = bone.local_transform.position.to_tuple()
-            matrix_rotation = mathutils.Quaternion((bone_rotation.w, bone_rotation.x, bone_rotation.y, bone_rotation.z)).to_matrix().to_4x4()
-            matrix_transform = mathutils.Matrix.Translation(mathutils.Vector(bone_position))
+            matrix_rotation = bone.local_transform.rotation.to_matrix().to_4x4()
+            matrix_transform = mathutils.Matrix.Translation(bone.local_transform.position)
 
             matrix = matrix_transform @ matrix_rotation
             bone_matrices[bone.name] = matrix
