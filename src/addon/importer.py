@@ -151,6 +151,7 @@ def import_xmodel(assetpath: str, filepath: str, import_skeleton: bool) -> bpy.t
 
         surface_uvs = []
         surface_vertex_colors = []
+        surface_normals = []
 
         for triangle in surface.triangles:
             
@@ -174,6 +175,12 @@ def import_xmodel(assetpath: str, filepath: str, import_skeleton: bool) -> bpy.t
             triangle_vertex_colors.append(vertex3.color.to_tuple())
             surface_vertex_colors.append(triangle_vertex_colors)
 
+            triangle_normals = []
+            triangle_normals.append(vertex1.normal.to_tuple())
+            triangle_normals.append(vertex2.normal.to_tuple())
+            triangle_normals.append(vertex3.normal.to_tuple())
+            surface_normals.append(triangle_normals)
+
             bm.verts.ensure_lookup_table()
             bm.verts.index_update()
 
@@ -183,14 +190,35 @@ def import_xmodel(assetpath: str, filepath: str, import_skeleton: bool) -> bpy.t
 
         uv_layer = bm.loops.layers.uv.new()
         vertex_color_layer = bm.loops.layers.color.new()
+        vertex_normal_buffer = []
 
-        for face, uv, vertex_color in zip(bm.faces, surface_uvs, surface_vertex_colors):
-            for loop, uv_data, vertex_color_data in zip(face.loops, uv, vertex_color):
+        for face, uv, color, normal in zip(bm.faces, surface_uvs, surface_vertex_colors, surface_normals):
+            for loop, uv_data, color_data, normal_data in zip(face.loops, uv, color, normal):
                 loop[uv_layer].uv = uv_data
-                loop[vertex_color_layer] = vertex_color_data
+                loop[vertex_color_layer] = color_data
+                vertex_normal_buffer.append(normal_data)
 
         bm.to_mesh(mesh_data)
         bm.free()
+
+        # set normals        
+        mesh.create_normals_split()
+
+        for loop_idx, loop in enumerate(mesh.loops):
+            mesh.loops[loop_idx].normal = vertex_normal_buffer[loop_idx]
+
+        mesh.validate(clean_customdata=False)
+
+        # fill default normals
+        default_normals = [0.0 for _ in range(len(mesh.loops) * 3)]
+        mesh.loops.foreach_get('normal', default_normals)
+
+        polygon_count = len(mesh.polygons)
+        mesh.polygons.foreach_set('use_smooth', [True] * polygon_count)
+
+        custom_normals = tuple(zip(*(iter(default_normals),) * 3))
+        mesh.normals_split_custom_set(custom_normals)
+        mesh.use_auto_smooth = True
 
         mesh_objects.append(obj)
 
