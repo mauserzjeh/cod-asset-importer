@@ -263,16 +263,16 @@ class D3DBSP:
             angles = mathutils.Vector()
             if ENTITY_KEYS.ANGLES in entity:
                 a = entity[ENTITY_KEYS.ANGLES].split(' ')
-                angles[0] = float(a[0])
-                angles[1] = float(a[1])
-                angles[2] = float(a[2])
+                angles.x = float(a[0])
+                angles.y = float(a[1])
+                angles.z = float(a[2])
 
             origin = mathutils.Vector()
             if ENTITY_KEYS.ORIGIN in entity:
                 o = entity[ENTITY_KEYS.ORIGIN].split(' ')
-                origin[0] = float(o[0])
-                origin[1] = float(o[1])
-                origin[2] = float(o[2])
+                origin.x = float(o[0])
+                origin.y = float(o[1])
+                origin.z = float(o[2])
 
             scale = 1.0
             if ENTITY_KEYS.MODELSCALE in entity:
