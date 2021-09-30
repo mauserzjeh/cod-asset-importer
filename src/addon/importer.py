@@ -135,10 +135,13 @@ def import_d3dbsp(assetpath: str, filepath: str) -> bool:
         if entity_null:
             entity_null.parent = map_entities_null
             entity_null.location = entity.origin.to_tuple()
+
+            rot_x, rot_y, rot_z = utils.fix_rotation(entity.angles.x, entity.angles.y, entity.angles.z)
+
             entity_null.rotation_euler = (
-                math.radians(entity.angles.x), 
-                math.radians(entity.angles.z), 
-                math.radians(entity.angles.y)
+                math.radians(rot_x), 
+                math.radians(rot_y), 
+                math.radians(rot_z)
             )
             entity_null.scale = (entity.scale, entity.scale, entity.scale)
 
