@@ -110,10 +110,10 @@ class D3DBSP:
             self.flag = material.flag
 
     class _trianglesoup:
-        __slots__ = ('material_id', 'draw_order', 'vertices_offset', 'vertices_length', 'triangles_offset', 'triangles_length')
+        __slots__ = ('material_idx', 'draw_order', 'vertices_offset', 'vertices_length', 'triangles_offset', 'triangles_length')
 
-        def __init__(self, material_id: int = 0, draw_order: int = 0, vertices_offset: int = 0, vertices_length: int = 0, triangles_offset: int = 0, triangles_length: int = 0) -> None:
-            self.material_id = material_id
+        def __init__(self, material_idx: int = 0, draw_order: int = 0, vertices_offset: int = 0, vertices_length: int = 0, triangles_offset: int = 0, triangles_length: int = 0) -> None:
+            self.material_idx = material_idx
             self.draw_order = draw_order
             self.vertices_offset = vertices_offset
             self.vertices_length = vertices_length
@@ -121,8 +121,8 @@ class D3DBSP:
             self.triangles_length = triangles_length
 
         def read(self, file) -> None:
-            trianglesoup = file_io.read_fmt(file, LUMPSIZES.TRIANGLESOUPS, collections.namedtuple('trianglesoup', 'material_id, draw_order, vertices_offset, vertices_length, triangles_length, triangles_offset'))
-            self.material_id = trianglesoup.material_id
+            trianglesoup = file_io.read_fmt(file, LUMPSIZES.TRIANGLESOUPS, collections.namedtuple('trianglesoup', 'material_idx, draw_order, vertices_offset, vertices_length, triangles_length, triangles_offset'))
+            self.material_idx = trianglesoup.material_idx
             self.draw_order = trianglesoup.draw_order
             self.vertices_offset = trianglesoup.vertices_offset
             self.vertices_length = trianglesoup.vertices_length
@@ -318,7 +318,7 @@ class D3DBSP:
                 self.entities = self._read_entities(file, entities_lump)
 
                 for trianglesoup in trianglesoups:
-                    surface_material = self.materials[trianglesoup.material_id].name
+                    surface_material = self.materials[trianglesoup.material_idx].name
                     surface_triangles = []
                     surface_vertices = {}
                     
