@@ -187,6 +187,7 @@ def import_xmodel(assetpath: str, filepath: str, import_skeleton: bool) -> bpy.t
 
         mesh_data = bpy.context.object.data
         bm = bmesh.new()
+        vertex_weight_layer = bm.verts.layers.deform.new()
 
         surface_uvs = []
         surface_vertex_colors = []
@@ -197,10 +198,6 @@ def import_xmodel(assetpath: str, filepath: str, import_skeleton: bool) -> bpy.t
             vertex1 = surface.vertices[triangle[0]]
             vertex2 = surface.vertices[triangle[2]]
             vertex3 = surface.vertices[triangle[1]]
-
-            v1 = bm.verts.new(vertex1.position.to_tuple())
-            v2 = bm.verts.new(vertex2.position.to_tuple())
-            v3 = bm.verts.new(vertex3.position.to_tuple())
 
             triangle_uvs = []
             triangle_uvs.append(vertex1.uv.to_tuple())
@@ -220,8 +217,22 @@ def import_xmodel(assetpath: str, filepath: str, import_skeleton: bool) -> bpy.t
             triangle_normals.append(vertex3.normal.to_tuple())
             surface_normals.append(triangle_normals)
 
+            v1 = bm.verts.new(vertex1.position.to_tuple())
+            v2 = bm.verts.new(vertex2.position.to_tuple())
+            v3 = bm.verts.new(vertex3.position.to_tuple())
+
             bm.verts.ensure_lookup_table()
             bm.verts.index_update()
+
+            verts_assoc = {
+                v1: vertex1,
+                v2: vertex2,
+                v3: vertex3
+            }
+
+            for bvert, svert in verts_assoc.items():
+                for weight in svert.weights:
+                    bm.verts[bvert.index][vertex_weight_layer][weight.bone] = weight.influence
 
             bm.faces.new((v1, v2, v3))
             bm.faces.ensure_lookup_table()
@@ -333,11 +344,15 @@ def import_xmodel(assetpath: str, filepath: str, import_skeleton: bool) -> bpy.t
             mesh_object.parent = xmodel_null
             continue
 
+        for bone in XMODELPART.bones:
+            mesh_object.vertex_groups.new(name=bone.name)
+
         mesh_object.parent = skeleton
         modifier = mesh_object.modifiers.new('armature_rig', 'ARMATURE')
         modifier.object = skeleton
         modifier.use_bone_envelopes = False
         modifier.use_vertex_groups = True
+
 
     
     bpy.context.view_layer.update()

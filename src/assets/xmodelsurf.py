@@ -20,11 +20,11 @@ class XModelSurf:
     
     # --------------------------------------------------------------------------------------------
     class _weight:
-        __slots__ = ('bone', 'weight')
+        __slots__ = ('bone', 'influence')
 
-        def __init__(self, bone: int, weight: int) -> None:
+        def __init__(self, bone: int, influence: float) -> None:
             self.bone = bone
-            self.weight = weight
+            self.influence = influence
     
     class _uv:
         __slots__ = ('u', 'v')
@@ -120,6 +120,7 @@ class XModelSurf:
 
                         weight_count = 0
                         vertex_bone = 0
+
                         if rigged:
                             weight_count = file_io.read_uchar(file)
                             vertex_bone = file_io.read_ushort(file)
@@ -128,15 +129,19 @@ class XModelSurf:
                         vertex_position = mathutils.Vector((vp[0], vp[1], vp[2]))
 
                         vertex_weights = []
+                        vertex_weights.append(self._weight(vertex_bone, 1.0))
+
                         if weight_count > 0:
                             file.read(1) # padding
 
                             for _ in range(weight_count):
                                 weight_bone = file_io.read_ushort(file)
                                 file.read(12) # padding
-                                weight_weight = file_io.read_ushort(file)
+                                weight_influence = file_io.read_ushort(file)
+                                weight_influence = float(weight_influence / self.RIGGED)
 
-                                vertex_weights.append(self._weight(weight_bone, weight_weight))
+                                vertex_weights[0].influence -= weight_influence
+                                vertex_weights.append(self._weight(weight_bone, weight_influence))
 
                         if xmodel_part != None:
                             xmodel_part_bone = xmodel_part.bones[vertex_bone]
