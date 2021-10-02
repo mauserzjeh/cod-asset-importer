@@ -28,44 +28,42 @@ typedef struct {
     FSeek( type_offset );
     string type;
     
-    SetBackColor ( cLtGreen );
+    SetBackColor( cLtGreen );
     FSeek( texture_name_offset );
     string texture_name;
     
-    SetBackColor ( cNone );
+    SetBackColor( cNone );
     FSeek( current_offset );
 } TEXTURE;
 
 typedef struct {
-    SetBackColor ( cLtRed );
+    SetBackColor( cLtRed );
     u32 name_offset;
     
-    SetBackColor ( cAqua );
+    SetBackColor( cAqua );
     local i64 current_offset = FTell();
     FSeek( name_offset );
     string name;
     FSeek( current_offset);
     
-    SetBackColor ( cNone );
-    u8 pad[48] <optimize=false>;
+    FSkip( 48 ); // padding
     
-    SetBackColor ( cLtYellow );
+    SetBackColor( cLtYellow );
     u16 texture_count;
 
-    SetBackColor ( cNone );
-    u16 pad2;
+    FSkip( 2 ); // padding
 
-    SetBackColor ( cLtGray );
+    SetBackColor( cLtGray );
     u32 techset_offset;
 
-    SetBackColor ( cLtGreen );
+    SetBackColor( cLtGreen );
     u32 textures_offset;
     
     SetBackColor( cLtRed );
     FSeek( techset_offset );
     string techset;
     
-    SetBackColor ( cNone );
+    SetBackColor( cNone );
     FSeek( textures_offset );
     TEXTURE textures[texture_count] <optimize=false>;
 

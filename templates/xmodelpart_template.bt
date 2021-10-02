@@ -18,28 +18,28 @@ typedef short i16;
 typedef int i32;
 
 typedef struct {
-    SetBackColor(cLtRed);
+    SetBackColor( cLtRed );
     f32 x;
     f32 y;
     f32 z;
 } JOINTPOS;
 
 typedef struct {
-    SetBackColor(cLtGreen);
+    SetBackColor( cLtGreen );
     i16 x;
     i16 y;
     i16 z;
 } JOINTROT;
 
 typedef struct {
-    SetBackColor(cLtBlue);
+    SetBackColor( cLtBlue );
     u8 parent_joint_id;
     JOINTPOS joint_pos;
     JOINTROT joint_rot;
 } JOINT;
 
 typedef struct {
-    SetBackColor (cLtYellow);
+    SetBackColor( cLtYellow );
     string bone_name;
 } BONENAME;
 

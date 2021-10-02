@@ -45,19 +45,17 @@ typedef struct {
     SetBackColor( cLtGreen );
     u16 header;
     
-    u8 padding1;
-    f32 unkfloat[6];
+    FSkip( 25 ); // padding
     
     local int num_lods = 4;
-    LOD lods[num_lods] <optimize=false>; //can be more maybe?
-        
-    u8 padding2[4] ;
+    LOD lods[num_lods] <optimize=false>;
+    
+    FSkip( 4 ); // padding
     
     i32 unk_count;
     UNK unks[unk_count] <optimize=false>;
 
     LODMATERIALS materials[num_lods] <optimize=false>;
-
 
 } XMODEL;
 

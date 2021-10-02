@@ -25,45 +25,45 @@ typedef int i32;
 
 
 typedef struct {
-    SetBackColor ( cPurple );    
+    SetBackColor( cPurple );    
     u16 bone; // 2
     
-    SetBackColor ( cNone);
-    f32 pad[3]; // 12
+    SetBackColor( cNone);
+    FSkip( 12 ); // padding
     
-    SetBackColor ( cGray );
+    SetBackColor( cGray );
     u16 weight; // 2
 
 } WEIGHT; // 16
 
 typedef struct {
-    SetBackColor ( cLtRed );
+    SetBackColor( cLtRed );
     f32 normal[3]; //12
 
     SetBackColor( cLtBlue );
     u8 color[4]; //4
     
-    SetBackColor ( cLtGreen );
+    SetBackColor( cLtGreen );
     f32 uv[2]; //8
 
-    SetBackColor ( cAqua );
+    SetBackColor( cAqua );
     f32 binormal[3]; // 12
     
-    SetBackColor ( cLtGray );
+    SetBackColor( cLtGray );
     f32 tangent[3]; // 12
     
-    SetBackColor ( cAqua );
+    SetBackColor( cAqua );
     u8 num_weights; //1
     
-    SetBackColor ( cNone );
+    SetBackColor( cNone );
     u16 bone_id; //2
     
-    SetBackColor ( cLtYellow );
+    SetBackColor( cLtYellow );
     f32 position[3]; // 12
 
-    SetBackColor ( cNone );
+    SetBackColor( cNone );
     if(num_weights) {
-        u8 pad3; //1
+        FSkip( 1 ); // padding
     }
 
     WEIGHT weights[num_weights] <optimize=false>;
@@ -71,27 +71,27 @@ typedef struct {
 } VERT_PHYSIQUED; 
 
 typedef struct {
-    SetBackColor ( cLtRed );
+    SetBackColor( cLtRed );
     f32 normal[3]; //12
 
     SetBackColor( cLtBlue );
     u8 color[4]; //4
     
-    SetBackColor ( cLtGreen );
+    SetBackColor( cLtGreen );
     f32 uv[2]; //8
     
-    SetBackColor ( cAqua );
+    SetBackColor( cAqua );
     f32 binormal[3]; // 12
     
-    SetBackColor ( cLtGray );
+    SetBackColor( cLtGray );
     f32 tangent[3]; // 12
     
-    SetBackColor ( cLtYellow );
+    SetBackColor( cLtYellow );
     f32 position[3]; // 12
 } VERT_NON_PHYSIQUED; // 60
 
 typedef struct {
-    SetBackColor ( cLtYellow );
+    SetBackColor( cLtYellow );
     u16 vertidx1;
     u16 vertidx2;
     u16 vertidx3;
@@ -105,7 +105,7 @@ typedef struct {
     i16 num_verts2; //if num_verts2 == FF -> physiqued
     
     if(num_verts2 == -1) {
-        u16 pad;
+        FSkip( 2 ); // padding
         VERT_PHYSIQUED verts[num_verts] <optimize=false>;
     } else {
         VERT_NON_PHYSIQUED verts[num_verts] <optimize=false>;
