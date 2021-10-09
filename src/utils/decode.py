@@ -13,7 +13,7 @@ class DECODE_FORMAT(metaclass = enum.BaseEnum):
     DXT3 = 0x0C
     DXT5 = 0x0D
 
-def decode(input: bytes, width: int, height: int, format: int) -> bytearray | bytes:
+def decode(input: bytes, width: int, height: int, format: int) -> bytes:
     if format == DECODE_FORMAT.DXT1:
         return _decodeDXT1(input, width, height)
     elif format == DECODE_FORMAT.DXT3:
