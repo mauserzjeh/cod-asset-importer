@@ -85,7 +85,7 @@ class XModelSurf:
                     log.info_log(f'Xmodel version {header.version} is not supported!')
                     return False
 
-                for j in range(header.surface_count):
+                for _ in range(header.surface_count):
                     surface_header = file_io.read_fmt(file, 'x3H', collections.namedtuple('surface_header', 'vertex_count, triangle_count, rigged'))
 
                     rigged = False
@@ -96,7 +96,7 @@ class XModelSurf:
                         file.read(2) #padding
 
                     vertices = []
-                    for i in range(surface_header.vertex_count):
+                    for _ in range(surface_header.vertex_count):
 
                         vn = file_io.read_fmt(file, '3f')
                         vertex_normal = mathutils.Vector((vn[0], vn[1], vn[2]))

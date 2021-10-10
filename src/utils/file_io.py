@@ -1,9 +1,11 @@
+from __future__ import annotations
+
 import collections
 import struct
 
 from . import (
-    log,
     enum,
+    log,
 )
 
 class FMT_CHARACTER_CONSTANTS(metaclass = enum.BaseEnum):
@@ -21,7 +23,7 @@ class FMT_CHARACTER_CONSTANTS(metaclass = enum.BaseEnum):
     FLOAT =                 'f' # float
     DOUBLE =                'd' # double
 
-def read_fmt(file, fmt_str: str, namedtuple: collections.namedtuple = False, fmt_byte_order: str = '<'):
+def read_fmt(file: bytes, fmt_str: str, namedtuple: collections.namedtuple = None, fmt_byte_order: str = '<') -> tuple | collections.namedtuple | int | float:
     fmt = fmt_byte_order + fmt_str
     size = struct.calcsize(fmt)
     data_raw = file.read(size)
@@ -39,46 +41,46 @@ def read_fmt(file, fmt_str: str, namedtuple: collections.namedtuple = False, fmt
     return data_unpacked
 
 
-def read_char(file):
+def read_char(file: bytes) -> int:
     return read_fmt(file, FMT_CHARACTER_CONSTANTS.CHAR)
 
-def read_schar(file):
+def read_schar(file: bytes) -> int:
     return read_fmt(file, FMT_CHARACTER_CONSTANTS.SIGNED_CHAR)
 
-def read_uchar(file):
+def read_uchar(file: bytes) -> int:
     return read_fmt(file, FMT_CHARACTER_CONSTANTS.UNSIGNED_CHAR)
 
-def read_short(file):
+def read_short(file: bytes) -> int:
     return read_fmt(file, FMT_CHARACTER_CONSTANTS.SHORT)
 
-def read_ushort(file):
+def read_ushort(file: bytes) -> int:
     return read_fmt(file, FMT_CHARACTER_CONSTANTS.UNSIGNED_SHORT)
 
-def read_int(file):
+def read_int(file: bytes) -> int:
     return read_fmt(file, FMT_CHARACTER_CONSTANTS.INTEGER)
 
-def read_uint(file):
+def read_uint(file: bytes) -> int:
     return read_fmt(file, FMT_CHARACTER_CONSTANTS.UNSIGNED_INTEGER)
 
-def read_long(file):
+def read_long(file: bytes) -> int:
     return read_fmt(file, FMT_CHARACTER_CONSTANTS.LONG)
 
-def read_ulong(file):
+def read_ulong(file: bytes) -> int:
     return read_fmt(file, FMT_CHARACTER_CONSTANTS.UNSIGNED_LONG)
 
-def read_longlong(file):
+def read_longlong(file: bytes) -> int:
     return read_fmt(file, FMT_CHARACTER_CONSTANTS.LONG_LONG)
 
-def read_ulonglong(file):
+def read_ulonglong(file: bytes) -> int:
     return read_fmt(file, FMT_CHARACTER_CONSTANTS.UNSIGNED_LONG_LONG)
 
-def read_float(file):
+def read_float(file: bytes) -> float:
     return read_fmt(file, FMT_CHARACTER_CONSTANTS.FLOAT)
 
-def read_double(file):
+def read_double(file: bytes) -> float:
     return read_fmt(file, FMT_CHARACTER_CONSTANTS.DOUBLE)
 
-def read_nullstr(file) -> str:
+def read_nullstr(file: bytes) -> str:
     string = b''
     character = None
     while(character != b'\x00'):

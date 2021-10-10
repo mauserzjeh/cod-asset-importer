@@ -9,19 +9,24 @@ import math
 from . import utils
 
 from .. assets import (
-    d3dbsp,
-    material,
-    xmodel,
-    xmodelpart,
-    xmodelsurf
+    d3dbsp as d3dbsp_asset,
+    material as material_asset,
+    texture as texture_asset,
+    xmodel as xmodel_asset,
+    xmodelpart as xmodelpart_asset,
+    xmodelsurf as xmodelsurf_asset
 )
 
-from .. utils import log
+from .. utils import (
+    blender as blenderutils,
+    data as datautils,
+    log
+)
 
 
 def import_d3dbsp(assetpath: str, filepath: str) -> bool:
-    D3DBSP = d3dbsp.D3DBSP()
-    if(not D3DBSP.load(filepath)):
+    D3DBSP = d3dbsp_asset.D3DBSP()
+    if not D3DBSP.load(filepath):
         log.error_log(f"Error loading d3dbsp: {os.path.basename(filepath)}")
         return False
 
@@ -126,17 +131,17 @@ def import_d3dbsp(assetpath: str, filepath: str) -> bool:
     unique_entities = {}
     for entity in D3DBSP.entities:
         if entity.name in unique_entities:
-            entity_null = utils.copy_object_hierarchy(unique_entities[entity.name])[0]
+            entity_null = blenderutils.copy_object_hierarchy(unique_entities[entity.name])[0]
             bpy.ops.object.select_all(action='DESELECT')
         else:
-            entity_path = os.path.join(assetpath, xmodel.XModel.PATH, entity.name)
+            entity_path = os.path.join(assetpath, xmodel_asset.XModel.PATH, entity.name)
             entity_null = import_xmodel(assetpath, entity_path, True)
             
         if entity_null:
             entity_null.parent = map_entities_null
             entity_null.location = entity.origin.to_tuple()
 
-            rot_x, rot_y, rot_z = utils.fix_rotation(entity.angles.x, entity.angles.y, entity.angles.z)
+            rot_x, rot_y, rot_z = datautils.fix_rotation(entity.angles.x, entity.angles.y, entity.angles.z)
 
             entity_null.rotation_euler = (
                 math.radians(rot_x), 
@@ -152,22 +157,22 @@ def import_d3dbsp(assetpath: str, filepath: str) -> bool:
 
     
 def import_xmodel(assetpath: str, filepath: str, import_skeleton: bool) -> bpy.types.Object | bool:
-    XMODEL = xmodel.XModel()
-    if(not XMODEL.load(filepath)):
+    XMODEL = xmodel_asset.XModel()
+    if not XMODEL.load(filepath):
         log.error_log(f"Error loading xmodel: {os.path.basename(filepath)}")
         return False
 
     xmodel_name = XMODEL.lods[0].name
 
-    XMODELPART = xmodelpart.XModelPart()
-    xmodel_part = os.path.join(assetpath, xmodelpart.XModelPart.PATH, xmodel_name)
-    if(not XMODELPART.load(xmodel_part)):
+    XMODELPART = xmodelpart_asset.XModelPart()
+    xmodel_part = os.path.join(assetpath, xmodelpart_asset.XModelPart.PATH, xmodel_name)
+    if not XMODELPART.load(xmodel_part):
         log.error_log(f"Error loading xmodelpart: {xmodel_name}")
         XMODELPART = None
 
-    XMODELSURF = xmodelsurf.XModelSurf()
-    xmodel_surf = os.path.join(assetpath, xmodelsurf.XModelSurf.PATH, xmodel_name)
-    if(not XMODELSURF.load(xmodel_surf, XMODELPART)):
+    XMODELSURF = xmodelsurf_asset.XModelSurf()
+    xmodel_surf = os.path.join(assetpath, xmodelsurf_asset.XModelSurf.PATH, xmodel_name)
+    if not XMODELSURF.load(xmodel_surf, XMODELPART):
         log.error_log(f"Error loading xmodelsurf: {xmodel_name}")
         return False
 
@@ -360,12 +365,27 @@ def import_xmodel(assetpath: str, filepath: str, import_skeleton: bool) -> bpy.t
     bpy.ops.object.select_all(action='DESELECT')
     return xmodel_null
 
-def _import_material(assetpath: str, material_name: str) -> bool:
-    MATERIAL = material.Material()
-    material_file = os.path.join(assetpath, MATERIAL.PATH, material_name)
-    if(not MATERIAL.load(material_file)):
+def _import_material(assetpath: str, material_name: str) -> bpy.types.Material | bool:
+    MATERIAL = material_asset.Material()
+    material_file = os.path.join(assetpath, material_asset.Material.PATH, material_name)
+    if not MATERIAL.load(material_file):
         log.error_log(f"Error loading material: {material_name}")
         return False
     
-    #TODO
+    # TODO return the new material
     return True
+
+def _import_texture(assetpath: str, texture_name: str) -> bpy.types.Texture | bool:
+    TEXTURE = texture_asset.Texture()
+    texture_file = os.path.join(assetpath, texture_asset.Texture.PATH, texture_name + '.iwi')
+    if not TEXTURE.load(texture_file):
+        log.error_log(f"Error loading texture: {texture_name}")
+        return False
+    
+    image = bpy.data.images.new(texture_name, TEXTURE.width, TEXTURE.height, alpha=True)
+    image.pixels = datautils.normalize_color_data(TEXTURE.texture_data)
+
+    texture = bpy.data.textures.new(texture_name, type='IMAGE')
+    texture.image = image
+
+    return texture

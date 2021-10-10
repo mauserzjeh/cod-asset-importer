@@ -3,6 +3,7 @@ import os
 import traceback
 
 from .. utils import (
+    decode,
     enum,
     file_io,
     log
@@ -21,6 +22,12 @@ class TEXTURE_FORMAT(metaclass = enum.BaseEnum):
     DXT1 = 0x0B
     DXT3 = 0x0C
     DXT5 = 0x0D
+
+class TEXTURE_TYPE(metaclass = enum.BaseEnum):
+    COLORMAP = 'colorMap'
+    DETAILMAP = 'detailMap'
+    NORMALMAP = 'normalMap'
+    SPECULARMAP = 'specularMap'
 
 class Texture:
 
@@ -54,7 +61,8 @@ class Texture:
                 self.height = header.height
 
                 file.seek(header.texture_offset, os.SEEK_SET)
-                self.texture_data = file.read(header.filesize - header.texture_offset)
+                raw_texture_data = file.read(header.filesize - header.texture_offset)
+                self.texture_data = decode.decode(raw_texture_data, self.width, self.height, self.format)
 
                 return True
         except:

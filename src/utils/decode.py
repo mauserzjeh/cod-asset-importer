@@ -4,8 +4,8 @@ import io
 import struct
 
 from . import (
+    enum,
     log,
-    enum
 )
 
 class DECODE_FORMAT(metaclass = enum.BaseEnum):
