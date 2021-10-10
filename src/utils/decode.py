@@ -44,14 +44,14 @@ def _unpack_rgba(c: int) -> tuple:
     
     return r,g,b,a
 
-def _c2a(c0: int, c1: int) -> int:
-    return (2 * c0 + c1) // 3
+def _c2(component0: int, component1: int, color0: int, color1: int) -> int:
+    if color0 > color1:
+        return (2 * component0 + component1) // 3
+    else:
+        return (component0 + component1) // 2
 
-def _c2b(c0: int, c1: int) -> int:
-    return (c0 + c1) // 2
-
-def _c3(c0: int, c1: int) -> int:
-    return (c0 + 2 * c1) // 3
+def _c3(component0: int, component1: int) -> int:
+    return (component0 + 2 * component1) // 3
 
 def _decodeDXT1(input: bytes, width: int, height: int) -> bytes:
     input = io.BytesIO(input)
@@ -72,12 +72,8 @@ def _decodeDXT1(input: bytes, width: int, height: int) -> bytes:
                         
             colors[0] = _pack_rgba(r0, g0, b0, 255)
             colors[1] = _pack_rgba(r1, g1, b1, 255)
-
-            if c0 > c1:
-                colors[2] = _pack_rgba(_c2a(r0, r1), _c2a(g0, g1), _c2a(b0, b1), 255)
-                colors[3] = _pack_rgba(_c3(r0, r1), _c3(g0, g1), _c3(b0, b1), 255)
-            else:
-                colors[2] = _pack_rgba(_c2b(r0, r1), _c2b(g0, g1), _c2b(b0, b1), 255)
+            colors[2] = _pack_rgba(_c2(r0, r1, c0, c1), _c2(g0, g1, c0, c1), _c2(b0, b1, c0, c1), 255)
+            colors[3] = _pack_rgba(_c3(r0, r1), _c3(g0, g1), _c3(b0, b1), 255)
             
             for i in range(16):
                 idx = i * 4
@@ -126,12 +122,8 @@ def _decodeDXT3(input: bytes, width: int, height: int) -> bytes:
 
             colors[0] = _pack_rgba(r0, g0, b0, 0)
             colors[1] = _pack_rgba(r1, g1, b1, 0)
-
-            if c0 > c1:
-                colors[2] = _pack_rgba(_c2a(r0, r1), _c2a(g0, g1), _c2a(b0, b1), 0)
-                colors[3] = _pack_rgba(_c3(r0, r1), _c3(g0, g1), _c3(b0, b1), 0)
-            else:
-                colors[2] = _pack_rgba(_c2b(r0, r1), _c2b(g0, g1), _c2b(b0, b1), 0)
+            colors[2] = _pack_rgba(_c2(r0, r1, c0, c1), _c2(g0, g1, c0, c1), _c2(b0, b1, c0, c1), 0)
+            colors[3] = _pack_rgba(_c3(r0, r1), _c3(g0, g1), _c3(b0, b1), 0)
 
             for i in range(16):
                 idx = i * 4
@@ -194,12 +186,8 @@ def _decodeDXT5(input: bytes, width: int, height: int) -> bytes:
 
             colors[0] = _pack_rgba(r0, g0, b0, 0)
             colors[1] = _pack_rgba(r1, g1, b1, 0)
-
-            if c0 > c1:
-                colors[2] = _pack_rgba(_c2a(r0, r1), _c2a(g0, g1), _c2a(b0, b1), 0)
-                colors[3] = _pack_rgba(_c3(r0, r1), _c3(g0, g1), _c3(b0, b1), 0)
-            else:
-                colors[2] = _pack_rgba(_c2b(r0, r1), _c2b(g0, g1), _c2b(b0, b1), 0)
+            colors[2] = _pack_rgba(_c2(r0, r1, c0, c1), _c2(g0, g1, c0, c1), _c2(b0, b1, c0, c1), 0)
+            colors[3] = _pack_rgba(_c3(r0, r1), _c3(g0, g1), _c3(b0, b1), 0)
 
             for i in range(16):
                 idx = i * 4
