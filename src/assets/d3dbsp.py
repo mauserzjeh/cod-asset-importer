@@ -165,7 +165,7 @@ class D3DBSP:
     class _entity:
         __slots__ = ('name', 'angles', 'origin', 'scale')
 
-        def __init__(self, name: str = '', angles: mathutils.Vector = mathutils.Vector(), origin: mathutils.Vector = mathutils.Vector(), scale: float = 1.0) -> None:
+        def __init__(self, name: str = '', angles: mathutils.Vector = None, origin: mathutils.Vector = None, scale: float = 1.0) -> None:
             self.name = name
             self.angles = angles
             self.origin = origin

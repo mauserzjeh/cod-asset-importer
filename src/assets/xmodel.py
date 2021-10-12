@@ -15,10 +15,10 @@ class XModel:
     class _lod:
         __slots__ = ('name', 'distance', 'materials')
     
-        def __init__(self, name: str = "", distance: float = 0.0, materials: list[str] = []) -> None:
+        def __init__(self, name: str = "", distance: float = 0.0, materials: list[str] = None) -> None:
             self.name = name
             self.distance = distance
-            self.materials = materials
+            self.materials = [] if materials == None else materials
         
     # --------------------------------------------------------------------------------------------
 
