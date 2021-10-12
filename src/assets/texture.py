@@ -3,6 +3,7 @@ import os
 import traceback
 
 from .. utils import (
+    data as datautils,
     decode,
     enum,
     file_io,
@@ -62,7 +63,8 @@ class Texture:
 
                 file.seek(header.texture_offset, os.SEEK_SET)
                 raw_texture_data = file.read(header.filesize - header.texture_offset)
-                self.texture_data = decode.decode(raw_texture_data, self.width, self.height, self.format)
+                if len(raw_texture_data) > 0:
+                    self.texture_data = datautils.normalize_color_data(decode.decode(raw_texture_data, self.width, self.height, self.format))
 
                 return True
         except:
