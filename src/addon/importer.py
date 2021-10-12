@@ -6,8 +6,6 @@ import bmesh
 import mathutils
 import math
 
-from . import utils
-
 from .. assets import (
     d3dbsp as d3dbsp_asset,
     material as material_asset,
@@ -41,7 +39,10 @@ def import_d3dbsp(assetpath: str, filepath: str) -> bool:
     bpy.context.scene.collection.objects.link(map_entities_null)
     map_entities_null.parent = map_null
 
-    #TODO import materials
+    # import materials
+    for material in D3DBSP.materials:
+        if not bpy.data.materials.get(material.name):
+            _import_material(assetpath, material.name)
 
     # import surfaces
     for surface in D3DBSP.surfaces:
@@ -50,6 +51,7 @@ def import_d3dbsp(assetpath: str, filepath: str) -> bool:
         mesh = bpy.data.meshes.new(name)
         obj = bpy.data.objects.new(name, mesh)
         obj.parent = map_geometry_null
+        obj.active_material = bpy.data.materials.get(surface.material)
 
         bpy.context.scene.collection.objects.link(obj)
         bpy.context.view_layer.objects.active = obj
@@ -162,18 +164,18 @@ def import_xmodel(assetpath: str, filepath: str, import_skeleton: bool) -> bpy.t
         log.error_log(f"Error loading xmodel: {os.path.basename(filepath)}")
         return False
 
-    xmodel_name = XMODEL.lods[0].name
+    xmodel = XMODEL.lods[0]
 
     XMODELPART = xmodelpart_asset.XModelPart()
-    xmodel_part = os.path.join(assetpath, xmodelpart_asset.XModelPart.PATH, xmodel_name)
+    xmodel_part = os.path.join(assetpath, xmodelpart_asset.XModelPart.PATH, xmodel.name)
     if not XMODELPART.load(xmodel_part):
-        log.error_log(f"Error loading xmodelpart: {xmodel_name}")
+        log.error_log(f"Error loading xmodelpart: {xmodel.name}")
         XMODELPART = None
 
     XMODELSURF = xmodelsurf_asset.XModelSurf()
-    xmodel_surf = os.path.join(assetpath, xmodelsurf_asset.XModelSurf.PATH, xmodel_name)
+    xmodel_surf = os.path.join(assetpath, xmodelsurf_asset.XModelSurf.PATH, xmodel.name)
     if not XMODELSURF.load(xmodel_surf, XMODELPART):
-        log.error_log(f"Error loading xmodelsurf: {xmodel_name}")
+        log.error_log(f"Error loading xmodelsurf: {xmodel.name}")
         return False
 
     xmodel_null = bpy.data.objects.new(XMODEL.name, None)
@@ -181,14 +183,21 @@ def import_xmodel(assetpath: str, filepath: str, import_skeleton: bool) -> bpy.t
 
     mesh_objects = []
 
+    # import materials
+    for material in xmodel.materials:
+        if not bpy.data.materials.get(material):
+            _import_material(assetpath, material)
+
     # create mesh
-    for surface in XMODELSURF.surfaces:
+    for i, surface in enumerate(XMODELSURF.surfaces):
         mesh = bpy.data.meshes.new(XMODELSURF.name)
         obj = bpy.data.objects.new(XMODELSURF.name, mesh)
+        obj.active_material = bpy.data.materials.get(xmodel.materials[i])
 
         bpy.context.scene.collection.objects.link(obj)
         bpy.context.view_layer.objects.active = obj
         obj.select_set(True)
+
 
         mesh_data = bpy.context.object.data
         bm = bmesh.new()
@@ -280,10 +289,10 @@ def import_xmodel(assetpath: str, filepath: str, import_skeleton: bool) -> bpy.t
     # create skeleton
     skeleton = None
     if import_skeleton and XMODELPART != None and len(XMODELPART.bones) > 1:
-        armature = bpy.data.armatures.new(f"{xmodel_name}_armature")
+        armature = bpy.data.armatures.new(f"{xmodel.name}_armature")
         armature.display_type = 'STICK'
 
-        skeleton = bpy.data.objects.new(f"{xmodel_name}_skeleton", armature)
+        skeleton = bpy.data.objects.new(f"{xmodel.name}_skeleton", armature)
         skeleton.parent = xmodel_null
         skeleton.show_in_front = True
         bpy.context.scene.collection.objects.link(skeleton)
@@ -372,8 +381,69 @@ def _import_material(assetpath: str, material_name: str) -> bpy.types.Material |
         log.error_log(f"Error loading material: {material_name}")
         return False
     
-    # TODO return the new material
-    return True
+    material = bpy.data.materials.new(MATERIAL.name)
+    material.use_nodes = True
+
+    nodes = material.node_tree.nodes
+    links = material.node_tree.links
+
+    output_node = None
+    for node in nodes:
+        if node.type != 'OUTPUT_MATERIAL':
+            nodes.remove(node)
+            continue
+
+        if node.type == 'OUTPUT_MATERIAL' and output_node == None:
+            output_node = node
+
+    if output_node == None:
+        output_node = nodes.new('ShaderNodeOutputMaterial')
+
+    output_node.location = (300, 0)
+
+    mix_shader_node = nodes.new('ShaderNodeMixShader')
+    mix_shader_node.location = (100, 0)
+    links.new(mix_shader_node.outputs['Shader'], output_node.inputs['Surface'])
+
+    transparent_bsdf_node = nodes.new('ShaderNodeBsdfTransparent')
+    transparent_bsdf_node.location = (-200, 100)
+    links.new(transparent_bsdf_node.outputs['BSDF'], mix_shader_node.inputs[1])
+
+    principled_bsdf_node = nodes.new('ShaderNodeBsdfPrincipled')
+    principled_bsdf_node.location = (-200, 0)
+    principled_bsdf_node.width = 200
+    links.new(principled_bsdf_node.outputs['BSDF'], mix_shader_node.inputs[2])
+
+    for i, t in enumerate(MATERIAL.textures):
+        texture = bpy.data.textures.get(t.name)
+        if texture == None:
+            texture = _import_texture(assetpath, t.name)
+            if texture == False:
+                continue
+
+        texture_node = nodes.new('ShaderNodeTexImage')
+        texture_node.label = t.type
+        texture_node.location = (-700, -250 * i)
+        texture_node.image = texture.image
+
+        if t.type == texture_asset.TEXTURE_TYPE.COLORMAP:
+            links.new(texture_node.outputs['Color'], principled_bsdf_node.inputs['Base Color'])
+            links.new(texture_node.outputs['Alpha'], mix_shader_node.inputs['Fac'])
+        elif t.type == texture_asset.TEXTURE_TYPE.SPECULARMAP:
+            links.new(texture_node.outputs['Color'], principled_bsdf_node.inputs['Specular'])
+        elif t.type == texture_asset.TEXTURE_TYPE.NORMALMAP:
+            bump_node = nodes.new('ShaderNodeBump')
+            bump_node.location = (-450, -500)
+            links.new(texture_node.outputs['Color'], bump_node.inputs['Height'])
+            links.new(bump_node.outputs['Normal'], principled_bsdf_node.inputs['Normal'])
+
+    textcoord_node = nodes.new('ShaderNodeTexCoord')
+    textcoord_node.location = (-1000, -150)
+    for node in nodes:
+        if node.type == 'TEX_IMAGE':
+            links.new(textcoord_node.outputs['UV'], node.inputs['Vector'])
+
+    return material
 
 def _import_texture(assetpath: str, texture_name: str) -> bpy.types.Texture | bool:
     TEXTURE = texture_asset.Texture()
@@ -383,7 +453,7 @@ def _import_texture(assetpath: str, texture_name: str) -> bpy.types.Texture | bo
         return False
     
     image = bpy.data.images.new(texture_name, TEXTURE.width, TEXTURE.height, alpha=True)
-    image.pixels = datautils.normalize_color_data(TEXTURE.texture_data)
+    image.pixels = TEXTURE.texture_data
 
     texture = bpy.data.textures.new(texture_name, type='IMAGE')
     texture.image = image
