@@ -106,7 +106,7 @@ class D3DBSP:
 
         def read(self, file) -> None:
             material = file_io.read_fmt(file, LUMPSIZES.MATERIALS, collections.namedtuple('material', 'name, flag'))
-            self.name = material.name.decode('ascii')
+            self.name = material.name.rstrip(b'\x00').decode('ascii')
             self.flag = material.flag
 
     class _trianglesoup:
