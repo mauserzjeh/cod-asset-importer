@@ -164,18 +164,18 @@ def import_xmodel(assetpath: str, filepath: str, import_skeleton: bool) -> bpy.t
         log.error_log(f"Error loading xmodel: {os.path.basename(filepath)}")
         return False
 
-    xmodel = XMODEL.lods[0]
+    lod0 = XMODEL.lods[0]
 
     XMODELPART = xmodelpart_asset.XModelPart()
-    xmodel_part = os.path.join(assetpath, xmodelpart_asset.XModelPart.PATH, xmodel.name)
+    xmodel_part = os.path.join(assetpath, xmodelpart_asset.XModelPart.PATH, lod0.name)
     if not XMODELPART.load(xmodel_part):
-        log.error_log(f"Error loading xmodelpart: {xmodel.name}")
+        log.error_log(f"Error loading xmodelpart: {lod0.name}")
         XMODELPART = None
 
     XMODELSURF = xmodelsurf_asset.XModelSurf()
-    xmodel_surf = os.path.join(assetpath, xmodelsurf_asset.XModelSurf.PATH, xmodel.name)
+    xmodel_surf = os.path.join(assetpath, xmodelsurf_asset.XModelSurf.PATH, lod0.name)
     if not XMODELSURF.load(xmodel_surf, XMODELPART):
-        log.error_log(f"Error loading xmodelsurf: {xmodel.name}")
+        log.error_log(f"Error loading xmodelsurf: {lod0.name}")
         return False
 
     xmodel_null = bpy.data.objects.new(XMODEL.name, None)
@@ -184,7 +184,7 @@ def import_xmodel(assetpath: str, filepath: str, import_skeleton: bool) -> bpy.t
     mesh_objects = []
 
     # import materials
-    for material in xmodel.materials:
+    for material in lod0.materials:
         if not bpy.data.materials.get(material):
             _import_material(assetpath, material)
 
@@ -192,7 +192,7 @@ def import_xmodel(assetpath: str, filepath: str, import_skeleton: bool) -> bpy.t
     for i, surface in enumerate(XMODELSURF.surfaces):
         mesh = bpy.data.meshes.new(XMODELSURF.name)
         obj = bpy.data.objects.new(XMODELSURF.name, mesh)
-        obj.active_material = bpy.data.materials.get(xmodel.materials[i])
+        obj.active_material = bpy.data.materials.get(lod0.materials[i])
 
         bpy.context.scene.collection.objects.link(obj)
         bpy.context.view_layer.objects.active = obj
@@ -289,10 +289,10 @@ def import_xmodel(assetpath: str, filepath: str, import_skeleton: bool) -> bpy.t
     # create skeleton
     skeleton = None
     if import_skeleton and XMODELPART != None and len(XMODELPART.bones) > 1:
-        armature = bpy.data.armatures.new(f"{xmodel.name}_armature")
+        armature = bpy.data.armatures.new(f"{lod0.name}_armature")
         armature.display_type = 'STICK'
 
-        skeleton = bpy.data.objects.new(f"{xmodel.name}_skeleton", armature)
+        skeleton = bpy.data.objects.new(f"{lod0.name}_skeleton", armature)
         skeleton.parent = xmodel_null
         skeleton.show_in_front = True
         bpy.context.scene.collection.objects.link(skeleton)
@@ -383,6 +383,8 @@ def _import_material(assetpath: str, material_name: str) -> bpy.types.Material |
     
     material = bpy.data.materials.new(MATERIAL.name)
     material.use_nodes = True
+    material.blend_method = 'HASHED'
+    material.shadow_method = 'HASHED'
 
     nodes = material.node_tree.nodes
     links = material.node_tree.links
@@ -415,16 +417,16 @@ def _import_material(assetpath: str, material_name: str) -> bpy.types.Material |
     links.new(principled_bsdf_node.outputs['BSDF'], mix_shader_node.inputs[2])
 
     for i, t in enumerate(MATERIAL.textures):
-        texture = bpy.data.textures.get(t.name)
-        if texture == None:
-            texture = _import_texture(assetpath, t.name)
-            if texture == False:
+        texture_image = bpy.data.images.get(t.name)
+        if texture_image == None:
+            texture_image = _import_texture(assetpath, t.name)
+            if texture_image == False:
                 continue
 
         texture_node = nodes.new('ShaderNodeTexImage')
         texture_node.label = t.type
         texture_node.location = (-700, -250 * i)
-        texture_node.image = texture.image
+        texture_node.image = texture_image
 
         if t.type == texture_asset.TEXTURE_TYPE.COLORMAP:
             links.new(texture_node.outputs['Color'], principled_bsdf_node.inputs['Base Color'])
@@ -452,10 +454,7 @@ def _import_texture(assetpath: str, texture_name: str) -> bpy.types.Texture | bo
         log.error_log(f"Error loading texture: {texture_name}")
         return False
     
-    image = bpy.data.images.new(texture_name, TEXTURE.width, TEXTURE.height, alpha=True)
-    image.pixels = TEXTURE.texture_data
+    texture_image = bpy.data.images.new(texture_name, TEXTURE.width, TEXTURE.height, alpha=True)
+    texture_image.pixels = TEXTURE.texture_data
 
-    texture = bpy.data.textures.new(texture_name, type='IMAGE')
-    texture.image = image
-
-    return texture
+    return texture_image
