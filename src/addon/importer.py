@@ -267,21 +267,11 @@ def import_xmodel(assetpath: str, filepath: str, import_skeleton: bool) -> bpy.t
 
         # set normals        
         mesh.create_normals_split()
-
-        for loop_idx, loop in enumerate(mesh.loops):
-            mesh.loops[loop_idx].normal = vertex_normal_buffer[loop_idx]
-
         mesh.validate(clean_customdata=False)
-
-        # fill default normals
-        custom_normals = [0.0] * len(mesh.loops) * 3
-        mesh.loops.foreach_get('normal', custom_normals)
+        mesh.normals_split_custom_set(vertex_normal_buffer)
 
         polygon_count = len(mesh.polygons)
         mesh.polygons.foreach_set('use_smooth', [True] * polygon_count)
-
-        custom_normals = tuple(zip(*(iter(custom_normals),) * 3))
-        mesh.normals_split_custom_set(custom_normals)
         mesh.use_auto_smooth = True
 
         mesh_objects.append(obj)
@@ -419,7 +409,7 @@ def _import_material(assetpath: str, material_name: str) -> bpy.types.Material |
     for i, t in enumerate(MATERIAL.textures):
         texture_image = bpy.data.images.get(t.name)
         if texture_image == None:
-            texture_image = _import_texture(assetpath, t.name)
+            texture_image = _import_texture(assetpath, t.name, t.type == texture_asset.TEXTURE_TYPE.NORMALMAP)
             if texture_image == False:
                 continue
 
@@ -432,12 +422,15 @@ def _import_material(assetpath: str, material_name: str) -> bpy.types.Material |
             links.new(texture_node.outputs['Color'], principled_bsdf_node.inputs['Base Color'])
             links.new(texture_node.outputs['Alpha'], mix_shader_node.inputs['Fac'])
         elif t.type == texture_asset.TEXTURE_TYPE.SPECULARMAP:
+            texture_node.image.colorspace_settings.name = 'Linear'
             links.new(texture_node.outputs['Color'], principled_bsdf_node.inputs['Specular'])
         elif t.type == texture_asset.TEXTURE_TYPE.NORMALMAP:
-            bump_node = nodes.new('ShaderNodeBump')
-            bump_node.location = (-450, -500)
-            links.new(texture_node.outputs['Color'], bump_node.inputs['Height'])
-            links.new(bump_node.outputs['Normal'], principled_bsdf_node.inputs['Normal'])
+            texture_node.image.colorspace_settings.name = 'Linear'
+            normal_map_node = nodes.new('ShaderNodeNormalMap')
+            normal_map_node.location = (-450, -500)
+            normal_map_node.space = 'WORLD'
+            links.new(texture_node.outputs['Color'], normal_map_node.inputs['Color'])
+            links.new(normal_map_node.outputs['Normal'], principled_bsdf_node.inputs['Normal'])
 
     textcoord_node = nodes.new('ShaderNodeTexCoord')
     textcoord_node.location = (-1000, -150)
@@ -447,7 +440,7 @@ def _import_material(assetpath: str, material_name: str) -> bpy.types.Material |
 
     return material
 
-def _import_texture(assetpath: str, texture_name: str) -> bpy.types.Texture | bool:
+def _import_texture(assetpath: str, texture_name: str, normal_map: bool) -> bpy.types.Texture | bool:
     TEXTURE = texture_asset.Texture()
     texture_file = os.path.join(assetpath, texture_asset.Texture.PATH, texture_name + '.iwi')
     if not TEXTURE.load(texture_file):
@@ -455,6 +448,10 @@ def _import_texture(assetpath: str, texture_name: str) -> bpy.types.Texture | bo
         return False
     
     texture_image = bpy.data.images.new(texture_name, TEXTURE.width, TEXTURE.height, alpha=True)
-    texture_image.pixels = TEXTURE.texture_data
+
+    if normal_map == True:
+        texture_image.pixels = datautils.bumpmap_to_normalmap(TEXTURE.texture_data)
+    else:
+        texture_image.pixels = TEXTURE.texture_data
 
     return texture_image
