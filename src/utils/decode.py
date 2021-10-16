@@ -4,6 +4,7 @@ import io
 import struct
 
 from . import (
+    data as datautils,
     enum,
     log,
 )
@@ -22,7 +23,7 @@ def decode(input: bytes, width: int, height: int, format: int) -> bytes:
         return _decodeDXT5(input, width, height)
     else:
         log.error_log(f"Unsupported decode format: {format}")
-        return input
+        return datautils.normalize_color_data(input)
 
 def _unpack_565(color: int) -> tuple:
     r = (color & 0xF800) >> 8
@@ -53,10 +54,10 @@ def _c2(component0: int, component1: int, color0: int, color1: int) -> int:
 def _c3(component0: int, component1: int) -> int:
     return (component0 + 2 * component1) // 3
 
-def _decodeDXT1(input: bytes, width: int, height: int) -> bytes:
+def _decodeDXT1(input: bytes, width: int, height: int) -> tuple:
     input = io.BytesIO(input)
-    output = bytearray(width * height * 4)
-    buffer = bytearray(64)
+    output = [0.0] * (width * height * 4)
+    buffer = [0.0] * (64)
     
     block_count_x = (width + 3) // 4
     block_count_y = (height + 3) // 4
@@ -78,12 +79,12 @@ def _decodeDXT1(input: bytes, width: int, height: int) -> bytes:
             for i in range(16):
                 idx = i * 4
                 r, g, b, a = _unpack_rgba(colors[bitcode & 0x03])                
-                buffer[idx:idx+4] = struct.pack('<4B', r, g, b, a)
+                buffer[idx:idx+4] = r / 255, g / 255, b / 255, a / 255
                 bitcode >>= 2
                         
             length = (4 if x < block_count_x - 1 else length_last) * 4
             i = 0
-            j = y * 4            
+            j = y * 4
             while i < 4 and j < height:
                 bidx = (i * 4 * 4)
                 oidx = (j * width + x * 4) * 4
@@ -93,12 +94,12 @@ def _decodeDXT1(input: bytes, width: int, height: int) -> bytes:
                 i += 1
                 j += 1
 
-    return bytes(output)
+    return tuple(output)
 
-def _decodeDXT3(input: bytes, width: int, height: int) -> bytes:
+def _decodeDXT3(input: bytes, width: int, height: int) -> tuple:
     input = io.BytesIO(input)
-    output = bytearray(width * height * 4)
-    buffer = bytearray(64)
+    output = [0.0] * (width * height * 4)
+    buffer = [0.0] * (64)
 
     block_count_x = (width + 3) // 4
     block_count_y = (height + 3) // 4
@@ -128,7 +129,7 @@ def _decodeDXT3(input: bytes, width: int, height: int) -> bytes:
             for i in range(16):
                 idx = i * 4
                 r, g, b, a = _unpack_rgba(colors[bitcode & 0x03] | alphas[i])
-                buffer[idx:idx+4] = struct.pack('<4B', r, g, b, a)
+                buffer[idx:idx+4] = r / 255, g / 255, b / 255, a / 255
                 bitcode >>= 2
 
             length = (4 if x < block_count_x - 1 else length_last) * 4
@@ -143,12 +144,12 @@ def _decodeDXT3(input: bytes, width: int, height: int) -> bytes:
                 i += 1
                 j += 1
 
-    return bytes(output)
+    return tuple(output)
 
-def _decodeDXT5(input: bytes, width: int, height: int) -> bytes:
+def _decodeDXT5(input: bytes, width: int, height: int) -> tuple:
     input = io.BytesIO(input)
-    output = bytearray(width * height * 4)
-    buffer = bytearray(64)
+    output = [0.0] * (width * height * 4)
+    buffer = [0.0] * (64)
 
     block_count_x = (width + 3) // 4
     block_count_y = (height + 3) // 4
@@ -192,7 +193,7 @@ def _decodeDXT5(input: bytes, width: int, height: int) -> bytes:
             for i in range(16):
                 idx = i * 4
                 r, g, b, a = _unpack_rgba(alphas[bitcode_a & 0x07] | colors[bitcode_c & 0x03])
-                buffer[idx:idx+4] = struct.pack('<4B', r, g, b ,a)
+                buffer[idx:idx+4] = r / 255, g / 255, b / 255, a / 255
                 bitcode_a >>= 3
                 bitcode_c >>= 2
 
@@ -208,7 +209,7 @@ def _decodeDXT5(input: bytes, width: int, height: int) -> bytes:
                 i += 1
                 j += 1
 
-    return bytes(output)
+    return tuple(output)
 
             
 

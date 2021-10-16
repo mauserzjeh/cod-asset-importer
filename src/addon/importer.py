@@ -415,19 +415,15 @@ def _import_material(assetpath: str, material_name: str) -> bpy.types.Material |
             links.new(texture_node.outputs['Alpha'], mix_shader_node.inputs['Fac'])
         elif t.type == texture_asset.TEXTURE_TYPE.SPECULARMAP:
             links.new(texture_node.outputs['Color'], principled_bsdf_node.inputs['Specular'])
+            texture_node.image.colorspace_settings.name = 'Linear'
         elif t.type == texture_asset.TEXTURE_TYPE.NORMALMAP:
+            texture_node.image.colorspace_settings.name = 'Linear'
             normal_map_node = nodes.new('ShaderNodeNormalMap')
             normal_map_node.location = (-450, -500)
-            normal_map_node.space = 'WORLD'
-            normal_map_node.inputs['Strength'].default_value = 0.2
+            normal_map_node.space = 'TANGENT'
+            normal_map_node.inputs['Strength'].default_value = 1.0
             links.new(texture_node.outputs['Color'], normal_map_node.inputs['Color'])
             links.new(normal_map_node.outputs['Normal'], principled_bsdf_node.inputs['Normal'])
-
-    textcoord_node = nodes.new('ShaderNodeTexCoord')
-    textcoord_node.location = (-1000, -150)
-    for node in nodes:
-        if node.type == 'TEX_IMAGE':
-            links.new(textcoord_node.outputs['UV'], node.inputs['Vector'])
 
     return material
 
@@ -444,5 +440,8 @@ def _import_texture(assetpath: str, texture_name: str, normal_map: bool) -> bpy.
         texture_image.pixels = datautils.bumpmap_to_normalmap(TEXTURE.texture_data)
     else:
         texture_image.pixels = TEXTURE.texture_data
+
+    texture_image.file_format = 'TARGA'
+    texture_image.pack()
 
     return texture_image
