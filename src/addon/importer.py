@@ -112,21 +112,13 @@ def import_d3dbsp(assetpath: str, filepath: str) -> bool:
         bm.to_mesh(mesh_data)
         bm.free()
 
+        # set normals        
         mesh.create_normals_split()
-
-        for loop_idx, loop in enumerate(mesh.loops):
-            mesh.loops[loop_idx].normal = vertex_normal_buffer[loop_idx]
-
         mesh.validate(clean_customdata=False)
-
-        custom_normals = [0.0] * len(mesh.loops) * 3
-        mesh.loops.foreach_get('normal', custom_normals)
+        mesh.normals_split_custom_set(vertex_normal_buffer)
 
         polygon_count = len(mesh.polygons)
         mesh.polygons.foreach_set('use_smooth', [True] * polygon_count)
-
-        custom_normals = tuple(zip(*(iter(custom_normals),) * 3))
-        mesh.normals_split_custom_set(custom_normals)
         mesh.use_auto_smooth = True
 
     # entities
@@ -430,7 +422,7 @@ def _import_material(assetpath: str, material_name: str) -> bpy.types.Material |
             normal_map_node.location = (-450, -500)
             normal_map_node.space = 'WORLD'
             links.new(texture_node.outputs['Color'], normal_map_node.inputs['Color'])
-            links.new(normal_map_node.outputs['Normal'], principled_bsdf_node.inputs['Normal'])
+            links.new(normal_map_node.outputs['Normal'], principled_bsdf_node.inputs['Tangent'])
 
     textcoord_node = nodes.new('ShaderNodeTexCoord')
     textcoord_node.location = (-1000, -150)

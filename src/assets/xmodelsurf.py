@@ -86,14 +86,13 @@ class XModelSurf:
                     return False
 
                 for _ in range(header.surface_count):
-                    surface_header = file_io.read_fmt(file, 'x3H', collections.namedtuple('surface_header', 'vertex_count, triangle_count, rigged'))
+                    surface_header = file_io.read_fmt(file, 'x3H', collections.namedtuple('surface_header', 'vertex_count, triangle_count, default_bone'))
 
-                    rigged = False
-                    if surface_header.rigged == self.RIGGED:
-                        rigged = True
-
-                    if rigged:
+                    default_bone = 0
+                    if surface_header.default_bone == self.RIGGED:
                         file.read(2) #padding
+                    else:
+                        default_bone = surface_header.default_bone
 
                     vertices = []
                     for _ in range(surface_header.vertex_count):
@@ -119,9 +118,9 @@ class XModelSurf:
                         vertex_tangent = mathutils.Vector((tn[0], tn[1], tn[2]))
 
                         weight_count = 0
-                        vertex_bone = 0
+                        vertex_bone = default_bone
 
-                        if rigged:
+                        if default_bone == 0:
                             weight_count = file_io.read_uchar(file)
                             vertex_bone = file_io.read_ushort(file)
 
