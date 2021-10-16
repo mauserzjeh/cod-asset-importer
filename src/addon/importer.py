@@ -414,15 +414,14 @@ def _import_material(assetpath: str, material_name: str) -> bpy.types.Material |
             links.new(texture_node.outputs['Color'], principled_bsdf_node.inputs['Base Color'])
             links.new(texture_node.outputs['Alpha'], mix_shader_node.inputs['Fac'])
         elif t.type == texture_asset.TEXTURE_TYPE.SPECULARMAP:
-            texture_node.image.colorspace_settings.name = 'Linear'
             links.new(texture_node.outputs['Color'], principled_bsdf_node.inputs['Specular'])
         elif t.type == texture_asset.TEXTURE_TYPE.NORMALMAP:
-            texture_node.image.colorspace_settings.name = 'Linear'
             normal_map_node = nodes.new('ShaderNodeNormalMap')
             normal_map_node.location = (-450, -500)
             normal_map_node.space = 'WORLD'
+            normal_map_node.inputs['Strength'].default_value = 0.2
             links.new(texture_node.outputs['Color'], normal_map_node.inputs['Color'])
-            links.new(normal_map_node.outputs['Normal'], principled_bsdf_node.inputs['Tangent'])
+            links.new(normal_map_node.outputs['Normal'], principled_bsdf_node.inputs['Normal'])
 
     textcoord_node = nodes.new('ShaderNodeTexCoord')
     textcoord_node.location = (-1000, -150)

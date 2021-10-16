@@ -16,7 +16,7 @@ def bumpmap_to_normalmap(color_data: list) -> list:
 
         nr = (a * 2.0 - 1.0) * 0.5 + 0.5
         ng = (r * 2.0 - 1.0) * 0.5 + 0.5
-        nb = 1.0 - (nr ** 2) - (ng ** 2)
+        nb = 1.0 - (nr * nr) - (ng * ng)
         nb = math.sqrt(nb) * 0.5 + 0.5 if nb > 0.0 else 0.0
 
         output[i] = nr
