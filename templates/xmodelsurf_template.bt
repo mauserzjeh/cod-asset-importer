@@ -99,12 +99,12 @@ typedef struct {
 
 typedef struct {
     SetBackColor( cLtYellow);
-    u8 unk1;
+    FSkip( 1 ); // padding
     u16 num_verts;
     u16 num_tris;
-    i16 num_verts2; //if num_verts2 == FF -> physiqued
+    i16 default_bone; //if default_bone == FF -> physiqued
     
-    if(num_verts2 == -1) {
+    if(default_bone == -1) {
         FSkip( 2 ); // padding
         VERT_PHYSIQUED verts[num_verts] <optimize=false>;
     } else {
