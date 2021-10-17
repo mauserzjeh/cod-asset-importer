@@ -5,6 +5,7 @@ import bpy
 import bmesh
 import mathutils
 import math
+import numpy
 
 from .. assets import (
     d3dbsp as d3dbsp_asset,
@@ -40,9 +41,12 @@ def import_d3dbsp(assetpath: str, filepath: str) -> bool:
     map_entities_null.parent = map_null
 
     # import materials
+    failed_materials = []
+    failed_textures = []
     for material in D3DBSP.materials:
-        if not bpy.data.materials.get(material.name):
-            _import_material(assetpath, material.name)
+        if not bpy.data.materials.get(material.name) and material.name not in failed_materials:
+            if not _import_material(assetpath, material.name, failed_textures):
+                failed_materials.append(material.name)
 
     # import surfaces
     for surface in D3DBSP.surfaces:
@@ -129,7 +133,7 @@ def import_d3dbsp(assetpath: str, filepath: str) -> bool:
             bpy.ops.object.select_all(action='DESELECT')
         else:
             entity_path = os.path.join(assetpath, xmodel_asset.XModel.PATH, entity.name)
-            entity_null = import_xmodel(assetpath, entity_path, True)
+            entity_null = import_xmodel(assetpath, entity_path, True, failed_materials, failed_textures)
             
         if entity_null:
             entity_null.parent = map_entities_null
@@ -150,7 +154,7 @@ def import_d3dbsp(assetpath: str, filepath: str) -> bool:
     return True
 
     
-def import_xmodel(assetpath: str, filepath: str, import_skeleton: bool) -> bpy.types.Object | bool:
+def import_xmodel(assetpath: str, filepath: str, import_skeleton: bool, failed_materials: list = None, failed_textures: list = None) -> bpy.types.Object | bool:
     XMODEL = xmodel_asset.XModel()
     if not XMODEL.load(filepath):
         log.error_log(f"Error loading xmodel: {os.path.basename(filepath)}")
@@ -176,9 +180,12 @@ def import_xmodel(assetpath: str, filepath: str, import_skeleton: bool) -> bpy.t
     mesh_objects = []
 
     # import materials
+    failed_materials = [] if failed_materials == None else failed_materials
+    failed_textures = [] if failed_textures == None else failed_textures
     for material in lod0.materials:
-        if not bpy.data.materials.get(material):
-            _import_material(assetpath, material)
+        if not bpy.data.materials.get(material) and material not in failed_materials:
+            if not _import_material(assetpath, material, failed_textures):
+                failed_materials.append(material)
 
     # create mesh
     for i, surface in enumerate(XMODELSURF.surfaces):
@@ -356,7 +363,7 @@ def import_xmodel(assetpath: str, filepath: str, import_skeleton: bool) -> bpy.t
     bpy.ops.object.select_all(action='DESELECT')
     return xmodel_null
 
-def _import_material(assetpath: str, material_name: str) -> bpy.types.Material | bool:
+def _import_material(assetpath: str, material_name: str, failed_textures: list = None) -> bpy.types.Material | bool:
     MATERIAL = material_asset.Material()
     material_file = os.path.join(assetpath, material_asset.Material.PATH, material_name)
     if not MATERIAL.load(material_file):
@@ -398,11 +405,16 @@ def _import_material(assetpath: str, material_name: str) -> bpy.types.Material |
     principled_bsdf_node.width = 200
     links.new(principled_bsdf_node.outputs['BSDF'], mix_shader_node.inputs[2])
 
+    failed_textures = [] if failed_textures == None else failed_textures
     for i, t in enumerate(MATERIAL.textures):
+        if t.name in failed_textures:
+            continue
+
         texture_image = bpy.data.images.get(t.name)
         if texture_image == None:
             texture_image = _import_texture(assetpath, t.name, t.type == texture_asset.TEXTURE_TYPE.NORMALMAP)
             if texture_image == False:
+                failed_textures.append(t.name)
                 continue
 
         texture_node = nodes.new('ShaderNodeTexImage')
@@ -433,14 +445,20 @@ def _import_texture(assetpath: str, texture_name: str, normal_map: bool) -> bpy.
     if not TEXTURE.load(texture_file):
         log.error_log(f"Error loading texture: {texture_name}")
         return False
-    
+
     texture_image = bpy.data.images.new(texture_name, TEXTURE.width, TEXTURE.height, alpha=True)
 
     if normal_map == True:
-        texture_image.pixels = datautils.bumpmap_to_normalmap(TEXTURE.texture_data)
+        pixels = datautils.bumpmap_to_normalmap(TEXTURE.texture_data)
     else:
-        texture_image.pixels = TEXTURE.texture_data
+        pixels = TEXTURE.texture_data
+    
+    # flip the image
+    p = numpy.asarray(pixels)
+    p.shape = (TEXTURE.height, TEXTURE.width, 4)
+    p = numpy.flipud(p)
 
+    texture_image.pixels = p.flatten().tolist()
     texture_image.file_format = 'TARGA'
     texture_image.pack()
 

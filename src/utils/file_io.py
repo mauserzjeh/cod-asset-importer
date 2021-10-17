@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import collections
 import struct
+import traceback
 
 from . import (
     enum,
@@ -32,8 +33,8 @@ def read_fmt(file: bytes, fmt_str: str, namedtuple: collections.namedtuple = Non
     if namedtuple:
         try:
             return namedtuple._make(data_unpacked)
-        except Exception as e:
-            log.error_log(e)
+        except:
+            log.error_log(traceback.format_exc())
 
     if fmt_str in FMT_CHARACTER_CONSTANTS:
         return data_unpacked[0]

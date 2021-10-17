@@ -21,9 +21,8 @@ def decode(input: bytes, width: int, height: int, format: int) -> bytes:
         return _decodeDXT3(input, width, height)
     elif format == DECODE_FORMAT.DXT5:
         return _decodeDXT5(input, width, height)
-    else:
-        log.error_log(f"Unsupported decode format: {format}")
-        return datautils.normalize_color_data(input)
+
+    raise ValueError(f"Unsupported decode format: {format}")
 
 def _unpack_565(color: int) -> tuple:
     r = (color & 0xF800) >> 8

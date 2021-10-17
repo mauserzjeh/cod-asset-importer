@@ -101,6 +101,7 @@ class XModelPart:
                         current_bone.generate_world_transform_by_parent(parent_bone)
 
                 return True
+
         except:
-            traceback.print_exc()
+            log.error_log(traceback.format_exc())
             return False

@@ -60,7 +60,8 @@ class XModel:
                         self.lods[k].materials.append(material)
 
                 return True
+        
         except:
-            traceback.print_exc()
+            log.error_log(traceback.format_exc())
             return False
 

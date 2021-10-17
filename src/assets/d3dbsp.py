@@ -339,6 +339,7 @@ class D3DBSP:
                     self.surfaces.append(self._surface(surface_material, surface_triangles, surface_vertices))
 
                 return True
+
         except:
-            traceback.print_exc()
+            log.error_log(traceback.format_exc())
             return False

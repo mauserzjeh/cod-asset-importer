@@ -109,7 +109,7 @@ class XModelSurf:
                         )
 
                         uv = file_io.read_fmt(file, '2f')
-                        vertex_uv = self._uv(uv[0], uv[1])
+                        vertex_uv = self._uv(uv[0], 1 - uv[1])
 
                         bn = file_io.read_fmt(file, '3f')
                         vertex_binormal = mathutils.Vector((bn[0], bn[1], bn[2]))
@@ -120,7 +120,7 @@ class XModelSurf:
                         weight_count = 0
                         vertex_bone = default_bone
 
-                        if default_bone == 0:
+                        if surface_header.default_bone == self.RIGGED:
                             weight_count = file_io.read_uchar(file)
                             vertex_bone = file_io.read_ushort(file)
 
@@ -173,5 +173,5 @@ class XModelSurf:
                 return True
 
         except:
-            traceback.print_exc()
+            log.error_log(traceback.format_exc())
             return False

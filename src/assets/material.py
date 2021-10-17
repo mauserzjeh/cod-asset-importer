@@ -2,7 +2,8 @@ import os
 import traceback
 
 from .. utils import ( 
-    file_io
+    file_io,
+    log
 )
 
 class Material:
@@ -67,6 +68,7 @@ class Material:
                     file.seek(current_offset, os.SEEK_SET)
 
                 return True
+
         except:
-            traceback.print_exc()
+            log.error_log(traceback.format_exc())
             return False
