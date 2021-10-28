@@ -6,6 +6,7 @@ import bmesh
 import mathutils
 import math
 import numpy
+import time
 
 from .. assets import (
     d3dbsp as d3dbsp_asset,
@@ -24,10 +25,14 @@ from .. utils import (
 
 
 def import_d3dbsp(assetpath: str, filepath: str) -> bool:
+    start_time_d3dbsp = time.monotonic()
+
     D3DBSP = d3dbsp_asset.D3DBSP()
     if not D3DBSP.load(filepath):
         log.error_log(f"Error loading d3dbsp: {os.path.basename(filepath)}")
         return False
+    
+    log.info_log(f"Loaded d3dbsp: {D3DBSP.name}")
 
     map_null = bpy.data.objects.new(D3DBSP.name, None)
     bpy.context.scene.collection.objects.link(map_null)
@@ -41,14 +46,20 @@ def import_d3dbsp(assetpath: str, filepath: str) -> bool:
     map_entities_null.parent = map_null
 
     # import materials
+    start_time_materials = time.monotonic()
+    log.info_log(f"Importing materials for {D3DBSP.name}...")
     failed_materials = []
     failed_textures = []
     for material in D3DBSP.materials:
         if not bpy.data.materials.get(material.name) and material.name not in failed_materials:
             if not _import_material(assetpath, material.name, failed_textures):
                 failed_materials.append(material.name)
+    done_time_materials = time.monotonic()
+    log.info_log(f"Imported materials for {D3DBSP.name} in {round(done_time_materials - start_time_materials, 2)} seconds.")
 
     # import surfaces
+    start_time_surfaces = time.monotonic()
+    log.info_log(f"Creating surfaces for {D3DBSP.name}...")
     for surface in D3DBSP.surfaces:
         name = f"{D3DBSP.name}_geometry"
 
@@ -125,7 +136,12 @@ def import_d3dbsp(assetpath: str, filepath: str) -> bool:
         mesh.polygons.foreach_set('use_smooth', [True] * polygon_count)
         mesh.use_auto_smooth = True
 
+    done_time_surfaces = time.monotonic()
+    log.info_log(f"Created surfaces for {D3DBSP.name} in {round(done_time_surfaces - start_time_surfaces, 2)} seconds.")
+
     # entities
+    start_time_entities = time.monotonic()
+    log.info_log(f"Importing entities for {D3DBSP.name}...")
     unique_entities = {}
     for entity in D3DBSP.entities:
         if entity.name in unique_entities:
@@ -151,16 +167,26 @@ def import_d3dbsp(assetpath: str, filepath: str) -> bool:
             if entity.name not in unique_entities:
                 unique_entities[entity.name] = entity_null
 
+    done_time_entities = time.monotonic()
+    log.info_log(f"Imported entities for {D3DBSP.name} in {round(done_time_entities - start_time_entities,2)} seconds.")
+
+    done_time_d3dbsp = time.monotonic()
+    log.info_log(f"Imported d3dbsp: {D3DBSP.name} in {round(done_time_d3dbsp - start_time_d3dbsp, 2)} seconds.")
+
     return True
 
     
 def import_xmodel(assetpath: str, filepath: str, import_skeleton: bool, failed_materials: list = None, failed_textures: list = None) -> bpy.types.Object | bool:
+    start_time_xmodel = time.monotonic()
+    
     XMODEL = xmodel_asset.XModel()
     if not XMODEL.load(filepath):
         log.error_log(f"Error loading xmodel: {os.path.basename(filepath)}")
         return False
 
     lod0 = XMODEL.lods[0]
+
+    log.info_log(f"Loaded xmodel: {lod0.name}")
 
     XMODELPART = xmodelpart_asset.XModelPart()
     xmodel_part = os.path.join(assetpath, xmodelpart_asset.XModelPart.PATH, lod0.name)
@@ -180,6 +206,8 @@ def import_xmodel(assetpath: str, filepath: str, import_skeleton: bool, failed_m
     mesh_objects = []
 
     # import materials
+    start_time_materials = time.monotonic()
+    log.info_log(f"Importing materials for {lod0.name}...")
     failed_materials = [] if failed_materials == None else failed_materials
     failed_textures = [] if failed_textures == None else failed_textures
     for material in lod0.materials:
@@ -187,7 +215,12 @@ def import_xmodel(assetpath: str, filepath: str, import_skeleton: bool, failed_m
             if not _import_material(assetpath, material, failed_textures):
                 failed_materials.append(material)
 
+    done_time_materials = time.monotonic()
+    log.info_log(f"Imported materials for {lod0.name} in {round(done_time_materials - start_time_materials, 2)} seconds.")
+
     # create mesh
+    start_time_surfaces = time.monotonic()
+    log.info_log(f"Creating surfaces for {lod0.name}...")
     for i, surface in enumerate(XMODELSURF.surfaces):
         mesh = bpy.data.meshes.new(XMODELSURF.name)
         obj = bpy.data.objects.new(XMODELSURF.name, mesh)
@@ -275,9 +308,15 @@ def import_xmodel(assetpath: str, filepath: str, import_skeleton: bool, failed_m
 
         mesh_objects.append(obj)
 
+    done_time_surfaces = time.monotonic()
+    log.info_log(f"Created surfaces for {lod0.name} in {round(done_time_surfaces - start_time_surfaces, 2)} seconds.")
+
     # create skeleton
     skeleton = None
     if import_skeleton and XMODELPART != None and len(XMODELPART.bones) > 1:
+        start_time_skeleton = time.monotonic()
+        log.info_log(f"Creating skeleton for {lod0.name}...")
+
         armature = bpy.data.armatures.new(f"{lod0.name}_armature")
         armature.display_type = 'STICK'
 
@@ -342,6 +381,9 @@ def import_xmodel(assetpath: str, filepath: str, import_skeleton: bool, failed_m
 
         bpy.ops.object.mode_set(mode='OBJECT')
 
+        done_time_skeleton = time.monotonic()
+        log.info_log(f"Created skeleton for {lod0.name} in {round(done_time_skeleton - start_time_skeleton, 2)} seconds.")
+
     for mesh_object in mesh_objects:
         if skeleton == None:
             mesh_object.parent = xmodel_null
@@ -357,18 +399,25 @@ def import_xmodel(assetpath: str, filepath: str, import_skeleton: bool, failed_m
         modifier.use_vertex_groups = True
 
 
-    
     bpy.context.view_layer.update()
     bpy.ops.object.mode_set(mode='OBJECT')
     bpy.ops.object.select_all(action='DESELECT')
+
+    done_time_xmodel = time.monotonic()
+    log.info_log(f"Imported xmodel: {lod0.name} in {round(done_time_xmodel - start_time_xmodel, 2)} seconds.")
+
     return xmodel_null
 
 def _import_material(assetpath: str, material_name: str, failed_textures: list = None) -> bpy.types.Material | bool:
+    start_time_material = time.monotonic()
+
     MATERIAL = material_asset.Material()
     material_file = os.path.join(assetpath, material_asset.Material.PATH, material_name)
     if not MATERIAL.load(material_file):
         log.error_log(f"Error loading material: {material_name}")
         return False
+
+    log.info_log(f"Loaded material: {MATERIAL.name}")
     
     material = bpy.data.materials.new(MATERIAL.name)
     material.use_nodes = True
@@ -405,6 +454,8 @@ def _import_material(assetpath: str, material_name: str, failed_textures: list =
     principled_bsdf_node.width = 200
     links.new(principled_bsdf_node.outputs['BSDF'], mix_shader_node.inputs[2])
 
+    log.info_log(f"Importing textures and creating material for {MATERIAL.name}...")
+
     failed_textures = [] if failed_textures == None else failed_textures
     for i, t in enumerate(MATERIAL.textures):
         if t.name in failed_textures:
@@ -437,14 +488,21 @@ def _import_material(assetpath: str, material_name: str, failed_textures: list =
             links.new(texture_node.outputs['Color'], normal_map_node.inputs['Color'])
             links.new(normal_map_node.outputs['Normal'], principled_bsdf_node.inputs['Normal'])
 
+    done_time_material = time.monotonic()
+    log.info_log(f"Imported material {MATERIAL.name} in {round(done_time_material - start_time_material, 2)} seconds.")
+
     return material
 
 def _import_texture(assetpath: str, texture_name: str, normal_map: bool) -> bpy.types.Texture | bool:
+    start_time_texture = time.monotonic()
+
     TEXTURE = texture_asset.Texture()
     texture_file = os.path.join(assetpath, texture_asset.Texture.PATH, texture_name + '.iwi')
     if not TEXTURE.load(texture_file):
         log.error_log(f"Error loading texture: {texture_name}")
         return False
+
+    log.info_log(f"Loaded texture: {TEXTURE.name}")
 
     texture_image = bpy.data.images.new(texture_name, TEXTURE.width, TEXTURE.height, alpha=True)
 
@@ -461,5 +519,8 @@ def _import_texture(assetpath: str, texture_name: str, normal_map: bool) -> bpy.
     texture_image.pixels = p.flatten().tolist()
     texture_image.file_format = 'TARGA'
     texture_image.pack()
+
+    done_time_texture = time.monotonic()
+    log.info_log(f"Imported texture: {TEXTURE.name} in {round(done_time_texture - start_time_texture, 2)} seconds.")
 
     return texture_image
