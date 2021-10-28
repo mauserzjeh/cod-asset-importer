@@ -159,7 +159,7 @@ class D3DBSP:
             )
             self.uv = D3DBSP._uv(
                 vertex.u,
-                vertex.v
+                1-vertex.v
             )
 
     class _entity:
