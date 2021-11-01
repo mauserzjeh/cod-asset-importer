@@ -23,6 +23,11 @@ operators_list = (
         "class": operators.XModelImporter,
         "text": "Call of Duty model (xmodel)",
         "function": None
+    },
+    {
+        "class": operators.IWiImporter,
+        "text": "Call of Duty texture (iwi)",
+        "function": None
     }
 )
 

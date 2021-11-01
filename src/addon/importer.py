@@ -463,7 +463,7 @@ def _import_material(assetpath: str, material_name: str, failed_textures: list =
 
         texture_image = bpy.data.images.get(t.name)
         if texture_image == None:
-            texture_image = _import_texture(assetpath, t.name, t.type == texture_asset.TEXTURE_TYPE.NORMALMAP)
+            texture_image = import_texture(assetpath, t.name, t.type == texture_asset.TEXTURE_TYPE.NORMALMAP)
             if texture_image == False:
                 failed_textures.append(t.name)
                 continue
@@ -493,11 +493,15 @@ def _import_material(assetpath: str, material_name: str, failed_textures: list =
 
     return material
 
-def _import_texture(assetpath: str, texture_name: str, normal_map: bool) -> bpy.types.Texture | bool:
+def import_texture(assetpath: str, texture_name: str, normal_map: bool) -> bpy.types.Texture | bool:
     start_time_texture = time.monotonic()
 
     TEXTURE = texture_asset.Texture()
-    texture_file = os.path.join(assetpath, texture_asset.Texture.PATH, texture_name + '.iwi')
+    
+    if not texture_name.endswith('.iwi'):
+        texture_name += '.iwi'
+
+    texture_file = os.path.join(assetpath, texture_asset.Texture.PATH, texture_name)
     if not TEXTURE.load(texture_file):
         log.error_log(f"Error loading texture: {texture_name}")
         return False
