@@ -8,21 +8,22 @@ import os
 import traceback
 
 from .. utils import (
+    enum,
     file_io,
     log
 )
+
+class XModelType(metaclass = enum.BaseEnum):
+    RIGID = '0'
+    ANIMATED = '1'
+    VIEWMODEL = '2'
+    PLAYERBODY = '3'
+    VIEWHANDS = '4'
 
 class XModelPart:
     
     PATH = 'xmodelparts'
     VERSION = 20
-    MODEL_TYPES = {
-        0: 'rigid',
-        1: 'animated',
-        2: 'viewmodel',
-        3: 'playerbody',
-        4: 'viewhands'
-    }
     ROTATION_DIVISOR = 32768.0
     VIEWHANDS_BONE_POSITIONS = {
         "tag_view":         mathutils.Vector((0.0,              0.0,            0.0)),
@@ -105,14 +106,16 @@ class XModelPart:
 
     # --------------------------------------------------------------------------------------------
     
-    __slots__ = ('name', 'bones')
+    __slots__ = ('name', 'model_type', 'bones')
 
     def __init__(self) -> None:
         self.name = ''
+        self.model_type = 0
         self.bones = []
     
     def load(self, xmodel_part: str) -> bool:
         self.name = os.path.basename(xmodel_part)
+        self.model_type = self.name[-1]
         try:
             with open(xmodel_part, 'rb') as file:
                 header = file_io.read_fmt(file, '3H', collections.namedtuple('header', 'version, bone_count, root_bone_count'))
@@ -153,10 +156,11 @@ class XModelPart:
                     current_bone = self.bones[bone_index]
                     current_bone.name = bone_name
 
-                    if bone_name in self.VIEWHANDS_BONE_POSITIONS:
-                        viewmodel_position = self.VIEWHANDS_BONE_POSITIONS[bone_name]
-                        current_bone.local_transform.position = viewmodel_position / 2.54
-                        current_bone.world_transform.position = viewmodel_position / 2.54
+                    if self.model_type == XModelType.VIEWHANDS and  bone_name in self.VIEWHANDS_BONE_POSITIONS:
+                        local_viewmodel_position = self.VIEWHANDS_BONE_POSITIONS[bone_name]
+                        world_viewmodel_position = copy.deepcopy(local_viewmodel_position)
+                        current_bone.local_transform.position = local_viewmodel_position / 2.54
+                        current_bone.world_transform.position = world_viewmodel_position / 2.54
 
                     if current_bone.parent > -1:
                         parent_bone = self.bones[current_bone.parent]
