@@ -6,6 +6,8 @@ Blender add-on for importing various Call of Duty assets via the game files.
 ### D3DBSP
 <img src="./examples/d3dbsp1.png?raw=true" width="500" height="auto"></img>
 <br/>
+(overlapping faces and some of the materials need fixes)
+<br/>
 <br/>
 
 ### XModel
