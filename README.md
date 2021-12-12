@@ -4,20 +4,20 @@ Blender add-on for importing various Call of Duty assets via the game files.
 
 ## Examples
 ### D3DBSP
-<img src="./examples/d3dbsp1.png" width="500" height="auto"></img>
+<img src="./examples/d3dbsp1.png?raw=true" width="500" height="auto"></img>
 <br/>
 <br/>
 <br/>
 
 ### XModel
-<img src="./examples/xmodel1.png" width="500" height="auto"></img>
+<img src="./examples/xmodel1.png?raw=true" width="500" height="auto"></img>
 <br/>
 <br/>
 <br/>
 
 ### IWi
-<img src="./examples/iwi1.png" width="250" height="auto"></img>
-<img src="./examples/iwi2.png" width="250" height="auto"></img>
+<img src="./examples/iwi1.png?raw=true" width="250" height="auto"></img>
+<img src="./examples/iwi2.png?raw=true" width="250" height="auto"></img>
 <br/>
 <br/>
 <br/>
