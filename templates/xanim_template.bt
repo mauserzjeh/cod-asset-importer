@@ -1,0 +1,29 @@
+//--------------------------------------
+//--- 010 Editor v6.0.1 Binary Template
+//
+// File:
+// Author:
+// Revision:
+// Purpose:
+//--------------------------------------
+LittleEndian();
+
+typedef float f32;
+typedef double f64;
+typedef unsigned char u8;
+typedef unsigned short u16;
+typedef unsigned int u32;
+typedef char i8;
+typedef short i16;
+typedef int i32;
+
+typedef struct {
+    u16 version;
+    u16 frame_count;
+    u16 bone_count;
+    u8 flags;
+    u16 framerate;
+
+} XANIM;
+
+XANIM x;
