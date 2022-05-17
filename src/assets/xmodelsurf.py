@@ -109,7 +109,7 @@ class XModelSurf:
                         )
 
                         uv = file_io.read_fmt(file, '2f')
-                        vertex_uv = self._uv(uv[0], 1 - uv[1])
+                        vertex_uv = self._uv(uv[0], 1 - uv[1]) # flip UV
 
                         bn = file_io.read_fmt(file, '3f')
                         vertex_binormal = mathutils.Vector((bn[0], bn[1], bn[2]))

@@ -157,6 +157,8 @@ class D3DBSP:
                 vertex.blue / 255,
                 vertex.alpha / 255
             )
+
+            # flip UV
             self.uv = D3DBSP._uv(
                 vertex.u,
                 1-vertex.v
