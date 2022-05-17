@@ -7,6 +7,7 @@ import mathutils
 import math
 import numpy
 import time
+import subprocess
 
 from .. assets import (
     d3dbsp as d3dbsp_asset,
@@ -543,35 +544,46 @@ def import_texture(assetpath: str, texture_name: str, normal_map: bool) -> bpy.t
     start_time_texture = time.monotonic()
 
     TEXTURE = texture_asset.Texture()
-    
-    if not texture_name.endswith('.iwi'):
-        texture_name += '.iwi'
-
-    # TODO 
-    # iwi2dds = os.path.abspath(os.path.join(os.path.dirname(__file__), os.pardir, 'bin', 'iwi2dds.exe'))
-    # result = subprocess.run((iwi2dds, '-i', texture))
 
     texture_file = os.path.join(assetpath, texture_asset.Texture.PATH, texture_name)
-    if not TEXTURE.load(texture_file):
-        log.error_log(f"Error loading texture: {texture_name}")
-        return False
 
-    log.info_log(f"Loaded texture: {TEXTURE.name}")
+    # if no .dds exists then try to convert it on the fly via iwi2dds 
+    if not os.path.isfile(texture_file + '.dds'):
+        iwi2dds = os.path.abspath(os.path.join(os.path.dirname(__file__), os.pardir, 'bin', 'iwi2dds.exe'))
+        if os.path.isfile(iwi2dds):
+            result = subprocess.run((iwi2dds, '-i', texture_file + '.iwi'))
+            if result.returncode != 0:
+                log.error_log(result.stderr)
 
-    texture_image = bpy.data.images.new(texture_name, TEXTURE.width, TEXTURE.height, alpha=True)
-    pixels = TEXTURE.texture_data
+    try:
+        # try to load .dds 
+        texture_image = bpy.data.images.load(texture_file + '.dds', check_existing=True)
+        log.info_log(f"Loaded texture: {texture_name}")
+        pixels = texture_image.pixels
+
+    except:
+
+        # if error happens when loading the dds just fall back to .iwi parsing 
+        if not TEXTURE.load(texture_file + '.iwi'):
+            log.error_log(f"Error loading texture: {texture_name}")
+            return False
+
+        log.info_log(f"Loaded texture: {texture_name}")
+
+        texture_image = bpy.data.images.new(texture_name, TEXTURE.width, TEXTURE.height, alpha=True)
+        pixels = TEXTURE.texture_data
     
+
     # flip the image
     p = numpy.asarray(pixels)
     p.shape = (TEXTURE.height, TEXTURE.width, 4)
     p = numpy.flipud(p)
-    pixels = p.flatten().tolist()
 
-    texture_image.pixels = pixels
+    texture_image.pixels = p.flatten().tolist()
     texture_image.file_format = 'TARGA'
     texture_image.pack()
 
     done_time_texture = time.monotonic()
-    log.info_log(f"Imported texture: {TEXTURE.name} in {round(done_time_texture - start_time_texture, 2)} seconds.")
+    log.info_log(f"Imported texture: {texture_name} in {round(done_time_texture - start_time_texture, 2)} seconds.")
 
     return texture_image
