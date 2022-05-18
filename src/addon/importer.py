@@ -472,7 +472,7 @@ def _import_material(assetpath: str, material_name: str, failed_textures: list =
 
         texture_image = bpy.data.images.get(t.name)
         if texture_image == None:
-            texture_image = import_texture(assetpath, t.name, t.type == texture_asset.TEXTURE_TYPE.NORMALMAP)
+            texture_image = import_texture(assetpath, t.name)
             if texture_image == False:
                 failed_textures.append(t.name)
                 continue
@@ -557,7 +557,7 @@ importing logic / priorities
     
     3. if none of the above work, fallback to raw .iwi loading which is very slow with python
 """
-def import_texture(assetpath: str, texture_name: str, normal_map: bool) -> bpy.types.Texture | bool:
+def import_texture(assetpath: str, texture_name: str) -> bpy.types.Texture | bool:
     start_time_texture = time.monotonic()
 
     TEXTURE = texture_asset.Texture()
