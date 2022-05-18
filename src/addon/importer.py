@@ -549,13 +549,13 @@ def _import_material(assetpath: str, material_name: str, failed_textures: list =
 import texture file
 
 importing logic / priorities
-    -> if .dds exist import it
+    1. if .dds exist import it
     
-    -> if .dds does not exists
-        - then try convert the .iwi to .dds
-        - import .dds if conversion was succesful
+    2. if .dds does not exists
+        a. then try convert the .iwi to .dds
+        b. import .dds if conversion was succesful
     
-    -> if none of the above work, fallback to raw .iwi loading which is very slow with python
+    3. if none of the above work, fallback to raw .iwi loading which is very slow with python
 """
 def import_texture(assetpath: str, texture_name: str, normal_map: bool) -> bpy.types.Texture | bool:
     start_time_texture = time.monotonic()
