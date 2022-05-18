@@ -6,6 +6,9 @@ from .. utils import (
     log
 )
 
+"""
+Material class represents a material structure
+"""
 class Material:
 
     PATH = 'materials'

@@ -9,11 +9,17 @@ from .. utils import (
     log
 )
 
+""""
+Texture usage constants
+"""
 class TEXTURE_USAGE(metaclass = enum.BaseEnum):
     COLOR = 0x00
     DEFAULT = 0x01
     SKYBOX = 0x05
 
+"""
+Texture format constants
+"""
 class TEXTURE_FORMAT(metaclass = enum.BaseEnum):
     ARGB32 = 0x01
     RGB24 = 0x02
@@ -23,12 +29,18 @@ class TEXTURE_FORMAT(metaclass = enum.BaseEnum):
     DXT3 = 0x0C
     DXT5 = 0x0D
 
+"""
+Texture type constants
+"""
 class TEXTURE_TYPE(metaclass = enum.BaseEnum):
     COLORMAP = 'colorMap'
     DETAILMAP = 'detailMap'
     NORMALMAP = 'normalMap'
     SPECULARMAP = 'specularMap'
 
+"""
+Texture class represents a texture structure 
+"""
 class Texture:
 
     MAGIC = 'IWi'

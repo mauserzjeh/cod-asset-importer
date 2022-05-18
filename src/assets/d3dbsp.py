@@ -14,6 +14,9 @@ from .. utils import (
     log,
 )
 
+"""
+Lump constants
+"""
 class LUMPS(metaclass = enum.BaseEnum):
     MATERIALS = 0
     LIGHTMAPS = 1
@@ -49,18 +52,27 @@ class LUMPS(metaclass = enum.BaseEnum):
     ENTITIES = 37
     PATHS = 38
 
+"""
+Lump size fmt strings
+"""
 class LUMPSIZES(metaclass = enum.BaseEnum):
     MATERIALS = '64sQ'
     TRIANGLESOUPS = '2HI2HI'
     VERTICES = '3f3f4B2f32x'
     TRIANGLES = '3H'
 
+"""
+Entity key constants
+"""
 class ENTITY_KEYS(metaclass = enum.BaseEnum):
     MODEL = 'model'
     ANGLES = 'angles'
     ORIGIN = 'origin'
     MODELSCALE = 'modelscale'
 
+"""
+D3DBSP class representing a D3DBSP structure
+"""
 class D3DBSP:
 
     PATH = 'maps'
@@ -255,6 +267,7 @@ class D3DBSP:
             if ENTITY_KEYS.MODEL not in entity:
                 continue
             
+            # skip everything that is not a valid xmodel 
             name = entity[ENTITY_KEYS.MODEL]
             valid = re.match('^xmodel\/(.*)', name)
             if not valid:
@@ -319,6 +332,7 @@ class D3DBSP:
                 entities_lump = lumps[LUMPS.ENTITIES]
                 self.entities = self._read_entities(file, entities_lump)
 
+                # create surfaces from triangles and vertices
                 for trianglesoup in trianglesoups:
                     surface_material = self.materials[trianglesoup.material_idx].name
                     surface_triangles = []

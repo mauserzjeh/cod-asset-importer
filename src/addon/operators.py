@@ -4,6 +4,9 @@ import os
 
 from . import importer
 
+"""
+Imports .d3dbsp file into blender
+"""
 class D3DBSPImporter(bpy.types.Operator):
     bl_idname = 'cod_asset_importer.d3dbsp_importer'
     bl_label = 'Import'
@@ -22,6 +25,9 @@ class D3DBSPImporter(bpy.types.Operator):
         bpy.context.window_manager.fileselect_add(self)
         return {'RUNNING_MODAL'}
 
+"""
+Imports xmodel file into blender
+"""
 class XModelImporter(bpy.types.Operator):
     bl_idname = 'cod_asset_importer.xmodel_importer'
     bl_label = 'Import'

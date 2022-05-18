@@ -1,4 +1,6 @@
-
+"""
+Basic enum class with custom functionality
+"""
 class BaseEnum(type):
     def __iter__(self):
         _attr_values = []

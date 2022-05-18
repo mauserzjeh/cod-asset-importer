@@ -8,6 +8,7 @@ import math
 import numpy
 import time
 import subprocess
+import traceback
 
 from .. assets import (
     d3dbsp as d3dbsp_asset,
@@ -24,7 +25,9 @@ from .. utils import (
     log
 )
 
-
+"""
+Import a .d3dbsp file
+"""
 def import_d3dbsp(assetpath: str, filepath: str) -> bool:
     start_time_d3dbsp = time.monotonic()
 
@@ -176,7 +179,9 @@ def import_d3dbsp(assetpath: str, filepath: str) -> bool:
 
     return True
 
-    
+"""
+import an xmodel
+""" 
 def import_xmodel(assetpath: str, filepath: str, import_skeleton: bool, failed_materials: list = None, failed_textures: list = None) -> bpy.types.Object | bool:
     start_time_xmodel = time.monotonic()
     
@@ -209,8 +214,8 @@ def import_xmodel(assetpath: str, filepath: str, import_skeleton: bool, failed_m
     # import materials
     start_time_materials = time.monotonic()
     log.info_log(f"Importing materials for {lod0.name}...")
-    failed_materials = [] if failed_materials == None else failed_materials
-    failed_textures = [] if failed_textures == None else failed_textures
+    failed_materials = [] if failed_materials == None else failed_materials # cache
+    failed_textures = [] if failed_textures == None else failed_textures # cache
     for material in lod0.materials:
         if not bpy.data.materials.get(material) and material not in failed_materials:
             if not _import_material(assetpath, material, failed_textures):
@@ -409,6 +414,9 @@ def import_xmodel(assetpath: str, filepath: str, import_skeleton: bool, failed_m
 
     return xmodel_null
 
+"""
+import material and create node setup
+"""
 def _import_material(assetpath: str, material_name: str, failed_textures: list = None) -> bpy.types.Material | bool:
     start_time_material = time.monotonic()
 
@@ -532,14 +540,23 @@ def _import_material(assetpath: str, material_name: str, failed_textures: list =
             links.new(texture_node.outputs[blenderutils.BLENDER_SHADERNODES.OUTPUT_TEXIMAGE_ALPHA], math_power_node2.inputs[blenderutils.BLENDER_SHADERNODES.INPUT_MATH_POWER_BASE])
             links.new(texture_node.outputs[blenderutils.BLENDER_SHADERNODES.OUTPUT_TEXIMAGE_ALPHA], combine_rgb_node.inputs[blenderutils.BLENDER_SHADERNODES.INPUT_COMBINERGB_R])
 
-
-
-
     done_time_material = time.monotonic()
     log.info_log(f"Imported material {MATERIAL.name} in {round(done_time_material - start_time_material, 2)} seconds.")
 
     return material
 
+"""
+import texture file
+
+importing logic / priorities
+    -> if .dds exist import it
+    
+    -> if .dds does not exists
+        - then try convert the .iwi to .dds
+        - import .dds if conversion was succesful
+    
+    -> if none of the above work, fallback to raw .iwi loading which is very slow with python
+"""
 def import_texture(assetpath: str, texture_name: str, normal_map: bool) -> bpy.types.Texture | bool:
     start_time_texture = time.monotonic()
 
@@ -551,9 +568,12 @@ def import_texture(assetpath: str, texture_name: str, normal_map: bool) -> bpy.t
     if not os.path.isfile(texture_file + '.dds'):
         iwi2dds = os.path.abspath(os.path.join(os.path.dirname(__file__), os.pardir, 'bin', 'iwi2dds.exe'))
         if os.path.isfile(iwi2dds):
-            result = subprocess.run((iwi2dds, '-i', texture_file + '.iwi'))
-            if result.returncode != 0:
-                log.error_log(result.stderr)
+            try:
+                result = subprocess.run((iwi2dds, '-i', texture_file + '.iwi'))
+                if result.returncode != 0:
+                    log.error_log(result.stderr)
+            except:
+                log.error_log(traceback.format_exc())
 
     try:
         # try to load .dds 
@@ -563,7 +583,7 @@ def import_texture(assetpath: str, texture_name: str, normal_map: bool) -> bpy.t
 
     except:
 
-        # if error happens when loading the dds just fall back to .iwi parsing 
+        # if error happens when converting or loading the dds just fall back to .iwi parsing 
         if not TEXTURE.load(texture_file + '.iwi'):
             log.error_log(f"Error loading texture: {texture_name}")
             return False
@@ -573,13 +593,12 @@ def import_texture(assetpath: str, texture_name: str, normal_map: bool) -> bpy.t
         texture_image = bpy.data.images.new(texture_name, TEXTURE.width, TEXTURE.height, alpha=True)
         pixels = TEXTURE.texture_data
     
+        # flip the image
+        p = numpy.asarray(pixels)
+        p.shape = (TEXTURE.height, TEXTURE.width, 4)
+        p = numpy.flipud(p)
+        texture_image.pixels = p.flatten().tolist()
 
-    # flip the image
-    p = numpy.asarray(pixels)
-    p.shape = (TEXTURE.height, TEXTURE.width, 4)
-    p = numpy.flipud(p)
-
-    texture_image.pixels = p.flatten().tolist()
     texture_image.file_format = 'TARGA'
     texture_image.pack()
 

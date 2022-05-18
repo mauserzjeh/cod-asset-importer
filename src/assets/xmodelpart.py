@@ -13,6 +13,9 @@ from .. utils import (
     log
 )
 
+"""
+XModel type constants
+"""
 class XModelType(metaclass = enum.BaseEnum):
     RIGID = '0'
     ANIMATED = '1'
@@ -20,6 +23,9 @@ class XModelType(metaclass = enum.BaseEnum):
     PLAYERBODY = '3'
     VIEWHANDS = '4'
 
+"""
+XModelPart represents xmodelpart structure
+"""
 class XModelPart:
     
     PATH = 'xmodelparts'
@@ -131,6 +137,8 @@ class XModelPart:
                     self.bones.append(bone)
 
                 for _ in range(header.bone_count):
+
+                    # read raw bone data
                     raw_bone_data = file_io.read_fmt(file, 'B3f3h', collections.namedtuple('raw_bone_data', 'parent, px, py, pz, rx, ry, rz'))
                     
                     qx = raw_bone_data.rx / self.ROTATION_DIVISOR
@@ -138,8 +146,10 @@ class XModelPart:
                     qz = raw_bone_data.rz / self.ROTATION_DIVISOR
                     qw = math.sqrt((1 - (qx ** 2) - (qy ** 2) - (qz ** 2)))
 
+                    # generate rotation
                     rotation = mathutils.Quaternion((qw, qx, qy, qz))
 
+                    # generate positioon
                     position = mathutils.Vector((
                         raw_bone_data.px,
                         raw_bone_data.py,
@@ -156,12 +166,14 @@ class XModelPart:
                     current_bone = self.bones[bone_index]
                     current_bone.name = bone_name
 
+                    # set viewmodel positions
                     if self.model_type == XModelType.VIEWHANDS and  bone_name in self.VIEWHANDS_BONE_POSITIONS:
                         local_viewmodel_position = self.VIEWHANDS_BONE_POSITIONS[bone_name]
                         world_viewmodel_position = copy.deepcopy(local_viewmodel_position)
                         current_bone.local_transform.position = local_viewmodel_position / 2.54
                         current_bone.world_transform.position = world_viewmodel_position / 2.54
 
+                    # transform bones by their parents to the correct place
                     if current_bone.parent > -1:
                         parent_bone = self.bones[current_bone.parent]
                         current_bone.generate_world_transform_by_parent(parent_bone)

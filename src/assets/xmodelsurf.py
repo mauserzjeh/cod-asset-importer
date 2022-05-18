@@ -11,7 +11,9 @@ from .. utils import (
     log,
 )
 
-
+"""
+XModelSurf class represents xmodelsurf structure
+"""
 class XModelSurf:
 
     PATH = 'xmodelsurfs'
@@ -142,6 +144,8 @@ class XModelSurf:
                                 vertex_weights[0].influence -= weight_influence
                                 vertex_weights.append(self._weight(weight_bone, weight_influence))
 
+                        # if the xmodel is a skeletal mesh then transform vertices
+                        # by their bones so they wont be distorted
                         if xmodel_part != None:
                             xmodel_part_bone = xmodel_part.bones[vertex_bone]
                             

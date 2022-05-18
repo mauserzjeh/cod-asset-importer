@@ -4,16 +4,20 @@ import io
 import struct
 
 from . import (
-    data as datautils,
     enum,
-    log,
 )
 
+"""
+Supported decode formats
+"""
 class DECODE_FORMAT(metaclass = enum.BaseEnum):
     DXT1 = 0x0B
     DXT3 = 0x0C
     DXT5 = 0x0D
 
+"""
+Decode according to format
+"""
 def decode(input: bytes, width: int, height: int, format: int) -> bytes:
     if format == DECODE_FORMAT.DXT1:
         return _decodeDXT1(input, width, height)
@@ -24,6 +28,9 @@ def decode(input: bytes, width: int, height: int, format: int) -> bytes:
 
     raise ValueError(f"Unsupported decode format: {format}")
 
+"""
+Unpack an 565 color into its components
+"""
 def _unpack_565(color: int) -> tuple:
     r = (color & 0xF800) >> 8
     g = (color & 0x07E0) >> 3
@@ -33,9 +40,15 @@ def _unpack_565(color: int) -> tuple:
     b |= b >> 5
     return r, g, b
 
+"""
+Pack an RGBA color into a single integer
+"""
 def _pack_rgba(r: int, g: int, b: int, a: int) -> int:
     return (r << 16) | (g << 8) | b | (a << 24)
 
+"""
+Unpack RGBA color components from a single integer
+"""
 def _unpack_rgba(c: int) -> tuple:    
     b = c & 0xFF
     g = (c >> 8) & 0xFF
@@ -44,15 +57,24 @@ def _unpack_rgba(c: int) -> tuple:
     
     return r,g,b,a
 
+"""
+Create a new color
+"""
 def _c2(component0: int, component1: int, color0: int, color1: int) -> int:
     if color0 > color1:
         return (2 * component0 + component1) // 3
     else:
         return (component0 + component1) // 2
 
+"""
+Create a new color
+"""
 def _c3(component0: int, component1: int) -> int:
     return (component0 + 2 * component1) // 3
 
+"""
+Decode DXT1 encoding
+"""
 def _decodeDXT1(input: bytes, width: int, height: int) -> tuple:
     input = io.BytesIO(input)
     output = [0.0] * (width * height * 4)
@@ -95,6 +117,10 @@ def _decodeDXT1(input: bytes, width: int, height: int) -> tuple:
 
     return tuple(output)
 
+
+"""
+Decode a DXT3 encoding
+"""
 def _decodeDXT3(input: bytes, width: int, height: int) -> tuple:
     input = io.BytesIO(input)
     output = [0.0] * (width * height * 4)
@@ -145,6 +171,9 @@ def _decodeDXT3(input: bytes, width: int, height: int) -> tuple:
 
     return tuple(output)
 
+"""
+Decode DXT5 encoding
+"""
 def _decodeDXT5(input: bytes, width: int, height: int) -> tuple:
     input = io.BytesIO(input)
     output = [0.0] * (width * height * 4)
