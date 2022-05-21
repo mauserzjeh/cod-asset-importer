@@ -180,6 +180,6 @@ class XModelPart:
 
                 return True
 
-        except:
-            log.error_log(traceback.format_exc())
+        except Exception as e:
+            log.error_log(e)
             return False

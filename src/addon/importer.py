@@ -569,11 +569,12 @@ def import_texture(assetpath: str, texture_name: str) -> bpy.types.Texture | boo
         iwi2dds = os.path.abspath(os.path.join(os.path.dirname(__file__), os.pardir, 'bin', 'iwi2dds.exe'))
         if os.path.isfile(iwi2dds):
             try:
-                result = subprocess.run((iwi2dds, '-i', texture_file + '.iwi'))
+                result = subprocess.run((iwi2dds, '-i', texture_file + '.iwi'), capture_output=True)
                 if result.returncode != 0:
-                    log.error_log(result.stderr)
-            except:
-                log.error_log(traceback.format_exc())
+                    log.error_log(result.stderr.decode('utf-8'))
+
+            except Exception as e:
+                log.error_log(e)
 
     try:
         # try to load .dds 

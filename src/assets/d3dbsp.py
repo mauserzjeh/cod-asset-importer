@@ -75,7 +75,6 @@ D3DBSP class representing a D3DBSP structure
 """
 class D3DBSP:
 
-    PATH = 'maps'
     MAGIC = 'IBSP'
     VERSION = 4
 
@@ -118,7 +117,7 @@ class D3DBSP:
 
         def read(self, file) -> None:
             material = file_io.read_fmt(file, LUMPSIZES.MATERIALS, collections.namedtuple('material', 'name, flag'))
-            self.name = material.name.rstrip(b'\x00').decode('ascii')
+            self.name = material.name.rstrip(b'\x00').decode('utf-8')
             self.flag = material.flag
 
     class _trianglesoup:
@@ -256,7 +255,7 @@ class D3DBSP:
         entity_data = file.read(entities_lump.length)
         
         # create a valid json string and parse it
-        entity_string = entity_data.rstrip(b'\x00').decode('ascii')
+        entity_string = entity_data.rstrip(b'\x00').decode('utf-8')
         entity_string = f'[\n{entity_string}]'
         entity_string = re.sub(r'\}\n\{\n', '},\n{\n', entity_string)
         entity_string = re.sub(r'\"\n\"', '",\n"', entity_string)
@@ -304,7 +303,7 @@ class D3DBSP:
         try:
             with open(map, 'rb') as file:
                 header = file_io.read_fmt(file, '4si', collections.namedtuple('header', 'magic, version'))
-                header_magic = header.magic.decode('ascii')
+                header_magic = header.magic.decode('utf-8')
                 if header_magic != self.MAGIC and header.version != self.VERSION:
                     log.info_log(f"{header_magic}{header.version} is not supported")
                     return False
@@ -356,6 +355,6 @@ class D3DBSP:
 
                 return True
 
-        except:
-            log.error_log(traceback.format_exc())
+        except Exception as e:
+            log.error_log(e)
             return False

@@ -62,7 +62,7 @@ class Texture:
         try:
             with open(texture, 'rb') as file:
                 header = file_io.read_fmt(file, '3sBBBHH2xIIII', collections.namedtuple('header', 'magic, version, format, usage, width, height, filesize, texture_offset, mipmap1_offset, mipmap2_offset'))
-                header_magic = header.magic.decode('ascii')
+                header_magic = header.magic.decode('utf-8')
                 if header_magic != self.MAGIC and header.version != self.VERSION:
                     log.info_log(f"{header_magic}{header.version} is not supported")
                     return False
@@ -80,6 +80,6 @@ class Texture:
                 self.texture_data = decode.decode(raw_texture_data, self.width, self.height, self.format)
                 return True
         
-        except:
-            log.error_log(traceback.format_exc())
+        except Exception as e:
+            log.error_log(e)
             return False

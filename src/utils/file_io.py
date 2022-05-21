@@ -39,8 +39,8 @@ def read_fmt(file: bytes, fmt_str: str, namedtuple: collections.namedtuple = Non
     if namedtuple:
         try:
             return namedtuple._make(data_unpacked)
-        except:
-            log.error_log(traceback.format_exc())
+        except Exception as e:
+            log.error_log(e)
 
     if fmt_str in FMT_CHARACTER_CONSTANTS:
         return data_unpacked[0]
@@ -134,4 +134,4 @@ def read_nullstr(file: bytes) -> str:
     while(character != b'\x00'):
         character = file.read(1)
         string += character
-    return string.rstrip(b'\x00').decode('ascii')
+    return string.rstrip(b'\x00').decode('utf-8')
