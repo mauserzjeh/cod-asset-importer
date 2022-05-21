@@ -17,7 +17,7 @@ Write a log message as a certain type
 def _log(message: str, log_type: str = LOG_CONSTANTS.INFO) -> None:
     caller = inspect.getframeinfo(inspect.stack()[2][0])
     file_base_name = os.path.basename(caller.filename)
-    msg = f' {file_base_name}:{caller.lineno} ' + message 
+    msg = f' {file_base_name}:{caller.lineno} ' + message.removesuffix('\n') 
     if log_type == LOG_CONSTANTS.ERROR:
         msg = LOG_CONSTANTS.ERROR + msg
 
