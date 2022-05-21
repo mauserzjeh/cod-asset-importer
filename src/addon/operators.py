@@ -17,7 +17,10 @@ class D3DBSPImporter(bpy.types.Operator):
     filter_glob : bpy.props.StringProperty(default='*.d3dbsp', options={'HIDDEN'})
 
     def execute(self, context):
-        assetpath = os.path.abspath(os.path.join(self.filepath, os.pardir, os.pardir))
+        assetpath = os.path.abspath(os.path.join(os.path.dirname(self.filepath), os.pardir))
+        if os.path.basename(self.filepath).startswith("mp_"):
+            assetpath = os.path.abspath(os.path.join(os.path.dirname(self.filepath), os.pardir, os.pardir))
+            
         importer.import_d3dbsp(assetpath, self.filepath)
         return {'FINISHED'}
 
@@ -35,7 +38,7 @@ class XModelImporter(bpy.types.Operator):
 
     filepath : bpy.props.StringProperty(subtype='FILE_PATH')
     def execute(self, context):
-        assetpath = os.path.abspath(os.path.join(self.filepath, os.pardir, os.pardir))
+        assetpath = os.path.abspath(os.path.join(os.path.dirname(self.filepath), os.pardir))
         importer.import_xmodel(assetpath, self.filepath, True)
         return {'FINISHED'}
 
