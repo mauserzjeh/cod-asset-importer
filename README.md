@@ -1,5 +1,5 @@
 ![GitHub release (latest by date)](https://img.shields.io/github/v/release/mauserzjeh/cod-asset-importer?style=flat-square) 
-![GitHub all releases](https://img.shields.io/github/downloads/mauserzjeh/cod-asset-importer/total?style=flat-square)
+![GitHub all releases](https://img.shields.io/github/downloads/mauserzjeh/cod-asset-importer/total?color=green&style=flat-square)
 
 # Call of Duty asset importer
 Blender add-on for importing various Call of Duty assets via the game files.
