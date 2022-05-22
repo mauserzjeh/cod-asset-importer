@@ -7,6 +7,8 @@ import mathutils
 import math
 import numpy
 import time
+import subprocess
+import traceback
 
 from .. assets import (
     d3dbsp as d3dbsp_asset,
@@ -23,7 +25,9 @@ from .. utils import (
     log
 )
 
-
+"""
+Import a .d3dbsp file
+"""
 def import_d3dbsp(assetpath: str, filepath: str) -> bool:
     start_time_d3dbsp = time.monotonic()
 
@@ -175,7 +179,9 @@ def import_d3dbsp(assetpath: str, filepath: str) -> bool:
 
     return True
 
-    
+"""
+import an xmodel
+""" 
 def import_xmodel(assetpath: str, filepath: str, import_skeleton: bool, failed_materials: list = None, failed_textures: list = None) -> bpy.types.Object | bool:
     start_time_xmodel = time.monotonic()
     
@@ -208,8 +214,8 @@ def import_xmodel(assetpath: str, filepath: str, import_skeleton: bool, failed_m
     # import materials
     start_time_materials = time.monotonic()
     log.info_log(f"Importing materials for {lod0.name}...")
-    failed_materials = [] if failed_materials == None else failed_materials
-    failed_textures = [] if failed_textures == None else failed_textures
+    failed_materials = [] if failed_materials == None else failed_materials # cache
+    failed_textures = [] if failed_textures == None else failed_textures # cache
     for material in lod0.materials:
         if not bpy.data.materials.get(material) and material not in failed_materials:
             if not _import_material(assetpath, material, failed_textures):
@@ -408,6 +414,9 @@ def import_xmodel(assetpath: str, filepath: str, import_skeleton: bool, failed_m
 
     return xmodel_null
 
+"""
+import material and create node setup
+"""
 def _import_material(assetpath: str, material_name: str, failed_textures: list = None) -> bpy.types.Material | bool:
     start_time_material = time.monotonic()
 
@@ -437,22 +446,22 @@ def _import_material(assetpath: str, material_name: str, failed_textures: list =
             output_node = node
 
     if output_node == None:
-        output_node = nodes.new('ShaderNodeOutputMaterial')
+        output_node = nodes.new(blenderutils.BLENDER_SHADERNODES.SHADERNODE_OUTPUTMATERIAL)
 
     output_node.location = (300, 0)
 
-    mix_shader_node = nodes.new('ShaderNodeMixShader')
+    mix_shader_node = nodes.new(blenderutils.BLENDER_SHADERNODES.SHADERNODE_MIXSHADER)
     mix_shader_node.location = (100, 0)
-    links.new(mix_shader_node.outputs['Shader'], output_node.inputs['Surface'])
+    links.new(mix_shader_node.outputs[blenderutils.BLENDER_SHADERNODES.OUTPUT_MIXSHADER_SHADER], output_node.inputs[blenderutils.BLENDER_SHADERNODES.INPUT_OUTPUTMATERIAL_SURFACE])
 
-    transparent_bsdf_node = nodes.new('ShaderNodeBsdfTransparent')
+    transparent_bsdf_node = nodes.new(blenderutils.BLENDER_SHADERNODES.SHADERNODE_BSDFTRANSPARENT)
     transparent_bsdf_node.location = (-200, 100)
-    links.new(transparent_bsdf_node.outputs['BSDF'], mix_shader_node.inputs[1])
+    links.new(transparent_bsdf_node.outputs[blenderutils.BLENDER_SHADERNODES.OUTPUT_BSDFTRANSPARENT_BSDF], mix_shader_node.inputs[blenderutils.BLENDER_SHADERNODES.INPUT_MIXSHADER_SHADER1])
 
-    principled_bsdf_node = nodes.new('ShaderNodeBsdfPrincipled')
+    principled_bsdf_node = nodes.new(blenderutils.BLENDER_SHADERNODES.SHADERNODE_BSDFPRINCIPLED)
     principled_bsdf_node.location = (-200, 0)
     principled_bsdf_node.width = 200
-    links.new(principled_bsdf_node.outputs['BSDF'], mix_shader_node.inputs[2])
+    links.new(principled_bsdf_node.outputs[blenderutils.BLENDER_SHADERNODES.OUTPUT_BSDFTRANSPARENT_BSDF], mix_shader_node.inputs[blenderutils.BLENDER_SHADERNODES.INPUT_MIXSHADER_SHADER2])
 
     log.info_log(f"Importing textures and creating material for {MATERIAL.name}...")
 
@@ -463,68 +472,136 @@ def _import_material(assetpath: str, material_name: str, failed_textures: list =
 
         texture_image = bpy.data.images.get(t.name)
         if texture_image == None:
-            texture_image = import_texture(assetpath, t.name, t.type == texture_asset.TEXTURE_TYPE.NORMALMAP)
+            texture_image = import_texture(assetpath, t.name)
             if texture_image == False:
                 failed_textures.append(t.name)
                 continue
 
-        texture_node = nodes.new('ShaderNodeTexImage')
+        texture_node = nodes.new(blenderutils.BLENDER_SHADERNODES.SHADERNODE_TEXIMAGE)
         texture_node.label = t.type
-        texture_node.location = (-700, -250 * i)
+        texture_node.location = (-700, -255 * i)
         texture_node.image = texture_image
 
         if t.type == texture_asset.TEXTURE_TYPE.COLORMAP:
-            links.new(texture_node.outputs['Color'], principled_bsdf_node.inputs['Base Color'])
-            links.new(texture_node.outputs['Alpha'], mix_shader_node.inputs['Fac'])
+            links.new(texture_node.outputs[blenderutils.BLENDER_SHADERNODES.OUTPUT_TEXIMAGE_COLOR], principled_bsdf_node.inputs[blenderutils.BLENDER_SHADERNODES.INPUT_BSDFPRINCIPLED_BASECOLOR])
+            links.new(texture_node.outputs[blenderutils.BLENDER_SHADERNODES.OUTPUT_TEXIMAGE_ALPHA], mix_shader_node.inputs[blenderutils.BLENDER_SHADERNODES.INPUT_MIXSHADER_FAC])
         elif t.type == texture_asset.TEXTURE_TYPE.SPECULARMAP:
-            links.new(texture_node.outputs['Color'], principled_bsdf_node.inputs['Specular'])
-            texture_node.image.colorspace_settings.name = 'Linear'
+            links.new(texture_node.outputs[blenderutils.BLENDER_SHADERNODES.OUTPUT_TEXIMAGE_COLOR], principled_bsdf_node.inputs[blenderutils.BLENDER_SHADERNODES.INPUT_BSDFPRINCIPLED_SPECULAR])
+            texture_node.image.colorspace_settings.name = blenderutils.BLENDER_SHADERNODES.TEXIMAGE_COLORSPACE_LINEAR
+            texture_node.location = (-700, -255)
         elif t.type == texture_asset.TEXTURE_TYPE.NORMALMAP:
-            texture_node.image.colorspace_settings.name = 'Linear'
-            normal_map_node = nodes.new('ShaderNodeNormalMap')
-            normal_map_node.location = (-450, -500)
-            normal_map_node.space = 'TANGENT'
-            normal_map_node.inputs['Strength'].default_value = 1.0
-            links.new(texture_node.outputs['Color'], normal_map_node.inputs['Color'])
-            links.new(normal_map_node.outputs['Normal'], principled_bsdf_node.inputs['Normal'])
+            texture_node.image.colorspace_settings.name = blenderutils.BLENDER_SHADERNODES.TEXIMAGE_COLORSPACE_LINEAR
+            texture_node.location = (-1900, -655)
+            
+            normal_map_node = nodes.new(blenderutils.BLENDER_SHADERNODES.SHADERNODE_NORMALMAP)
+            normal_map_node.location = (-450, -650)
+            normal_map_node.space = blenderutils.BLENDER_SHADERNODES.NORMALMAP_SPACE_TANGENT
+            normal_map_node.inputs[blenderutils.BLENDER_SHADERNODES.INPUT_NORMALMAP_STRENGTH].default_value = 0.3
+            links.new(normal_map_node.outputs[blenderutils.BLENDER_SHADERNODES.OUTPUT_NORMALMAP_NORMAL], principled_bsdf_node.inputs[blenderutils.BLENDER_SHADERNODES.INPUT_BSDFPRINCIPLED_NORMAL])
+
+            combine_rgb_node = nodes.new(blenderutils.BLENDER_SHADERNODES.SHADERNODE_COMBINERGB)
+            combine_rgb_node.location = (-650, -750)
+            links.new(combine_rgb_node.outputs[blenderutils.BLENDER_SHADERNODES.OUTPUT_COMBINERGB_IMAGE], normal_map_node.inputs[blenderutils.BLENDER_SHADERNODES.INPUT_NORMALMAP_COLOR])
+
+            math_sqrt_node = nodes.new(blenderutils.BLENDER_SHADERNODES.SHADERNODE_MATH)
+            math_sqrt_node.location = (-850, -850)
+            math_sqrt_node.operation = blenderutils.BLENDER_SHADERNODES.OPERATION_MATH_SQRT
+            links.new(math_sqrt_node.outputs[blenderutils.BLENDER_SHADERNODES.OUTPUT_MATH_VALUE], combine_rgb_node.inputs[blenderutils.BLENDER_SHADERNODES.INPUT_COMBINERGB_B])
+
+            math_subtract_node = nodes.new(blenderutils.BLENDER_SHADERNODES.SHADERNODE_MATH)
+            math_subtract_node.location = (-1050, -850)
+            math_subtract_node.operation = blenderutils.BLENDER_SHADERNODES.OPERATION_MATH_SUBTRACT
+            links.new(math_subtract_node.outputs[blenderutils.BLENDER_SHADERNODES.OUTPUT_MATH_VALUE], math_sqrt_node.inputs[blenderutils.BLENDER_SHADERNODES.INPUT_MATH_SQRT_VALUE])
+
+            math_subtract_node2 = nodes.new(blenderutils.BLENDER_SHADERNODES.SHADERNODE_MATH)
+            math_subtract_node2.location = (-1250, -950)
+            math_subtract_node2.operation = blenderutils.BLENDER_SHADERNODES.OPERATION_MATH_SUBTRACT
+            math_subtract_node2.inputs[blenderutils.BLENDER_SHADERNODES.INPUT_MATH_SUBTRACT_VALUE1].default_value = 1.0
+            links.new(math_subtract_node2.outputs[blenderutils.BLENDER_SHADERNODES.OUTPUT_MATH_VALUE], math_subtract_node.inputs[blenderutils.BLENDER_SHADERNODES.INPUT_MATH_SUBTRACT_VALUE1])
+
+            math_power_node = nodes.new(blenderutils.BLENDER_SHADERNODES.SHADERNODE_MATH)
+            math_power_node.location = (-1250, -750)
+            math_power_node.operation = blenderutils.BLENDER_SHADERNODES.OPERATION_MATH_POWER
+            math_power_node.inputs[blenderutils.BLENDER_SHADERNODES.INPUT_MATH_POWER_EXPONENT].default_value = 2.0
+            links.new(math_power_node.outputs[blenderutils.BLENDER_SHADERNODES.OUTPUT_MATH_VALUE], math_subtract_node.inputs[blenderutils.BLENDER_SHADERNODES.INPUT_MATH_SUBTRACT_VALUE2])
+
+            math_power_node2 = nodes.new(blenderutils.BLENDER_SHADERNODES.SHADERNODE_MATH)
+            math_power_node2.location = (-1500, -950)
+            math_power_node2.operation = blenderutils.BLENDER_SHADERNODES.OPERATION_MATH_POWER
+            math_power_node2.inputs[blenderutils.BLENDER_SHADERNODES.INPUT_MATH_POWER_EXPONENT].default_value = 2.0
+            links.new(math_power_node2.outputs[blenderutils.BLENDER_SHADERNODES.OUTPUT_MATH_VALUE], math_subtract_node2.inputs[blenderutils.BLENDER_SHADERNODES.INPUT_MATH_SUBTRACT_VALUE2])
+            links.new(texture_node.outputs[blenderutils.BLENDER_SHADERNODES.OUTPUT_TEXIMAGE_ALPHA], math_power_node2.inputs[blenderutils.BLENDER_SHADERNODES.INPUT_MATH_POWER_BASE])
+
+            separate_rgb_node = nodes.new(blenderutils.BLENDER_SHADERNODES.SHADERNODE_SEPARATERGB)
+            separate_rgb_node.location = (-1500, -450)
+            links.new(separate_rgb_node.outputs[blenderutils.BLENDER_SHADERNODES.OUTPUT_SEPARATERGB_G], combine_rgb_node.inputs[blenderutils.BLENDER_SHADERNODES.INPUT_COMBINERGB_G])
+            links.new(separate_rgb_node.outputs[blenderutils.BLENDER_SHADERNODES.OUTPUT_SEPARATERGB_G], math_power_node.inputs[blenderutils.BLENDER_SHADERNODES.INPUT_MATH_POWER_BASE])
+            links.new(texture_node.outputs[blenderutils.BLENDER_SHADERNODES.OUTPUT_TEXIMAGE_COLOR], separate_rgb_node.inputs[blenderutils.BLENDER_SHADERNODES.INPUT_SEPARATERGB_IMAGE])
+            links.new(texture_node.outputs[blenderutils.BLENDER_SHADERNODES.OUTPUT_TEXIMAGE_ALPHA], math_power_node2.inputs[blenderutils.BLENDER_SHADERNODES.INPUT_MATH_POWER_BASE])
+            links.new(texture_node.outputs[blenderutils.BLENDER_SHADERNODES.OUTPUT_TEXIMAGE_ALPHA], combine_rgb_node.inputs[blenderutils.BLENDER_SHADERNODES.INPUT_COMBINERGB_R])
 
     done_time_material = time.monotonic()
     log.info_log(f"Imported material {MATERIAL.name} in {round(done_time_material - start_time_material, 2)} seconds.")
 
     return material
 
-def import_texture(assetpath: str, texture_name: str, normal_map: bool) -> bpy.types.Texture | bool:
+"""
+import texture file
+
+importing logic / priorities
+    1. if .dds exist import it
+    
+    2. if .dds does not exists
+        a. then try convert the .iwi to .dds
+        b. import .dds if conversion was succesful
+    
+    3. if none of the above work, fallback to raw .iwi loading which is very slow with python
+"""
+def import_texture(assetpath: str, texture_name: str) -> bpy.types.Texture | bool:
     start_time_texture = time.monotonic()
 
     TEXTURE = texture_asset.Texture()
-    
-    if not texture_name.endswith('.iwi'):
-        texture_name += '.iwi'
 
     texture_file = os.path.join(assetpath, texture_asset.Texture.PATH, texture_name)
-    if not TEXTURE.load(texture_file):
-        log.error_log(f"Error loading texture: {texture_name}")
-        return False
 
-    log.info_log(f"Loaded texture: {TEXTURE.name}")
+    # if no .dds exists then try to convert it on the fly via iwi2dds 
+    if not os.path.isfile(texture_file + '.dds'):
+        iwi2dds = os.path.abspath(os.path.join(os.path.dirname(__file__), os.pardir, 'bin', 'iwi2dds.exe'))
+        if os.path.isfile(iwi2dds):
+            try:
+                result = subprocess.run((iwi2dds, '-i', texture_file + '.iwi'), capture_output=True)
+                if result.returncode != 0:
+                    log.error_log(result.stderr.decode('utf-8'))
 
-    texture_image = bpy.data.images.new(texture_name, TEXTURE.width, TEXTURE.height, alpha=True)
+            except Exception as e:
+                log.error_log(e)
 
-    if normal_map == True:
-        pixels = datautils.bumpmap_to_normalmap(TEXTURE.texture_data)
-    else:
+    try:
+        # try to load .dds 
+        texture_image = bpy.data.images.load(texture_file + '.dds', check_existing=True)
+        log.info_log(f"Loaded texture: {texture_name}")
+
+    except:
+        # if error happens when converting or loading the dds just fall back to .iwi parsing 
+        if not TEXTURE.load(texture_file + '.iwi'):
+            log.error_log(f"Error loading texture: {texture_name}")
+            return False
+
+        log.info_log(f"Loaded texture: {texture_name}")
+
+        texture_image = bpy.data.images.new(texture_name, TEXTURE.width, TEXTURE.height, alpha=True)
         pixels = TEXTURE.texture_data
     
-    # flip the image
-    p = numpy.asarray(pixels)
-    p.shape = (TEXTURE.height, TEXTURE.width, 4)
-    p = numpy.flipud(p)
+        # flip the image
+        p = numpy.asarray(pixels)
+        p.shape = (TEXTURE.height, TEXTURE.width, 4)
+        p = numpy.flipud(p)
+        texture_image.pixels = p.flatten().tolist()
 
-    texture_image.pixels = p.flatten().tolist()
     texture_image.file_format = 'TARGA'
     texture_image.pack()
 
     done_time_texture = time.monotonic()
-    log.info_log(f"Imported texture: {TEXTURE.name} in {round(done_time_texture - start_time_texture, 2)} seconds.")
+    log.info_log(f"Imported texture: {texture_name} in {round(done_time_texture - start_time_texture, 2)} seconds.")
 
     return texture_image

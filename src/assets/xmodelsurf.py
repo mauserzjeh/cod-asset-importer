@@ -11,7 +11,9 @@ from .. utils import (
     log,
 )
 
-
+"""
+XModelSurf class represents xmodelsurf structure
+"""
 class XModelSurf:
 
     PATH = 'xmodelsurfs'
@@ -109,7 +111,7 @@ class XModelSurf:
                         )
 
                         uv = file_io.read_fmt(file, '2f')
-                        vertex_uv = self._uv(uv[0], 1 - uv[1])
+                        vertex_uv = self._uv(uv[0], 1 - uv[1]) # flip UV
 
                         bn = file_io.read_fmt(file, '3f')
                         vertex_binormal = mathutils.Vector((bn[0], bn[1], bn[2]))
@@ -142,6 +144,8 @@ class XModelSurf:
                                 vertex_weights[0].influence -= weight_influence
                                 vertex_weights.append(self._weight(weight_bone, weight_influence))
 
+                        # if the xmodel is a skeletal mesh then transform vertices
+                        # by their bones so they wont be distorted
                         if xmodel_part != None:
                             xmodel_part_bone = xmodel_part.bones[vertex_bone]
                             
@@ -172,6 +176,6 @@ class XModelSurf:
 
                 return True
 
-        except:
-            log.error_log(traceback.format_exc())
+        except Exception as e:
+            log.error_log(e)
             return False

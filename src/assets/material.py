@@ -6,6 +6,9 @@ from .. utils import (
     log
 )
 
+"""
+Material class represents a material structure
+"""
 class Material:
 
     PATH = 'materials'
@@ -69,6 +72,6 @@ class Material:
 
                 return True
 
-        except:
-            log.error_log(traceback.format_exc())
+        except Exception as e:
+            log.error_log(e)
             return False

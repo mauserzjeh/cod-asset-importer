@@ -14,6 +14,9 @@ from .. utils import (
     log,
 )
 
+"""
+Lump constants
+"""
 class LUMPS(metaclass = enum.BaseEnum):
     MATERIALS = 0
     LIGHTMAPS = 1
@@ -49,21 +52,29 @@ class LUMPS(metaclass = enum.BaseEnum):
     ENTITIES = 37
     PATHS = 38
 
+"""
+Lump size fmt strings
+"""
 class LUMPSIZES(metaclass = enum.BaseEnum):
     MATERIALS = '64sQ'
     TRIANGLESOUPS = '2HI2HI'
     VERTICES = '3f3f4B2f32x'
     TRIANGLES = '3H'
 
+"""
+Entity key constants
+"""
 class ENTITY_KEYS(metaclass = enum.BaseEnum):
     MODEL = 'model'
     ANGLES = 'angles'
     ORIGIN = 'origin'
     MODELSCALE = 'modelscale'
 
+"""
+D3DBSP class representing a D3DBSP structure
+"""
 class D3DBSP:
 
-    PATH = 'maps'
     MAGIC = 'IBSP'
     VERSION = 4
 
@@ -106,7 +117,7 @@ class D3DBSP:
 
         def read(self, file) -> None:
             material = file_io.read_fmt(file, LUMPSIZES.MATERIALS, collections.namedtuple('material', 'name, flag'))
-            self.name = material.name.rstrip(b'\x00').decode('ascii')
+            self.name = material.name.rstrip(b'\x00').decode('utf-8')
             self.flag = material.flag
 
     class _trianglesoup:
@@ -157,6 +168,8 @@ class D3DBSP:
                 vertex.blue / 255,
                 vertex.alpha / 255
             )
+
+            # flip UV
             self.uv = D3DBSP._uv(
                 vertex.u,
                 1-vertex.v
@@ -242,7 +255,7 @@ class D3DBSP:
         entity_data = file.read(entities_lump.length)
         
         # create a valid json string and parse it
-        entity_string = entity_data.rstrip(b'\x00').decode('ascii')
+        entity_string = entity_data.rstrip(b'\x00').decode('utf-8')
         entity_string = f'[\n{entity_string}]'
         entity_string = re.sub(r'\}\n\{\n', '},\n{\n', entity_string)
         entity_string = re.sub(r'\"\n\"', '",\n"', entity_string)
@@ -253,6 +266,7 @@ class D3DBSP:
             if ENTITY_KEYS.MODEL not in entity:
                 continue
             
+            # skip everything that is not a valid xmodel 
             name = entity[ENTITY_KEYS.MODEL]
             valid = re.match('^xmodel\/(.*)', name)
             if not valid:
@@ -289,7 +303,7 @@ class D3DBSP:
         try:
             with open(map, 'rb') as file:
                 header = file_io.read_fmt(file, '4si', collections.namedtuple('header', 'magic, version'))
-                header_magic = header.magic.decode('ascii')
+                header_magic = header.magic.decode('utf-8')
                 if header_magic != self.MAGIC and header.version != self.VERSION:
                     log.info_log(f"{header_magic}{header.version} is not supported")
                     return False
@@ -317,6 +331,7 @@ class D3DBSP:
                 entities_lump = lumps[LUMPS.ENTITIES]
                 self.entities = self._read_entities(file, entities_lump)
 
+                # create surfaces from triangles and vertices
                 for trianglesoup in trianglesoups:
                     surface_material = self.materials[trianglesoup.material_idx].name
                     surface_triangles = []
@@ -340,6 +355,6 @@ class D3DBSP:
 
                 return True
 
-        except:
-            log.error_log(traceback.format_exc())
+        except Exception as e:
+            log.error_log(e)
             return False
