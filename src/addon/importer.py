@@ -580,10 +580,8 @@ def import_texture(assetpath: str, texture_name: str) -> bpy.types.Texture | boo
         # try to load .dds 
         texture_image = bpy.data.images.load(texture_file + '.dds', check_existing=True)
         log.info_log(f"Loaded texture: {texture_name}")
-        pixels = texture_image.pixels
 
     except:
-
         # if error happens when converting or loading the dds just fall back to .iwi parsing 
         if not TEXTURE.load(texture_file + '.iwi'):
             log.error_log(f"Error loading texture: {texture_name}")
