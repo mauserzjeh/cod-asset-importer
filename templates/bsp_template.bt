@@ -1,0 +1,95 @@
+//--------------------------------------
+//--- 010 Editor v6.0.1 Binary Template
+//
+// File:
+// Author:
+// Revision:
+// Purpose:
+//--------------------------------------
+
+LittleEndian();
+
+typedef float f32;
+typedef double f64;
+typedef unsigned char u8;
+typedef unsigned short u16;
+typedef unsigned int u32;
+typedef char i8;
+typedef short i16;
+typedef int i32;
+typedef int64 i64;
+
+typedef struct {
+    SetBackColor( cLtGray );
+    u16 vertex_idx[3];
+} TRIANGLE;
+
+// TODO check this if its good
+typedef struct {
+    SetBackColor( cLtBlue );
+    f32 position[3];
+    f32 normal[3];
+    u8 color[4];
+    f32 uv[2];
+    
+    SetBackColor( cNone );
+    u8 p[8] <optimize=false>; // padding
+} VERTEX;
+
+typedef struct {
+    SetBackColor( cLtGreen );
+    u16 material_idx;
+    u16 draw_order;
+    u32 vertices_offset;
+    u16 vertices_length;
+    u16 triangles_length;
+    u32 triangles_offset;
+} TRIANGLESOUP;
+
+typedef struct {
+    SetBackColor( cLtYellow );
+    i8 name[64] <optimize=false>;
+    i64 flag;
+} SHADER;
+
+typedef struct {
+    SetBackColor( cAqua );
+    u32 length;
+    u32 offset;
+} LUMP;
+
+typedef struct {
+    SetBackColor( cLtRed );    
+    i8 magic[4] <optimize=false>;
+    i32 version;
+    
+    LUMP lumps[32] <optimize=false>;
+
+    // lumps[0] - shaders lump
+    local int shaders_count = lumps[0].length / sizeof(SHADER);
+    FSeek( lumps[0].offset );
+    SHADER shaders[shaders_count] <optimize=false>;
+
+    // lumps[6] - trianglesoups lump
+    local int trianglesoups_count = lumps[6].length / sizeof(TRIANGLESOUP);
+    FSeek( lumps[6].offset );
+    TRIANGLESOUP trianglesoups[trianglesoups_count] <optimize=false>;
+
+    // lumps[7] - vertices lump
+    local int vertices_count = lumps[7].length / sizeof(VERTEX);
+    FSeek( lumps[7].offset );
+    VERTEX vertices[vertices_count] <optimize=false>;
+
+    // lumps[8] - triangles lump
+    local int triangles_count = lumps[8].length / sizeof(TRIANGLE);
+    FSeek( lumps[8].offset );
+    TRIANGLE triangles[triangles_count] <optimize=false>;
+    
+    // lumps[29] - entities lump
+    FSeek( lumps[29].offset );
+    SetBackColor( cLtRed );
+    string entities;
+
+} BSP;
+
+BSP b;
