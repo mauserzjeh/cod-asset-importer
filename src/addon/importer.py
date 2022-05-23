@@ -11,6 +11,7 @@ import subprocess
 import traceback
 
 from .. assets import (
+    bsp as bsp_asset,
     d3dbsp as d3dbsp_asset,
     material as material_asset,
     texture as texture_asset,
@@ -573,8 +574,8 @@ def import_texture(assetpath: str, texture_name: str) -> bpy.types.Texture | boo
                 if result.returncode != 0:
                     log.error_log(result.stderr.decode('utf-8'))
 
-            except Exception as e:
-                log.error_log(e)
+            except:
+                log.error_log(traceback.print_exc())
 
     try:
         # try to load .dds 
@@ -605,3 +606,117 @@ def import_texture(assetpath: str, texture_name: str) -> bpy.types.Texture | boo
     log.info_log(f"Imported texture: {texture_name} in {round(done_time_texture - start_time_texture, 2)} seconds.")
 
     return texture_image
+
+# ----------------------------------------------------------------------------------
+
+"""
+Import a .bsp file
+"""
+def import_bsp(assetpath: str, filepath: str) -> bool:
+    start_time_bsp = time.monotonic()
+
+    BSP = bsp_asset.BSP()
+    if not BSP.load(filepath):
+        log.error_log(f"Error loading bsp: {os.path.basename(filepath)}")
+        return False
+    
+    log.info_log(f"Loaded bsp: {BSP.name}")
+
+    map_null = bpy.data.objects.new(BSP.name, None)
+    bpy.context.scene.collection.objects.link(map_null)
+
+    map_geometry_null = bpy.data.objects.new(f"{BSP.name}_geometry", None)
+    bpy.context.scene.collection.objects.link(map_geometry_null)
+    map_geometry_null.parent = map_null
+
+    map_entities_null = bpy.data.objects.new(f"{BSP.name}_entities", None)
+    bpy.context.scene.collection.objects.link(map_entities_null)
+    map_entities_null.parent = map_null
+
+    # import surfaces
+    start_time_surfaces = time.monotonic()
+    log.info_log(f"Creating surfaces for {BSP.name}...")
+    for surface in BSP.surfaces:
+        name = f"{BSP.name}_geometry"
+
+        mesh = bpy.data.meshes.new(name)
+        obj = bpy.data.objects.new(name, mesh)
+        obj.parent = map_geometry_null
+        # obj.active_material = bpy.data.materials.get(surface.material)
+
+        bpy.context.scene.collection.objects.link(obj)
+        bpy.context.view_layer.objects.active = obj
+        obj.select_set(True)
+
+        mesh_data = bpy.context.object.data
+        bm = bmesh.new()
+
+        surface_uvs = []
+        surface_vertex_colors = []
+        surface_normals = []
+
+        for triangle in surface.triangles:
+            
+            vertex1 = surface.vertices[triangle[0]]
+            vertex2 = surface.vertices[triangle[2]]
+            vertex3 = surface.vertices[triangle[1]]
+
+            v1 = bm.verts.new(vertex1.position.to_tuple())
+            v2 = bm.verts.new(vertex2.position.to_tuple())
+            v3 = bm.verts.new(vertex3.position.to_tuple())
+
+            triangle_uvs = []
+            triangle_uvs.append(vertex1.uv.to_tuple())
+            triangle_uvs.append(vertex2.uv.to_tuple())
+            triangle_uvs.append(vertex3.uv.to_tuple())
+            surface_uvs.append(triangle_uvs)
+
+            triangle_vertex_colors = []
+            triangle_vertex_colors.append(vertex1.color.to_tuple())
+            triangle_vertex_colors.append(vertex2.color.to_tuple())
+            triangle_vertex_colors.append(vertex3.color.to_tuple())
+            surface_vertex_colors.append(triangle_vertex_colors)
+
+            triangle_normals = []
+            triangle_normals.append(vertex1.normal.to_tuple())
+            triangle_normals.append(vertex2.normal.to_tuple())
+            triangle_normals.append(vertex3.normal.to_tuple())
+            surface_normals.append(triangle_normals)
+
+            bm.verts.ensure_lookup_table()
+            bm.verts.index_update()
+
+            bm.faces.new((v1, v2, v3))
+            bm.faces.ensure_lookup_table()
+            bm.faces.index_update()
+
+        uv_layer = bm.loops.layers.uv.new()
+        vertex_color_layer = bm.loops.layers.color.new()
+        vertex_normal_buffer = []
+
+        for face, uv, color, normal in zip(bm.faces, surface_uvs, surface_vertex_colors, surface_normals):
+            for loop, uv_data, color_data, normal_data in zip(face.loops, uv, color, normal):
+                loop[uv_layer].uv = uv_data
+                loop[vertex_color_layer] = color_data
+                vertex_normal_buffer.append(normal_data)
+
+        bm.to_mesh(mesh_data)
+        bm.free()
+
+        # set normals        
+        mesh.create_normals_split()
+        mesh.validate(clean_customdata=False)
+        mesh.normals_split_custom_set(vertex_normal_buffer)
+
+        polygon_count = len(mesh.polygons)
+        mesh.polygons.foreach_set('use_smooth', [True] * polygon_count)
+        mesh.use_auto_smooth = True
+
+    done_time_surfaces = time.monotonic()
+    log.info_log(f"Created surfaces for {BSP.name} in {round(done_time_surfaces - start_time_surfaces, 2)} seconds.")
+
+
+    done_time_bsp = time.monotonic()
+    log.info_log(f"Imported bsp: {BSP.name} in {round(done_time_bsp - start_time_bsp, 2)} seconds.")
+
+    return True

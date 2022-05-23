@@ -45,3 +45,28 @@ class XModelImporter(bpy.types.Operator):
     def invoke(self, context, event):
         bpy.context.window_manager.fileselect_add(self)
         return {'RUNNING_MODAL'}
+
+"""
+Imports .bsp file into blender
+"""
+class BSPImporter(bpy.types.Operator):
+    bl_idname = 'cod_asset_importer.bsp_importer'
+    bl_label = 'Import'
+    bl_options = {'UNDO'}
+
+    filepath : bpy.props.StringProperty(subtype='FILE_PATH')
+    filename_ext = '.bsp'
+    filter_glob : bpy.props.StringProperty(default='*.bsp', options={'HIDDEN'})
+
+    def execute(self, context):
+        assetpath = os.path.abspath(os.path.join(os.path.dirname(self.filepath), os.pardir))
+        if os.path.basename(self.filepath).startswith("mp_"):
+            assetpath = os.path.abspath(os.path.join(os.path.dirname(self.filepath), os.pardir, os.pardir))
+        
+        importer.import_bsp(assetpath, self.filepath)
+
+        return {'FINISHED'}
+
+    def invoke(self, context, event):
+        bpy.context.window_manager.fileselect_add(self)
+        return {'RUNNING_MODAL'}

@@ -64,7 +64,7 @@ class XModel:
 
                 return True
         
-        except Exception as e:
-            log.error_log(e)
+        except:
+            log.error_log(traceback.print_exc())
             return False
 

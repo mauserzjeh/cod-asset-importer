@@ -2,11 +2,11 @@ from __future__ import annotations
 
 import collections
 import json
+import traceback
 import mathutils
 import os
 import re
 import struct
-import traceback
 
 from .. utils import (
     enum,
@@ -19,10 +19,10 @@ Lump constants
 """
 class LUMPS(metaclass = enum.BaseEnum):
     MATERIALS = 0
-    TRIANGLESOUPS = 7
-    VERTICES = 8
-    TRIANGLES = 9
-    ENTITIES = 37
+    TRIANGLESOUPS = 6
+    VERTICES = 7
+    TRIANGLES = 8
+    ENTITIES  = 29
 
 """
 Lump size fmt strings
@@ -30,7 +30,7 @@ Lump size fmt strings
 class LUMPSIZES(metaclass = enum.BaseEnum):
     MATERIALS = '64sQ'
     TRIANGLESOUPS = '2HI2HI'
-    VERTICES = '3f3f4B2f32x'
+    VERTICES = '3f3f4B2f8x'
     TRIANGLES = '3H'
 
 """
@@ -43,12 +43,12 @@ class ENTITY_KEYS(metaclass = enum.BaseEnum):
     MODELSCALE = 'modelscale'
 
 """
-D3DBSP class representing a D3DBSP structure
+BSP class representing a BSP structure
 """
-class D3DBSP:
+class BSP:
 
     MAGIC = 'IBSP'
-    VERSION = 4
+    VERSION = 59
 
     # --------------------------------------------------------------------------------------------
     class _uv:
@@ -119,8 +119,8 @@ class D3DBSP:
         def __init__(self) -> None:
             self.position = mathutils.Vector()
             self.normal = mathutils.Vector()
-            self.color = D3DBSP._color()
-            self.uv = D3DBSP._uv()
+            self.color = BSP._color()
+            self.uv = BSP._uv()
 
         def read(self, file) -> None:
             vertex = file_io.read_fmt(file, LUMPSIZES.VERTICES, collections.namedtuple('vertex', 'px, py, pz, nx, ny, nz, red, green, blue, alpha, u, v'))
@@ -134,7 +134,7 @@ class D3DBSP:
                 vertex.ny,
                 vertex.nz
             ))
-            self.color = D3DBSP._color(
+            self.color = BSP._color(
                 vertex.red / 255,
                 vertex.green / 255,
                 vertex.blue / 255,
@@ -142,7 +142,7 @@ class D3DBSP:
             )
 
             # flip UV
-            self.uv = D3DBSP._uv(
+            self.uv = BSP._uv(
                 vertex.u,
                 1-vertex.v
             )
@@ -159,7 +159,7 @@ class D3DBSP:
     class _surface:
         __slots__ = ('material', 'vertices', 'triangles')
 
-        def __init__(self, material: str, triangles: list[tuple], vertices: dict[int, D3DBSP._vertex]) -> None:
+        def __init__(self, material: str, triangles: list[tuple], vertices: dict[int, BSP._vertex]) -> None:
             self.material = material
             self.vertices = vertices
             self.triangles = triangles
@@ -176,7 +176,7 @@ class D3DBSP:
 
     def _read_lumps(self, file) -> list[_lump]:
         lumps = []
-        for _ in range(39):
+        for _ in range(32):
             lump = file_io.read_fmt(file, '2I', collections.namedtuple('lump', 'length, offset'))
             lumps.append(self._lump(lump.length, lump.offset))
 
@@ -268,7 +268,6 @@ class D3DBSP:
             entities.append(e)
 
         return entities
-
 
     def load(self, map: str) -> bool:
         self.name = os.path.splitext(os.path.basename(map))[0]

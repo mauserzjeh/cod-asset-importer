@@ -20,6 +20,11 @@ operators_list = (
         "function": None
     },
     {
+        "class": operators.BSPImporter,
+        "text": "Call of Duty map (bsp)",
+        "function": None
+    },
+    {
         "class": operators.XModelImporter,
         "text": "Call of Duty model (xmodel)",
         "function": None

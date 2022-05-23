@@ -80,6 +80,6 @@ class Texture:
                 self.texture_data = decode.decode(raw_texture_data, self.width, self.height, self.format)
                 return True
         
-        except Exception as e:
-            log.error_log(e)
+        except:
+            log.error_log(traceback.print_exc())
             return False
