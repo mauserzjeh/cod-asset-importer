@@ -24,7 +24,6 @@ typedef struct {
     u16 vertex_idx[3];
 } TRIANGLE;
 
-// TODO check this if its good
 typedef struct {
     SetBackColor( cLtBlue );
     f32 position[3];
