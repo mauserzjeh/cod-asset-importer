@@ -25,6 +25,11 @@ typedef struct {
     string lod_name;
 } LOD;
 
+typedef struct {
+    u32 subcount;
+    local int padnum = ((subcount*48)+36);
+    u8 padding[padnum];
+} UNK;
 
 typedef struct {
     SetBackColor( cLtBlue );
@@ -43,12 +48,23 @@ typedef struct {
     
     FSkip( 24 ); // padding
     
+    
     local int num_lods = 3;
     LOD lods[num_lods] <optimize=false>;
     
-    FSkip( 8 ); // padding
+    FSkip( 4 ); // padding
+
+    i32 unk_count;
+    UNK unks[unk_count] <optimize=false>;  
     
-    LODMATERIAL lodmaterials[num_lods] <optimize=false>;
+
+    local int valid_lods, i = 0;
+    for(i = 0; i<num_lods; i++) {
+        if (lods[i].lod_name != "") {
+            valid_lods++;
+        }
+    }
+    LODMATERIAL lodmaterials[valid_lods] <optimize=false>;
 
 } XMODEL;
 
