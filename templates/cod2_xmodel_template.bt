@@ -55,7 +55,13 @@ typedef struct {
     i32 unk_count;
     UNK unks[unk_count] <optimize=false>;
 
-    LODMATERIALS materials[num_lods] <optimize=false>;
+    local int valid_lods, i = 0;
+    for(i = 0; i<num_lods; i++) {
+        if (lods[i].lod_name != "") {
+            valid_lods++;
+        }
+    }
+    LODMATERIALS materials[valid_lods] <optimize=false>;
 
 } XMODEL;
 
