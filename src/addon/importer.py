@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import glob
 import os
 import bpy
 import bmesh
@@ -412,7 +413,7 @@ def import_xmodel_v20(assetpath: str, filepath: str, import_skeleton: bool, fail
     return xmodel_null
 
 """
-import material and create node setup
+Import material and create node setup
 """
 def _import_material(assetpath: str, material_name: str, failed_textures: list = None) -> bpy.types.Material | bool:
     start_time_material = time.monotonic()
@@ -469,7 +470,7 @@ def _import_material(assetpath: str, material_name: str, failed_textures: list =
 
         texture_image = bpy.data.images.get(t.name)
         if texture_image == None:
-            texture_image = import_texture(assetpath, t.name)
+            texture_image = _import_texture(assetpath, t.name)
             if texture_image == False:
                 failed_textures.append(t.name)
                 continue
@@ -554,7 +555,7 @@ importing logic / priorities
     
     3. if none of the above work, fallback to raw .iwi loading which is very slow with python
 """
-def import_texture(assetpath: str, texture_name: str) -> bpy.types.Texture | bool:
+def _import_texture(assetpath: str, texture_name: str) -> bpy.types.Texture | bool:
     start_time_texture = time.monotonic()
 
     TEXTURE = texture_asset.Texture()
@@ -629,7 +630,30 @@ def import_bsp(assetpath: str, filepath: str) -> bool:
     bpy.context.scene.collection.objects.link(map_entities_null)
     map_entities_null.parent = map_null
 
-    # TODO import materials
+    # import materials
+    start_time_materials = time.monotonic()
+    log.info_log(f"Importing materials for {BSP.name}...")
+    failed_materials = []
+    for material in BSP.materials:
+        material_name = os.path.join(*material.name.split('/'))
+        if not bpy.data.materials.get(material_name) and material_name not in failed_materials:
+
+            # the extension is not defined inside the bsp format 
+            # so we try to match a pattern and retrieve the first matching file 
+            texture_file = ''
+            for tex in glob.iglob(os.path.join(assetpath, material_name + '.*')):
+                texture_file = tex.removeprefix(assetpath).lstrip('/\\')
+                break
+            
+            if texture_file == '':
+                failed_materials.append(material_name)
+                continue
+
+            if not _import_material_v14(assetpath, texture_file):
+                failed_materials.append(material_name)
+
+    done_time_materials = time.monotonic()
+    log.info_log(f"Imported materials for {BSP.name} in {round(done_time_materials - start_time_materials, 2)} seconds.")
 
     # import surfaces
     start_time_surfaces = time.monotonic()
@@ -640,7 +664,7 @@ def import_bsp(assetpath: str, filepath: str) -> bool:
         mesh = bpy.data.meshes.new(name)
         obj = bpy.data.objects.new(name, mesh)
         obj.parent = map_geometry_null
-        # obj.active_material = bpy.data.materials.get(surface.material)
+        obj.active_material = bpy.data.materials.get(os.path.join(*surface.material.split('/'))) # TODO fix because somehow it doesnt find the materials
 
         bpy.context.scene.collection.objects.link(obj)
         bpy.context.view_layer.objects.active = obj
@@ -713,6 +737,9 @@ def import_bsp(assetpath: str, filepath: str) -> bool:
     done_time_surfaces = time.monotonic()
     log.info_log(f"Created surfaces for {BSP.name} in {round(done_time_surfaces - start_time_surfaces, 2)} seconds.")
 
+    # debug 
+    return True
+
     # entities
     start_time_entities = time.monotonic()
     log.info_log(f"Importing entities for {BSP.name}...")
@@ -749,7 +776,7 @@ def import_bsp(assetpath: str, filepath: str) -> bool:
 """
 Import a CoD1 (v14) xmodel
 """
-def import_xmodel_v14(assetpath: str, filepath: str, import_skeleton: bool) -> bpy.types.Object | bool:
+def import_xmodel_v14(assetpath: str, filepath: str, import_skeleton: bool, failed_textures: list = None) -> bpy.types.Object | bool:
     start_time_xmodel = time.monotonic()
     XMODEL = xmodel_asset.XModelV14()
     if not XMODEL.load(filepath):
@@ -777,12 +804,25 @@ def import_xmodel_v14(assetpath: str, filepath: str, import_skeleton: bool) -> b
 
     mesh_objects = []
 
+    # import textures aka materials, just they only contain a single texture, the colormap
+    start_time_textures = time.monotonic()
+    log.info_log(f"Importing textures for {lod0.name}...")
+    failed_textures = [] if failed_textures == None else failed_textures # cache
+    for texture in lod0.textures:
+        if not bpy.data.materials.get(texture) and texture not in failed_textures:
+            if not _import_material_v14(os.path.join(assetpath, 'skins'), texture):
+                failed_textures.append(texture)
+            
+    done_time_textures = time.monotonic()
+    log.info_log(f"Imported materials for {lod0.name} in {round(done_time_textures - start_time_textures, 2)} seconds.")
+
     # create mesh
     start_time_surfaces = time.monotonic()
     log.info_log(f"Creating surfaces for {lod0.name}...")
     for i, surface in enumerate(XMODELSURF.surfaces):
         mesh = bpy.data.meshes.new(XMODELSURF.name)
         obj = bpy.data.objects.new(XMODELSURF.name, mesh)
+        obj.active_material = bpy.data.materials.get(lod0.textures[i])
 
         bpy.context.scene.collection.objects.link(obj)
         bpy.context.view_layer.objects.active = obj
@@ -956,3 +996,61 @@ def import_xmodel_v14(assetpath: str, filepath: str, import_skeleton: bool) -> b
     log.info_log(f"Imported xmodel: {lod0.name} in {round(done_time_xmodel - start_time_xmodel, 2)} seconds.")
 
     return xmodel_null
+
+"""
+Import a material for v14 assets and create node setup
+"""
+def _import_material_v14(assetpath: str, texture_name: str) -> bpy.types.Material | bool:
+    start_time_material = time.monotonic()
+    texture_file = os.path.join(assetpath, texture_name)
+    try:
+        texture_image = bpy.data.images.load(texture_file, check_existing=True)
+        material = bpy.data.materials.new(texture_name)
+        material.use_nodes = True
+        material.blend_method = 'HASHED'
+        material.shadow_method = 'HASHED'
+
+        nodes = material.node_tree.nodes
+        links = material.node_tree.links
+
+        output_node = None
+        for node in nodes:
+            if node.type != 'OUTPUT_MATERIAL':
+                nodes.remove(node)
+                continue
+
+            if node.type == 'OUTPUT_MATERIAL' and output_node == None:
+                output_node = node
+
+        if output_node == None:
+            output_node = nodes.new(blenderutils.BLENDER_SHADERNODES.SHADERNODE_OUTPUTMATERIAL)
+
+        output_node.location = (300, 0)
+
+        mix_shader_node = nodes.new(blenderutils.BLENDER_SHADERNODES.SHADERNODE_MIXSHADER)
+        mix_shader_node.location = (100, 0)
+        links.new(mix_shader_node.outputs[blenderutils.BLENDER_SHADERNODES.OUTPUT_MIXSHADER_SHADER], output_node.inputs[blenderutils.BLENDER_SHADERNODES.INPUT_OUTPUTMATERIAL_SURFACE])
+
+        transparent_bsdf_node = nodes.new(blenderutils.BLENDER_SHADERNODES.SHADERNODE_BSDFTRANSPARENT)
+        transparent_bsdf_node.location = (-200, 100)
+        links.new(transparent_bsdf_node.outputs[blenderutils.BLENDER_SHADERNODES.OUTPUT_BSDFTRANSPARENT_BSDF], mix_shader_node.inputs[blenderutils.BLENDER_SHADERNODES.INPUT_MIXSHADER_SHADER1])
+
+        principled_bsdf_node = nodes.new(blenderutils.BLENDER_SHADERNODES.SHADERNODE_BSDFPRINCIPLED)
+        principled_bsdf_node.location = (-200, 0)
+        principled_bsdf_node.width = 200
+        links.new(principled_bsdf_node.outputs[blenderutils.BLENDER_SHADERNODES.OUTPUT_BSDFTRANSPARENT_BSDF], mix_shader_node.inputs[blenderutils.BLENDER_SHADERNODES.INPUT_MIXSHADER_SHADER2])
+
+        texture_node = nodes.new(blenderutils.BLENDER_SHADERNODES.SHADERNODE_TEXIMAGE)
+        texture_node.label = 'colorMap'
+        texture_node.location = (-700, -255)
+        texture_node.image = texture_image
+        links.new(texture_node.outputs[blenderutils.BLENDER_SHADERNODES.OUTPUT_TEXIMAGE_COLOR], principled_bsdf_node.inputs[blenderutils.BLENDER_SHADERNODES.INPUT_BSDFPRINCIPLED_BASECOLOR])
+        links.new(texture_node.outputs[blenderutils.BLENDER_SHADERNODES.OUTPUT_TEXIMAGE_ALPHA], mix_shader_node.inputs[blenderutils.BLENDER_SHADERNODES.INPUT_MIXSHADER_FAC])
+
+        done_time_material = time.monotonic()
+        log.info_log(f"Imported material {texture_name} in {round(done_time_material - start_time_material, 2)} seconds.")
+        return material
+
+    except:
+        log.error_log(traceback.print_exc())
+        return False
