@@ -1,0 +1,143 @@
+//--------------------------------------
+//--- 010 Editor v6.0.1 Binary Template
+//
+// File:
+// Author:
+// Revision:
+// Purpose:
+//--------------------------------------
+LittleEndian();
+
+// modelType 0 -> rigid
+// modelType 1 -> animated
+// modelType 2 -> viewmodel
+// modelType 3 -> playerbody
+// modelType 4 -> viewhands
+
+typedef float f32;
+typedef double f64;
+typedef unsigned char u8;
+typedef unsigned short u16;
+typedef unsigned int u32;
+typedef char i8;
+typedef short i16;
+typedef int i32;
+
+// THIS WHOLE TEMPLATE IS NOT WORKING SOMEHOW
+// BUT READING IS OK
+
+void read_faces(u16 num_faces) {
+    local u16 face_counter = 0;
+    local u8 i, v;
+    local u16 _idx4, _idx2;
+    while(true) {
+        u8 idx_count;
+    
+        u16 idx1;
+        u16 idx2;
+        u16 idx3;
+
+        if(idx1 != idx2 && idx1 != idx3 && idx2 != idx3) {
+            face_counter++;
+        }
+
+        v = 0;
+        i = 3;
+        while(i < idx_count) {
+            _idx4 = idx3;
+            u16 idx5;
+
+            if(_idx4 != idx2 && _idx4 != idx5 && idx2 != idx5) {
+                face_counter++;
+            }
+
+            v = i + 1;
+            if(v >= idx_count) {
+                break;
+            }
+            
+            _idx2 = idx5;
+            u16 idx33;
+            if(_idx4 != _idx2 && _idx4 != idx33 && _idx2 != idx33) {
+                face_counter++;
+            }
+
+            i = v + 1;
+        }
+
+        if(face_counter >= num_faces) {
+            break;
+        }
+    }
+}
+
+typedef struct {
+    f32 v[3];
+} V3;
+
+typedef struct {
+    f32 v[2];
+} V2;
+
+typedef struct {
+    u8 mesh_idx;
+    u16 idx[3];
+} FACE;
+
+typedef struct {
+    FSkip( 1 ); // padding
+    u16 num_verts;
+    u16 num_faces;
+    FSkip( 2 ); // padding
+    i16 default_bone;
+
+    if(default_bone == -1) {
+        u16 num_weights;
+        FSkip( 2 ); // padding
+    }
+    
+    read_faces(num_faces);   
+
+    local u16 i;
+    local u16 bl;
+    local i16 bone_counts[num_verts];
+    for(i = 0; i < num_verts; i++) {
+        V3 normal;
+        V2 uv;
+
+        bl = 0;
+        if(default_bone == -1) {
+            u16 blend_count;
+            u16 bone;
+
+            bl = blend_count;
+        }
+
+        V3 position;
+        
+        if(bl != 0) {
+            FSkip( 4 );
+        }
+        
+        bone_counts[i] = bl;
+    }
+    
+    local u16 j;
+    for(i = 0; i < num_verts; i++) {
+        for(j = 0; j < bone_counts[i]; i++) {
+            u16 blend_bone;
+            u16 weight;
+        }
+    }
+
+} MESH;
+
+typedef struct {
+    SetBackColor( cLtRed );
+    u16 version;
+    u16 mesh_number;
+    
+    MESH meshes[mesh_number] <optimize=false>;
+} XMODELSURF;
+
+XMODELSURF x;
