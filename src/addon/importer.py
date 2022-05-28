@@ -27,7 +27,7 @@ from .. utils import (
 )
 
 """
-Import a .d3dbsp file
+Import a CoD2 d3dbsp file
 """
 def import_d3dbsp(assetpath: str, filepath: str) -> bool:
     start_time_d3dbsp = time.monotonic()
@@ -153,8 +153,8 @@ def import_d3dbsp(assetpath: str, filepath: str) -> bool:
             entity_null = blenderutils.copy_object_hierarchy(unique_entities[entity.name])[0]
             bpy.ops.object.select_all(action='DESELECT')
         else:
-            entity_path = os.path.join(assetpath, xmodel_asset.XModel.PATH, entity.name)
-            entity_null = import_xmodel(assetpath, entity_path, True, failed_materials, failed_textures)
+            entity_path = os.path.join(assetpath, xmodel_asset.XModelV20.PATH, entity.name)
+            entity_null = import_xmodel_v20(assetpath, entity_path, True, failed_materials, failed_textures)
             
         if entity_null:
             entity_null.parent = map_entities_null
@@ -181,12 +181,12 @@ def import_d3dbsp(assetpath: str, filepath: str) -> bool:
     return True
 
 """
-import an xmodel
+Import a CoD2 (v20) xmodel
 """ 
-def import_xmodel(assetpath: str, filepath: str, import_skeleton: bool, failed_materials: list = None, failed_textures: list = None) -> bpy.types.Object | bool:
+def import_xmodel_v20(assetpath: str, filepath: str, import_skeleton: bool, failed_materials: list = None, failed_textures: list = None) -> bpy.types.Object | bool:
     start_time_xmodel = time.monotonic()
     
-    XMODEL = xmodel_asset.XModel()
+    XMODEL = xmodel_asset.XModelV20()
     if not XMODEL.load(filepath):
         log.error_log(f"Error loading xmodel: {os.path.basename(filepath)}")
         return False
@@ -195,14 +195,14 @@ def import_xmodel(assetpath: str, filepath: str, import_skeleton: bool, failed_m
 
     log.info_log(f"Loaded xmodel: {lod0.name}")
 
-    XMODELPART = xmodelpart_asset.XModelPart()
-    xmodel_part = os.path.join(assetpath, xmodelpart_asset.XModelPart.PATH, lod0.name)
+    XMODELPART = xmodelpart_asset.XModelPartV20()
+    xmodel_part = os.path.join(assetpath, xmodelpart_asset.XModelPartV20.PATH, lod0.name)
     if not XMODELPART.load(xmodel_part):
         log.error_log(f"Error loading xmodelpart: {lod0.name}")
         XMODELPART = None
 
     XMODELSURF = xmodelsurf_asset.XModelSurf()
-    xmodel_surf = os.path.join(assetpath, xmodelsurf_asset.XModelSurf.PATH, lod0.name)
+    xmodel_surf = os.path.join(assetpath, xmodelsurf_asset.XModelSurfV20.PATH, lod0.name)
     if not XMODELSURF.load(xmodel_surf, XMODELPART):
         log.error_log(f"Error loading xmodelsurf: {lod0.name}")
         return False
@@ -633,6 +633,8 @@ def import_bsp(assetpath: str, filepath: str) -> bool:
     bpy.context.scene.collection.objects.link(map_entities_null)
     map_entities_null.parent = map_null
 
+    # TODO import materials
+
     # import surfaces
     start_time_surfaces = time.monotonic()
     log.info_log(f"Creating surfaces for {BSP.name}...")
@@ -715,8 +717,249 @@ def import_bsp(assetpath: str, filepath: str) -> bool:
     done_time_surfaces = time.monotonic()
     log.info_log(f"Created surfaces for {BSP.name} in {round(done_time_surfaces - start_time_surfaces, 2)} seconds.")
 
+    # entities
+    start_time_entities = time.monotonic()
+    log.info_log(f"Importing entities for {BSP.name}...")
+    unique_entities = {}
+    for entity in BSP.entities:
+        if entity.name in unique_entities:
+            entity_null = blenderutils.copy_object_hierarchy(unique_entities[entity.name])[0]
+            bpy.ops.object.select_all(action='DESELECT')
+        else:
+            entity_path = os.path.join(assetpath, xmodel_asset.XModelV14.PATH, entity.name)
+            entity_null = import_xmodel_v14(assetpath, entity_path, True)
+
+        if entity_null:
+            entity_null.parent = map_entities_null
+            entity_null.location = entity.origin.to_tuple()
+
+            rot_x, rot_y, rot_z = datautils.fix_rotation(entity.angles.x, entity.angles.y, entity.angles.z)
+
+            entity_null.rotation_euler = (
+                math.radians(rot_x), 
+                math.radians(rot_y), 
+                math.radians(rot_z)
+            )
+            entity_null.scale = (entity.scale, entity.scale, entity.scale)
+
+            if entity.name not in unique_entities:
+                unique_entities[entity.name] = entity_null
+
+    done_time_entities = time.monotonic()
+    log.info_log(f"Imported entities for {BSP.name} in {round(done_time_entities - start_time_entities,2)} seconds.")
 
     done_time_bsp = time.monotonic()
     log.info_log(f"Imported bsp: {BSP.name} in {round(done_time_bsp - start_time_bsp, 2)} seconds.")
 
     return True
+
+"""
+Import a CoD1 (v14) xmodel
+"""
+def import_xmodel_v14(assetpath: str, filepath: str, import_skeleton: bool) -> bpy.types.Object | bool:
+    start_time_xmodel = time.monotonic()
+    XMODEL = xmodel_asset.XModelV14()
+    if not XMODEL.load(filepath):
+        log.error_log(f"Error loading xmodel: {os.path.basename(filepath)}")
+        return False
+
+    lod0 = XMODEL.lods[0]
+
+    log.info_log(f"Loaded xmodel: {lod0.name}")
+
+    XMODELPART = xmodelpart_asset.XModelPartV14()
+    xmodel_part = os.path.join(assetpath, xmodelpart_asset.XModelPartV14.PATH, lod0.name)
+    if not XMODELPART.load(xmodel_part):
+        log.error_log(f"Error loading xmodelpart: {lod0.name}")
+        XMODELPART = None
+
+    XMODELSURF = xmodelsurf_asset.XModelSurfV14()
+    xmodel_surf = os.path.join(assetpath, xmodelsurf_asset.XModelSurfV14.PATH, lod0.name)
+    if not XMODELSURF.load(xmodel_surf, XMODELPART):
+        log.error_log(f"Error loading xmodelsurf: {lod0.name}")
+        return False
+
+    xmodel_null = bpy.data.objects.new(XMODEL.name, None)
+    bpy.context.scene.collection.objects.link(xmodel_null)
+
+    mesh_objects = []
+
+    # create mesh
+    start_time_surfaces = time.monotonic()
+    log.info_log(f"Creating surfaces for {lod0.name}...")
+    for i, surface in enumerate(XMODELSURF.surfaces):
+        mesh = bpy.data.meshes.new(XMODELSURF.name)
+        obj = bpy.data.objects.new(XMODELSURF.name, mesh)
+
+        bpy.context.scene.collection.objects.link(obj)
+        bpy.context.view_layer.objects.active = obj
+        obj.select_set(True)
+
+
+        mesh_data = bpy.context.object.data
+        bm = bmesh.new()
+        vertex_weight_layer = bm.verts.layers.deform.new()
+
+        surface_uvs = []
+        surface_normals = []
+
+        for triangle in surface.triangles:
+            
+            vertex1 = surface.vertices[triangle[0]]
+            vertex2 = surface.vertices[triangle[2]]
+            vertex3 = surface.vertices[triangle[1]]
+
+            triangle_uvs = []
+            triangle_uvs.append(vertex1.uv.to_tuple())
+            triangle_uvs.append(vertex2.uv.to_tuple())
+            triangle_uvs.append(vertex3.uv.to_tuple())
+            surface_uvs.append(triangle_uvs)
+
+            triangle_normals = []
+            triangle_normals.append(vertex1.normal.to_tuple())
+            triangle_normals.append(vertex2.normal.to_tuple())
+            triangle_normals.append(vertex3.normal.to_tuple())
+            surface_normals.append(triangle_normals)
+
+            v1 = bm.verts.new(vertex1.position.to_tuple())
+            v2 = bm.verts.new(vertex2.position.to_tuple())
+            v3 = bm.verts.new(vertex3.position.to_tuple())
+
+            bm.verts.ensure_lookup_table()
+            bm.verts.index_update()
+
+            verts_assoc = {
+                v1: vertex1,
+                v2: vertex2,
+                v3: vertex3
+            }
+
+            for bvert, svert in verts_assoc.items():
+                for weight in svert.weights:
+                    bm.verts[bvert.index][vertex_weight_layer][weight.bone] = weight.influence
+
+            bm.faces.new((v1, v2, v3))
+            bm.faces.ensure_lookup_table()
+            bm.faces.index_update()
+
+        uv_layer = bm.loops.layers.uv.new()
+        vertex_normal_buffer = []
+
+        for face, uv, normal in zip(bm.faces, surface_uvs, surface_normals):
+            for loop, uv_data, normal_data in zip(face.loops, uv, normal):
+                loop[uv_layer].uv = uv_data
+                vertex_normal_buffer.append(normal_data)
+
+        bm.to_mesh(mesh_data)
+        bm.free()
+
+        # set normals        
+        mesh.create_normals_split()
+        mesh.validate(clean_customdata=False)
+        mesh.normals_split_custom_set(vertex_normal_buffer)
+
+        polygon_count = len(mesh.polygons)
+        mesh.polygons.foreach_set('use_smooth', [True] * polygon_count)
+        mesh.use_auto_smooth = True
+
+        mesh_objects.append(obj)
+
+    done_time_surfaces = time.monotonic()
+    log.info_log(f"Created surfaces for {lod0.name} in {round(done_time_surfaces - start_time_surfaces, 2)} seconds.")
+
+    # create skeleton
+    skeleton = None
+    if import_skeleton and XMODELPART != None and len(XMODELPART.bones) > 1:
+        start_time_skeleton = time.monotonic()
+        log.info_log(f"Creating skeleton for {lod0.name}...")
+
+        armature = bpy.data.armatures.new(f"{lod0.name}_armature")
+        armature.display_type = 'STICK'
+
+        skeleton = bpy.data.objects.new(f"{lod0.name}_skeleton", armature)
+        skeleton.parent = xmodel_null
+        skeleton.show_in_front = True
+        bpy.context.scene.collection.objects.link(skeleton)
+        bpy.context.view_layer.objects.active = skeleton
+        bpy.ops.object.mode_set(mode='EDIT')
+
+        bone_matrices = {}
+
+        for bone in XMODELPART.bones:
+
+            new_bone = armature.edit_bones.new(bone.name)
+            new_bone.tail = (0, 0.05, 0)
+
+            matrix_rotation = bone.local_transform.rotation.to_matrix().to_4x4()
+            matrix_transform = mathutils.Matrix.Translation(bone.local_transform.position)
+
+            matrix = matrix_transform @ matrix_rotation
+            bone_matrices[bone.name] = matrix
+
+            if bone.parent > -1:
+                new_bone.parent = armature.edit_bones[bone.parent]
+
+        bpy.context.view_layer.objects.active = skeleton
+        bpy.ops.object.mode_set(mode='POSE')
+
+        for bone in skeleton.pose.bones:
+            bone.matrix_basis.identity()
+            bone.matrix = bone_matrices[bone.name]
+        
+        bpy.ops.pose.armature_apply()
+
+        bpy.ops.object.mode_set(mode='EDIT', toggle=False)
+        bpy.ops.mesh.primitive_ico_sphere_add(subdivisions=3, radius=2)
+        bone_visualizer = bpy.context.active_object
+        bone_visualizer.data.name = bone_visualizer.name = 'bone_visualizer'
+        bone_visualizer.use_fake_user = True
+
+        bpy.context.view_layer.active_layer_collection.collection.objects.unlink(bone_visualizer)
+        bpy.context.view_layer.objects.active = skeleton
+
+        maxs = [0,0,0]
+        mins = [0,0,0]
+
+        for bone in armature.bones:
+            for i in range(3):
+                maxs[i] = max(maxs[i], bone.head_local[i])
+                mins[i] = min(mins[i], bone.head_local[i])
+
+        dimensions = []
+        for i in range(3):
+            dimensions.append(maxs[i] - mins[i])
+
+        length = max(0.001, (dimensions[0] + dimensions[1] + dimensions[2]) / 600)
+        bpy.ops.object.mode_set(mode='EDIT')
+        for bone in [armature.edit_bones[b.name] for b in XMODELPART.bones]:
+            bone.tail = bone.head + (bone.tail - bone.head).normalized() * length
+            skeleton.pose.bones[bone.name].custom_shape = bone_visualizer
+
+        bpy.ops.object.mode_set(mode='OBJECT')
+
+        done_time_skeleton = time.monotonic()
+        log.info_log(f"Created skeleton for {lod0.name} in {round(done_time_skeleton - start_time_skeleton, 2)} seconds.")
+
+    for mesh_object in mesh_objects:
+        if skeleton == None:
+            mesh_object.parent = xmodel_null
+            continue
+
+        for bone in XMODELPART.bones:
+            mesh_object.vertex_groups.new(name=bone.name)
+
+        mesh_object.parent = skeleton
+        modifier = mesh_object.modifiers.new('armature_rig', 'ARMATURE')
+        modifier.object = skeleton
+        modifier.use_bone_envelopes = False
+        modifier.use_vertex_groups = True
+
+
+    bpy.context.view_layer.update()
+    bpy.ops.object.mode_set(mode='OBJECT')
+    bpy.ops.object.select_all(action='DESELECT')
+
+    done_time_xmodel = time.monotonic()
+    log.info_log(f"Imported xmodel: {lod0.name} in {round(done_time_xmodel - start_time_xmodel, 2)} seconds.")
+
+    return xmodel_null

@@ -70,3 +70,21 @@ class BSPImporter(bpy.types.Operator):
     def invoke(self, context, event):
         bpy.context.window_manager.fileselect_add(self)
         return {'RUNNING_MODAL'}
+
+"""
+Imports xmodel file into blender
+"""
+class XModelImporterV14(bpy.types.Operator):
+    bl_idname = 'cod_asset_importer.xmodel_importer_v14'
+    bl_label = 'Import'
+    bl_options = {'UNDO'}
+
+    filepath : bpy.props.StringProperty(subtype='FILE_PATH')
+    def execute(self, context):
+        assetpath = os.path.abspath(os.path.join(os.path.dirname(self.filepath), os.pardir))
+        importer.import_xmodel_v14(assetpath, self.filepath, True)
+        return {'FINISHED'}
+
+    def invoke(self, context, event):
+        bpy.context.window_manager.fileselect_add(self)
+        return {'RUNNING_MODAL'}

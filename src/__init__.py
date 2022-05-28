@@ -29,6 +29,11 @@ operators_list = (
         "text": "Call of Duty model (xmodel)",
         "function": None
     },
+    {
+        "class": operators.XModelImporterV14,
+        "text": "Call of Duty model (xmodel v14)",
+        "function": None
+    },
 )
 
 """
