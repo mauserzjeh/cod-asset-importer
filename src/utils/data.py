@@ -1,4 +1,5 @@
 from __future__ import annotations
+import collections
 import traceback
 
 from . import (
@@ -24,8 +25,8 @@ Read the version of a map file and return
 def PeekMapVersion(file: bytes) -> int:
     try:
         with open(file, 'rb') as f:
-            version = file_io.read_fmt(f, '4xi')
-            return version
+            header = file_io.read_fmt(f, '4xi', collections.namedtuple('header', 'version'))
+            return header.version
     except:
         log.error_log(traceback.print_exc())
         return -1
