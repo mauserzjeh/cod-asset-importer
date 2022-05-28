@@ -22,7 +22,6 @@ from .. assets import (
 
 from .. utils import (
     blender as blenderutils,
-    data as datautils,
     log
 )
 
@@ -159,13 +158,10 @@ def import_d3dbsp(assetpath: str, filepath: str) -> bool:
         if entity_null:
             entity_null.parent = map_entities_null
             entity_null.location = entity.origin.to_tuple()
-
-            rot_x, rot_y, rot_z = datautils.fix_rotation(entity.angles.x, entity.angles.y, entity.angles.z)
-
             entity_null.rotation_euler = (
-                math.radians(rot_x), 
-                math.radians(rot_y), 
-                math.radians(rot_z)
+                math.radians(entity.angles.z), 
+                math.radians(entity.angles.x), 
+                math.radians(entity.angles.y)
             )
             entity_null.scale = (entity.scale, entity.scale, entity.scale)
 
@@ -201,7 +197,7 @@ def import_xmodel_v20(assetpath: str, filepath: str, import_skeleton: bool, fail
         log.error_log(f"Error loading xmodelpart: {lod0.name}")
         XMODELPART = None
 
-    XMODELSURF = xmodelsurf_asset.XModelSurf()
+    XMODELSURF = xmodelsurf_asset.XModelSurfV20()
     xmodel_surf = os.path.join(assetpath, xmodelsurf_asset.XModelSurfV20.PATH, lod0.name)
     if not XMODELSURF.load(xmodel_surf, XMODELPART):
         log.error_log(f"Error loading xmodelsurf: {lod0.name}")
@@ -732,13 +728,10 @@ def import_bsp(assetpath: str, filepath: str) -> bool:
         if entity_null:
             entity_null.parent = map_entities_null
             entity_null.location = entity.origin.to_tuple()
-
-            rot_x, rot_y, rot_z = datautils.fix_rotation(entity.angles.x, entity.angles.y, entity.angles.z)
-
             entity_null.rotation_euler = (
-                math.radians(rot_x), 
-                math.radians(rot_y), 
-                math.radians(rot_z)
+                math.radians(entity.angles.z), 
+                math.radians(entity.angles.x), 
+                math.radians(entity.angles.y)
             )
             entity_null.scale = (entity.scale, entity.scale, entity.scale)
 

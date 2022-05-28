@@ -15,23 +15,13 @@ bl_info = {
 
 operators_list = (
     {
-        "class": operators.D3DBSPImporter,
-        "text": "Call of Duty map (d3dbsp)",
-        "function": None
-    },
-    {
-        "class": operators.BSPImporter,
-        "text": "Call of Duty map (bsp)",
+        "class": operators.MapImporter,
+        "text": "Call of Duty map",
         "function": None
     },
     {
         "class": operators.XModelImporter,
-        "text": "Call of Duty model (xmodel)",
-        "function": None
-    },
-    {
-        "class": operators.XModelImporterV14,
-        "text": "Call of Duty model (xmodel v14)",
+        "text": "Call of Duty xmodel",
         "function": None
     },
 )
