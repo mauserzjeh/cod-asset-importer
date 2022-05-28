@@ -41,6 +41,7 @@ typedef struct {
 typedef struct {
     SetBackColor( cLtYellow );
     string bone_name;
+    FSkip( 24 ); // padding
 } BONENAME;
 
 
