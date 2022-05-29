@@ -635,7 +635,7 @@ def import_bsp(assetpath: str, filepath: str) -> bool:
     log.info_log(f"Importing materials for {BSP.name}...")
     failed_materials = []
     for material in BSP.materials:
-        material_name = os.path.join(*material.name.split('/'))
+        material_name = os.path.join(*material.name.split('/')) # material names are path names as well, so we create a proper path
         if not bpy.data.materials.get(material_name) and material_name not in failed_materials:
 
             # the extension is not defined inside the bsp format 
@@ -664,7 +664,7 @@ def import_bsp(assetpath: str, filepath: str) -> bool:
         mesh = bpy.data.meshes.new(name)
         obj = bpy.data.objects.new(name, mesh)
         obj.parent = map_geometry_null
-        obj.active_material = bpy.data.materials.get(os.path.join(*surface.material.split('/'))) # TODO fix because somehow it doesnt find the materials
+        obj.active_material = bpy.data.materials.get(os.path.join(*surface.material.split('/')))
 
         bpy.context.scene.collection.objects.link(obj)
         bpy.context.view_layer.objects.active = obj
@@ -737,9 +737,6 @@ def import_bsp(assetpath: str, filepath: str) -> bool:
     done_time_surfaces = time.monotonic()
     log.info_log(f"Created surfaces for {BSP.name} in {round(done_time_surfaces - start_time_surfaces, 2)} seconds.")
 
-    # debug 
-    return True
-
     # entities
     start_time_entities = time.monotonic()
     log.info_log(f"Importing entities for {BSP.name}...")
@@ -809,9 +806,10 @@ def import_xmodel_v14(assetpath: str, filepath: str, import_skeleton: bool, fail
     log.info_log(f"Importing textures for {lod0.name}...")
     failed_textures = [] if failed_textures == None else failed_textures # cache
     for texture in lod0.textures:
-        if not bpy.data.materials.get(texture) and texture not in failed_textures:
+        texture_noext = os.path.splitext(texture)[0] # strip off extension for namecheck
+        if not bpy.data.materials.get(texture_noext) and texture_noext not in failed_textures:
             if not _import_material_v14(os.path.join(assetpath, 'skins'), texture):
-                failed_textures.append(texture)
+                failed_textures.append(texture_noext)
             
     done_time_textures = time.monotonic()
     log.info_log(f"Imported materials for {lod0.name} in {round(done_time_textures - start_time_textures, 2)} seconds.")
@@ -822,7 +820,7 @@ def import_xmodel_v14(assetpath: str, filepath: str, import_skeleton: bool, fail
     for i, surface in enumerate(XMODELSURF.surfaces):
         mesh = bpy.data.meshes.new(XMODELSURF.name)
         obj = bpy.data.objects.new(XMODELSURF.name, mesh)
-        obj.active_material = bpy.data.materials.get(lod0.textures[i])
+        obj.active_material = bpy.data.materials.get(os.path.splitext(lod0.textures[i])[0])
 
         bpy.context.scene.collection.objects.link(obj)
         bpy.context.view_layer.objects.active = obj
@@ -1005,6 +1003,7 @@ def _import_material_v14(assetpath: str, texture_name: str) -> bpy.types.Materia
     texture_file = os.path.join(assetpath, texture_name)
     try:
         texture_image = bpy.data.images.load(texture_file, check_existing=True)
+        texture_name = os.path.splitext(texture_name)[0] # strip off the extension when creating the name
         material = bpy.data.materials.new(texture_name)
         material.use_nodes = True
         material.blend_method = 'HASHED'
