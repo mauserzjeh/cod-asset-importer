@@ -225,13 +225,14 @@ class BSP:
         entities = []
         file.seek(entities_lump.offset, os.SEEK_SET)
         entity_data = file.read(entities_lump.length)
-        
+
         # create a valid json string and parse it
         entity_string = entity_data.rstrip(b'\x00').decode('utf-8')
         entity_string = f'[\n{entity_string}]'
         entity_string = re.sub(r'\}\n\{\n', '},\n{\n', entity_string)
         entity_string = re.sub(r'\"\n\"', '",\n"', entity_string)
         entity_string = re.sub(r'\"[^\n]\"', '":"', entity_string)
+        entity_string = entity_string.replace('\\', '/')
         entity_json = json.loads(entity_string)
 
         for entity in entity_json:

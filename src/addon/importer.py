@@ -1041,10 +1041,23 @@ def _import_material_v14(assetpath: str, texture_name: str) -> bpy.types.Materia
 
         texture_node = nodes.new(blenderutils.BLENDER_SHADERNODES.SHADERNODE_TEXIMAGE)
         texture_node.label = 'colorMap'
-        texture_node.location = (-700, -255)
+        texture_node.location = (-700, 0)
         texture_node.image = texture_image
         links.new(texture_node.outputs[blenderutils.BLENDER_SHADERNODES.OUTPUT_TEXIMAGE_COLOR], principled_bsdf_node.inputs[blenderutils.BLENDER_SHADERNODES.INPUT_BSDFPRINCIPLED_BASECOLOR])
-        links.new(texture_node.outputs[blenderutils.BLENDER_SHADERNODES.OUTPUT_TEXIMAGE_ALPHA], mix_shader_node.inputs[blenderutils.BLENDER_SHADERNODES.INPUT_MIXSHADER_FAC])
+        # links.new(texture_node.outputs[blenderutils.BLENDER_SHADERNODES.OUTPUT_TEXIMAGE_ALPHA], mix_shader_node.inputs[blenderutils.BLENDER_SHADERNODES.INPUT_MIXSHADER_FAC])
+
+
+        invert_node = nodes.new(blenderutils.BLENDER_SHADERNODES.SHADERNODE_INVERT)
+        invert_node.location = (-400, 0)
+        
+        invert_fac_default_value = 0.0
+        if 'foliage_masked' in texture_name.lower():
+            invert_fac_default_value = 1.0
+        
+        invert_node.inputs[blenderutils.BLENDER_SHADERNODES.INPUT_INVERT_FAC].default_value = invert_fac_default_value
+
+        links.new(invert_node.outputs[blenderutils.BLENDER_SHADERNODES.OUTPUT_INVERT_COLOR], mix_shader_node.inputs[blenderutils.BLENDER_SHADERNODES.INPUT_MIXSHADER_FAC])
+        links.new(texture_node.outputs[blenderutils.BLENDER_SHADERNODES.OUTPUT_TEXIMAGE_ALPHA], invert_node.inputs[blenderutils.BLENDER_SHADERNODES.INPUT_INVERT_COLOR])
 
         done_time_material = time.monotonic()
         log.info_log(f"Imported material {texture_name} in {round(done_time_material - start_time_material, 2)} seconds.")

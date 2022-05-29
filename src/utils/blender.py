@@ -79,4 +79,9 @@ class BLENDER_SHADERNODES(metaclass = enum.BaseEnum):
     OUTPUT_SEPARATERGB_R = 0
     OUTPUT_SEPARATERGB_G = 1
     OUTPUT_SEPARATERGB_B = 2
+    # ------------------------------------------------
+    SHADERNODE_INVERT = 'ShaderNodeInvert'
+    INPUT_INVERT_FAC = 0
+    INPUT_INVERT_COLOR = 1
+    OUTPUT_INVERT_COLOR = 0
 
