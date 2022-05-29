@@ -1,0 +1,55 @@
+//--------------------------------------
+//--- 010 Editor v6.0.1 Binary Template
+//
+// File:
+// Author:
+// Revision:
+// Purpose:
+//--------------------------------------
+LittleEndian();
+
+typedef float f32;
+typedef double f64;
+typedef unsigned char u8;
+typedef unsigned short u16;
+typedef unsigned int u32;
+typedef char i8;
+typedef short i16;
+typedef int i32;
+
+typedef struct {
+    SetBackColor( cLtRed );
+    f32 x;
+    f32 y;
+    f32 z;
+} JOINTPOS;
+
+typedef struct {
+    SetBackColor( cLtGreen );
+    i16 x;
+    i16 y;
+    i16 z;
+} JOINTROT;
+
+typedef struct {
+    SetBackColor( cLtBlue );
+    u8 parent_joint_id;
+    JOINTPOS joint_pos;
+    JOINTROT joint_rot;
+} JOINT;
+
+typedef struct {
+    SetBackColor( cLtYellow );
+    string bone_name;
+} BONENAME;
+
+
+typedef struct {
+    u16 version;
+    u16 num_joints;
+    u16 num_joints_relative;
+    JOINT joints[num_joints] <optimize=false>;
+    BONENAME bone_names[num_joints + num_joints_relative] <optimize=false>;
+} XMODELPART;
+
+XMODELPART x;
