@@ -5,12 +5,32 @@
 Blender add-on for importing various Call of Duty assets via the game files.
 
 ## Supported assets & features
+- Call of Duty & Call of Duty United Offensive
+    - BSP - Compiled map files
+    - XModel - Compiled models
 - Call of Duty 2
     - D3DBSP - Compiled map files
     - XModel - Compiled models
 
 ## Installation & setup
-First of all, extract all the necessary contents of the .iwd files. Make sure to have the exact same folder structure as they have inside the .iwds.
+First of all, extract all the necessary game specific contents. Make sure to have the exact same folder structure as they have originally.
+
+### Call of Duty
+Files can be found inside the .pk3 files.
+```
+  .
+  ├── maps/
+  ├── skins/
+  ├── textures/
+  ├── xanim/
+  ├── xmodel/
+  ├── xmodelalias/
+  ├── xmodelparts/
+  └── xmodelsurfs/
+```
+
+### Call of Duty 2
+Files can be found inside the .iwd files.
 ```
   .
   ├── images/
@@ -34,10 +54,10 @@ First of all, extract all the necessary contents of the .iwd files. Make sure to
 - To see import progress, information and errors
     - `Window > Toggle System Console`
 - To import a map
-    - `File > Import > Call of Duty map (d3dbsp)`
+    - `File > Import > Call of Duty map`
     - Browse to the map inside the maps folder
 - To import a model
-    - `File > Import > Call of Duty model (xmodel)`
+    - `File > Import > Call of Duty xmodel`
     - Browse to the xmodel inside the xmodel folder
 
 ## Installation from source
