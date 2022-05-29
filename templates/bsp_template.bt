@@ -27,12 +27,14 @@ typedef struct {
 typedef struct {
     SetBackColor( cLtBlue );
     f32 position[3];
-    f32 normal[3];
-    u8 color[4];
     f32 uv[2];
     
     SetBackColor( cNone );
-    u8 p[8] <optimize=false>; // padding
+    u8 p[8]; // padding
+    
+    SetBackColor( cLtBlue );
+    f32 normal[3];
+    u8 color[4];
 } VERTEX;
 
 typedef struct {

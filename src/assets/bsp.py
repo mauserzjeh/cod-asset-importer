@@ -30,7 +30,7 @@ Lump size fmt strings
 class LUMPSIZES(metaclass = enum.BaseEnum):
     MATERIALS = '64sQ'
     TRIANGLESOUPS = '2HI2HI'
-    VERTICES = '3f3f4B2f8x'
+    VERTICES = '3f2f8x3f4B'
     TRIANGLES = '3H'
 
 """
@@ -123,7 +123,7 @@ class BSP:
             self.uv = BSP._uv()
 
         def read(self, file) -> None:
-            vertex = file_io.read_fmt(file, LUMPSIZES.VERTICES, collections.namedtuple('vertex', 'px, py, pz, nx, ny, nz, red, green, blue, alpha, u, v'))
+            vertex = file_io.read_fmt(file, LUMPSIZES.VERTICES, collections.namedtuple('vertex', 'px, py, pz, u, v, nx, ny, nz, red, green, blue, alpha'))
             self.position = mathutils.Vector((
                 vertex.px,
                 vertex.py,
