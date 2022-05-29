@@ -130,3 +130,64 @@ class XModelV14:
             log.error_log(traceback.print_exc())
             return False
 
+
+"""
+XModelV25 class represents an xmodel structure for CoD4
+"""
+class XModelV25:
+
+    PATH = 'xmodel'
+    VERSION = 25
+
+    # --------------------------------------------------------------------------------------------
+    class _lod:
+        __slots__ = ('name', 'distance', 'materials')
+    
+        def __init__(self, name: str = "", distance: float = 0.0, materials: 'list[str]' = None) -> None:
+            self.name = name
+            self.distance = distance
+            self.materials = [] if materials == None else materials
+        
+    # --------------------------------------------------------------------------------------------
+
+    __slots__ = ('name', 'lods')
+
+    def __init__(self) -> None:
+        self.name = ''
+        self.lods = []
+
+    def load(self, xmodel: str) -> bool:
+        self.name = os.path.basename(xmodel)
+        try:
+            with open(xmodel, 'rb') as file:
+                version = file_io.read_ushort(file)
+                if version != self.VERSION:
+                    log.info_log(f'Xmodel version {version} is not supported!')
+                    return False
+
+                file.read(26) # padding
+                
+                for _ in range(4):
+                    lod_distance = file_io.read_float(file)
+                    lod_name = file_io.read_nullstr(file)
+
+                    if len(lod_name):
+                        self.lods.append(self._lod(lod_name, lod_distance))
+                
+                file.read(4) # padding
+
+                padding_count = file_io.read_uint(file)
+                for _ in range(padding_count):
+                    sub_padding_count = file_io.read_uint(file)
+                    file.read(((sub_padding_count*48)+36))
+
+                for k in range(len(self.lods)):
+                    material_count = file_io.read_ushort(file)
+                    for _ in range(material_count):
+                        material = file_io.read_nullstr(file)
+                        self.lods[k].materials.append(material)
+
+                return True
+        except:
+            log.error_log(traceback.print_exc())
+            return False
