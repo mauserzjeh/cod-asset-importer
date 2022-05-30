@@ -31,7 +31,7 @@ typedef struct {
     SetBackColor( cGray );
     u16 weight; // 2
 
-} WEIGHT; // 16
+} WEIGHT; // 4
 
 typedef struct {
     SetBackColor( cLtRed );
