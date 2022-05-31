@@ -51,7 +51,7 @@ typedef struct {
     LOD lods[num_lods] <optimize=false>;
     
     FSkip( 4 ); // padding
-    
+
     i32 unk_count;
     UNK unks[unk_count] <optimize=false>;
 
@@ -61,6 +61,7 @@ typedef struct {
             valid_lods++;
         }
     }
+    
     LODMATERIALS materials[valid_lods] <optimize=false>;
 
 } XMODEL;

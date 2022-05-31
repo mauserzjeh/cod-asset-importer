@@ -67,6 +67,10 @@ class XModelImporter(bpy.types.Operator):
             importer.import_xmodel_v14(assetpath, self.filepath, True)
             return {'FINISHED'}
 
+        if version == xmodel.XModelV25.VERSION:
+            importer.import_xmodel_v25(assetpath, self.filepath, True)
+            return {'FINISHED'}
+
         log.error_log(f"Unsupported xmodel version {version}")
         return {'FINISHED'}
 

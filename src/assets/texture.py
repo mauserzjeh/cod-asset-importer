@@ -39,9 +39,9 @@ class TEXTURE_TYPE(metaclass = enum.BaseEnum):
     SPECULARMAP = 'specularMap'
 
 """
-Texture class represents a texture structure 
+IWi class represents an IWi structure 
 """
-class Texture:
+class IWi:
 
     MAGIC = 'IWi'
     VERSION = 5
