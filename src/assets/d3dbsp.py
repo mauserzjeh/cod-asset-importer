@@ -276,7 +276,7 @@ class D3DBSP:
             with open(map, 'rb') as file:
                 header = file_io.read_fmt(file, '4si', collections.namedtuple('header', 'magic, version'))
                 header_magic = header.magic.decode('utf-8')
-                if header_magic != self.MAGIC and header.version != self.VERSION:
+                if header_magic != self.MAGIC or header.version != self.VERSION:
                     log.info_log(f"{header_magic}{header.version} is not supported")
                     return False
 

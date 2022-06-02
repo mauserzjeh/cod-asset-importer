@@ -208,7 +208,7 @@ class XModelSurfV14:
             return (self.u, self.v)
 
     class _vertex:
-        __slots__ = ('normal', 'color', 'uv', 'binormal', 'tangent', 'bone', 'position', 'weights')
+        __slots__ = ('normal', 'color', 'uv', 'bone', 'position', 'weights')
 
         def __init__(self, normal: mathutils.Vector , uv: XModelSurfV14._uv, bone: int, position: mathutils.Vector, weights: list[XModelSurfV14._weight]) -> None:
             self.normal = normal
