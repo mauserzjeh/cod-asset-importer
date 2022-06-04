@@ -220,7 +220,7 @@ def import_xmodel(assetpath: str, filepath: str, import_skeleton: bool) -> bpy.t
         elif XMODEL.version == xmodel_asset.VERSIONS.COD2:
             _import_material_v20(assetpath, material)
         elif XMODEL.version == xmodel_asset.VERSIONS.COD4:
-            pass
+            _import_material_v25(assetpath, material)
 
     # create mesh
     for i, surface in enumerate(XMODELSURF.surfaces):
@@ -494,7 +494,130 @@ def _import_material_v20(assetpath: str, material_name: str) -> bool:
 
     MATERIAL = material_asset.Material()
     material_file = os.path.join(assetpath, material_asset.Material.PATH, material_name)
-    if not MATERIAL.load(material_file):
+    if not MATERIAL.load(xmodel_asset.VERSIONS.COD2, material_file):
+        log.error_log(f"Error loading material: {material_name}")
+        return False
+    
+    material = bpy.data.materials.new(MATERIAL.name)
+    material.use_nodes = True
+    material.blend_method = 'HASHED'
+    material.shadow_method = 'HASHED'
+
+    nodes = material.node_tree.nodes
+    links = material.node_tree.links
+
+    output_node = None
+    for node in nodes:
+        if node.type != 'OUTPUT_MATERIAL':
+            nodes.remove(node)
+            continue
+
+        if node.type == 'OUTPUT_MATERIAL' and output_node == None:
+            output_node = node
+
+    if output_node == None:
+        output_node = nodes.new(blenderutils.BLENDER_SHADERNODES.SHADERNODE_OUTPUTMATERIAL)
+
+    output_node.location = (300, 0)
+
+    mix_shader_node = nodes.new(blenderutils.BLENDER_SHADERNODES.SHADERNODE_MIXSHADER)
+    mix_shader_node.location = (100, 0)
+    links.new(mix_shader_node.outputs[blenderutils.BLENDER_SHADERNODES.OUTPUT_MIXSHADER_SHADER], output_node.inputs[blenderutils.BLENDER_SHADERNODES.INPUT_OUTPUTMATERIAL_SURFACE])
+
+    transparent_bsdf_node = nodes.new(blenderutils.BLENDER_SHADERNODES.SHADERNODE_BSDFTRANSPARENT)
+    transparent_bsdf_node.location = (-200, 100)
+    links.new(transparent_bsdf_node.outputs[blenderutils.BLENDER_SHADERNODES.OUTPUT_BSDFTRANSPARENT_BSDF], mix_shader_node.inputs[blenderutils.BLENDER_SHADERNODES.INPUT_MIXSHADER_SHADER1])
+
+    principled_bsdf_node = nodes.new(blenderutils.BLENDER_SHADERNODES.SHADERNODE_BSDFPRINCIPLED)
+    principled_bsdf_node.location = (-200, 0)
+    principled_bsdf_node.width = 200
+    links.new(principled_bsdf_node.outputs[blenderutils.BLENDER_SHADERNODES.OUTPUT_BSDFTRANSPARENT_BSDF], mix_shader_node.inputs[blenderutils.BLENDER_SHADERNODES.INPUT_MIXSHADER_SHADER2])
+
+    for i, t in enumerate(MATERIAL.textures):
+        texture_image = _import_texture(assetpath, t.name)
+        if texture_image == False:
+            continue
+
+        texture_node = nodes.new(blenderutils.BLENDER_SHADERNODES.SHADERNODE_TEXIMAGE)
+        texture_node.label = t.type
+        texture_node.location = (-700, -255 * i)
+        texture_node.image = texture_image
+
+        if t.type == texture_asset.TEXTURE_TYPE.COLORMAP:
+            links.new(texture_node.outputs[blenderutils.BLENDER_SHADERNODES.OUTPUT_TEXIMAGE_COLOR], principled_bsdf_node.inputs[blenderutils.BLENDER_SHADERNODES.INPUT_BSDFPRINCIPLED_BASECOLOR])
+            links.new(texture_node.outputs[blenderutils.BLENDER_SHADERNODES.OUTPUT_TEXIMAGE_ALPHA], mix_shader_node.inputs[blenderutils.BLENDER_SHADERNODES.INPUT_MIXSHADER_FAC])
+        elif t.type == texture_asset.TEXTURE_TYPE.SPECULARMAP:
+            links.new(texture_node.outputs[blenderutils.BLENDER_SHADERNODES.OUTPUT_TEXIMAGE_COLOR], principled_bsdf_node.inputs[blenderutils.BLENDER_SHADERNODES.INPUT_BSDFPRINCIPLED_SPECULAR])
+            texture_node.image.colorspace_settings.name = blenderutils.BLENDER_SHADERNODES.TEXIMAGE_COLORSPACE_LINEAR
+            texture_node.location = (-700, -255)
+        elif t.type == texture_asset.TEXTURE_TYPE.NORMALMAP:
+            texture_node.image.colorspace_settings.name = blenderutils.BLENDER_SHADERNODES.TEXIMAGE_COLORSPACE_LINEAR
+            texture_node.location = (-1900, -655)
+            
+            normal_map_node = nodes.new(blenderutils.BLENDER_SHADERNODES.SHADERNODE_NORMALMAP)
+            normal_map_node.location = (-450, -650)
+            normal_map_node.space = blenderutils.BLENDER_SHADERNODES.NORMALMAP_SPACE_TANGENT
+            normal_map_node.inputs[blenderutils.BLENDER_SHADERNODES.INPUT_NORMALMAP_STRENGTH].default_value = 0.3
+            links.new(normal_map_node.outputs[blenderutils.BLENDER_SHADERNODES.OUTPUT_NORMALMAP_NORMAL], principled_bsdf_node.inputs[blenderutils.BLENDER_SHADERNODES.INPUT_BSDFPRINCIPLED_NORMAL])
+
+            combine_rgb_node = nodes.new(blenderutils.BLENDER_SHADERNODES.SHADERNODE_COMBINERGB)
+            combine_rgb_node.location = (-650, -750)
+            links.new(combine_rgb_node.outputs[blenderutils.BLENDER_SHADERNODES.OUTPUT_COMBINERGB_IMAGE], normal_map_node.inputs[blenderutils.BLENDER_SHADERNODES.INPUT_NORMALMAP_COLOR])
+
+            math_sqrt_node = nodes.new(blenderutils.BLENDER_SHADERNODES.SHADERNODE_MATH)
+            math_sqrt_node.location = (-850, -850)
+            math_sqrt_node.operation = blenderutils.BLENDER_SHADERNODES.OPERATION_MATH_SQRT
+            links.new(math_sqrt_node.outputs[blenderutils.BLENDER_SHADERNODES.OUTPUT_MATH_VALUE], combine_rgb_node.inputs[blenderutils.BLENDER_SHADERNODES.INPUT_COMBINERGB_B])
+
+            math_subtract_node = nodes.new(blenderutils.BLENDER_SHADERNODES.SHADERNODE_MATH)
+            math_subtract_node.location = (-1050, -850)
+            math_subtract_node.operation = blenderutils.BLENDER_SHADERNODES.OPERATION_MATH_SUBTRACT
+            links.new(math_subtract_node.outputs[blenderutils.BLENDER_SHADERNODES.OUTPUT_MATH_VALUE], math_sqrt_node.inputs[blenderutils.BLENDER_SHADERNODES.INPUT_MATH_SQRT_VALUE])
+
+            math_subtract_node2 = nodes.new(blenderutils.BLENDER_SHADERNODES.SHADERNODE_MATH)
+            math_subtract_node2.location = (-1250, -950)
+            math_subtract_node2.operation = blenderutils.BLENDER_SHADERNODES.OPERATION_MATH_SUBTRACT
+            math_subtract_node2.inputs[blenderutils.BLENDER_SHADERNODES.INPUT_MATH_SUBTRACT_VALUE1].default_value = 1.0
+            links.new(math_subtract_node2.outputs[blenderutils.BLENDER_SHADERNODES.OUTPUT_MATH_VALUE], math_subtract_node.inputs[blenderutils.BLENDER_SHADERNODES.INPUT_MATH_SUBTRACT_VALUE1])
+
+            math_power_node = nodes.new(blenderutils.BLENDER_SHADERNODES.SHADERNODE_MATH)
+            math_power_node.location = (-1250, -750)
+            math_power_node.operation = blenderutils.BLENDER_SHADERNODES.OPERATION_MATH_POWER
+            math_power_node.inputs[blenderutils.BLENDER_SHADERNODES.INPUT_MATH_POWER_EXPONENT].default_value = 2.0
+            links.new(math_power_node.outputs[blenderutils.BLENDER_SHADERNODES.OUTPUT_MATH_VALUE], math_subtract_node.inputs[blenderutils.BLENDER_SHADERNODES.INPUT_MATH_SUBTRACT_VALUE2])
+
+            math_power_node2 = nodes.new(blenderutils.BLENDER_SHADERNODES.SHADERNODE_MATH)
+            math_power_node2.location = (-1500, -950)
+            math_power_node2.operation = blenderutils.BLENDER_SHADERNODES.OPERATION_MATH_POWER
+            math_power_node2.inputs[blenderutils.BLENDER_SHADERNODES.INPUT_MATH_POWER_EXPONENT].default_value = 2.0
+            links.new(math_power_node2.outputs[blenderutils.BLENDER_SHADERNODES.OUTPUT_MATH_VALUE], math_subtract_node2.inputs[blenderutils.BLENDER_SHADERNODES.INPUT_MATH_SUBTRACT_VALUE2])
+            links.new(texture_node.outputs[blenderutils.BLENDER_SHADERNODES.OUTPUT_TEXIMAGE_ALPHA], math_power_node2.inputs[blenderutils.BLENDER_SHADERNODES.INPUT_MATH_POWER_BASE])
+
+            separate_rgb_node = nodes.new(blenderutils.BLENDER_SHADERNODES.SHADERNODE_SEPARATERGB)
+            separate_rgb_node.location = (-1500, -450)
+            links.new(separate_rgb_node.outputs[blenderutils.BLENDER_SHADERNODES.OUTPUT_SEPARATERGB_G], combine_rgb_node.inputs[blenderutils.BLENDER_SHADERNODES.INPUT_COMBINERGB_G])
+            links.new(separate_rgb_node.outputs[blenderutils.BLENDER_SHADERNODES.OUTPUT_SEPARATERGB_G], math_power_node.inputs[blenderutils.BLENDER_SHADERNODES.INPUT_MATH_POWER_BASE])
+            links.new(texture_node.outputs[blenderutils.BLENDER_SHADERNODES.OUTPUT_TEXIMAGE_COLOR], separate_rgb_node.inputs[blenderutils.BLENDER_SHADERNODES.INPUT_SEPARATERGB_IMAGE])
+            links.new(texture_node.outputs[blenderutils.BLENDER_SHADERNODES.OUTPUT_TEXIMAGE_ALPHA], math_power_node2.inputs[blenderutils.BLENDER_SHADERNODES.INPUT_MATH_POWER_BASE])
+            links.new(texture_node.outputs[blenderutils.BLENDER_SHADERNODES.OUTPUT_TEXIMAGE_ALPHA], combine_rgb_node.inputs[blenderutils.BLENDER_SHADERNODES.INPUT_COMBINERGB_R])
+
+    done_time_material = time.monotonic()
+    log.info_log(f"Imported material: {MATERIAL.name} [{round(done_time_material - start_time_material, 2)}s]")
+
+    return True
+
+"""
+Import a material file for CoD4 (v26) assets and create node setup
+"""
+def _import_material_v25(assetpath: str, material_name: str) -> bool:
+    if bpy.data.materials.get(material_name):
+        return True
+
+    start_time_material = time.monotonic()
+
+    MATERIAL = material_asset.Material()
+    material_file = os.path.join(assetpath, material_asset.Material.PATH, material_name)
+    if not MATERIAL.load(xmodel_asset.VERSIONS.COD4, material_file):
         log.error_log(f"Error loading material: {material_name}")
         return False
     

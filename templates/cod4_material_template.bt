@@ -39,20 +39,19 @@ typedef struct {
 typedef struct {
     SetBackColor( cLtRed );
     u32 name_offset;
-    
+
     SetBackColor( cAqua );
     local i64 current_offset = FTell();
     FSeek( name_offset );
     string name;
     FSeek( current_offset );
     
-    FSkip( 48 ); // padding
-    
+    FSkip( 44 ); // padding
     SetBackColor( cLtYellow );
     u16 texture_count;
 
     FSkip( 2 ); // padding
-
+    
     SetBackColor( cLtGray );
     u32 techset_offset;
 
