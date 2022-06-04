@@ -1,0 +1,110 @@
+//--------------------------------------
+//--- 010 Editor v6.0.1 Binary Template
+//
+// File:
+// Author:
+// Revision:
+// Purpose:
+//--------------------------------------
+LittleEndian();
+
+typedef float f32;
+typedef double f64;
+typedef unsigned char u8;
+typedef unsigned short u16;
+typedef unsigned int u32;
+typedef char i8;
+typedef short i16;
+typedef int i32;
+typedef int64 i64;
+
+typedef struct(i32 size, int color) {
+    SetBackColor( color );
+    u8 d[size];
+} MIPMAP;
+
+typedef struct {
+    SetBackColor( cLtGreen );
+    u8 format;
+
+    SetBackColor( cLtGray );
+    u8 usage;
+
+    SetBackColor( cLtYellow );
+    u16 width;
+    u16 height;
+
+    SetBackColor( cLtBlue );
+    u16 depth;
+
+} INFO; // 10
+
+typedef struct {
+    
+    SetBackColor( cLtRed );
+    i8 magic[3];
+
+    SetBackColor( cLtBlue );
+    u8 version;
+    
+    // CoD MW2 (8) & MW3 (8)
+    if (version == 8) {
+        FSeek( 8 );
+    }
+
+    INFO info;
+
+    local int num_offsets = 4;
+
+    // CoD BO1 (13) & BO2 (27)
+    if (version == 13 || version == 27) {
+        num_offsets = 8;
+        FSeek( 16 );
+
+        if (version == 27) {
+            FSeek( 32 );
+        }
+    }
+    
+    
+    SetBackColor( cLtPurple );
+    i32 offsets[num_offsets];
+    local int i;
+    local i64 first = FTell();
+    local i32 os[num_offsets];    
+    local i32 ss[num_offsets];
+    
+    
+    for (i = 0; i < num_offsets; i++) {
+        Printf("offset(%d): %i\n", i, offsets[i]);
+        switch(i) {
+            case 0:
+                os[i] = offsets[i];
+                ss[i] = FileSize() - offsets[i];
+                break;
+            case (num_offsets - 1):
+                os[i] = first;
+                ss[i] = offsets[i] - first;
+                break;
+            default:
+                os[i] = offsets[i];
+                ss[i] = offsets[i-1] - offsets[i];
+        }
+    }
+    
+    local int color;
+    for(i = 0; i < num_offsets; i++) {
+        if(i % 2 == 0) {
+            color = cLtGray;
+        } else {
+            color = cAqua;
+        }
+        FSeek( os[i] );
+        Printf("mipmap[%d]: offset=%d, size=%i\n", i, os[i], ss[i]);
+        if (ss[i] > 0) {
+            MIPMAP mmmm(ss[i], color);
+        }
+    }
+} IWI;
+
+IWI t;

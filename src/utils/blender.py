@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import bpy
 
 from . import (
@@ -15,7 +17,7 @@ def select_hierarchy(obj: bpy.types.Object) -> None:
 """
 Copies the selected objects
 """
-def copy_object_hierarchy(obj: bpy.types.Object) -> 'list[bpy.types.Object]':
+def copy_object_hierarchy(obj: bpy.types.Object) -> list[bpy.types.Object]:
     select_hierarchy(obj)
     bpy.ops.object.duplicate()
     return bpy.context.selected_objects
@@ -79,4 +81,9 @@ class BLENDER_SHADERNODES(metaclass = enum.BaseEnum):
     OUTPUT_SEPARATERGB_R = 0
     OUTPUT_SEPARATERGB_G = 1
     OUTPUT_SEPARATERGB_B = 2
+    # ------------------------------------------------
+    SHADERNODE_INVERT = 'ShaderNodeInvert'
+    INPUT_INVERT_FAC = 0
+    INPUT_INVERT_COLOR = 1
+    OUTPUT_INVERT_COLOR = 0
 

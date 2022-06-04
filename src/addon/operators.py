@@ -5,23 +5,23 @@ import os
 from . import importer
 
 """
-Imports .d3dbsp file into blender
+Imports a map file into blender
 """
-class D3DBSPImporter(bpy.types.Operator):
-    bl_idname = 'cod_asset_importer.d3dbsp_importer'
+class MapImporter(bpy.types.Operator):
+    bl_idname = 'cod_asset_importer.map_importer'
     bl_label = 'Import'
     bl_options = {'UNDO'}
 
     filepath : bpy.props.StringProperty(subtype='FILE_PATH')
     filename_ext = '.d3dbsp'
-    filter_glob : bpy.props.StringProperty(default='*.d3dbsp', options={'HIDDEN'})
+    filter_glob : bpy.props.StringProperty(default='*.d3dbsp;*.bsp', options={'HIDDEN'})
 
     def execute(self, context):
         assetpath = os.path.abspath(os.path.join(os.path.dirname(self.filepath), os.pardir))
         if os.path.basename(self.filepath).startswith("mp_"):
             assetpath = os.path.abspath(os.path.join(os.path.dirname(self.filepath), os.pardir, os.pardir))
-            
-        importer.import_d3dbsp(assetpath, self.filepath)
+
+        importer.import_ibsp(assetpath, self.filepath)
         return {'FINISHED'}
 
     def invoke(self, context, event):

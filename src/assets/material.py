@@ -1,6 +1,8 @@
 import os
 import traceback
 
+from . import xmodel
+
 from .. utils import ( 
     file_io,
     log
@@ -31,7 +33,7 @@ class Material:
         self.techset = ''
         self.textures = []
 
-    def load(self, material: str) -> bool:
+    def load(self, version: int, material: str) -> bool:
         self.name = os.path.basename(material)
         try:
             with open(material, 'rb') as file:
@@ -42,7 +44,10 @@ class Material:
                 self.name = file_io.read_nullstr(file)
                 file.seek(current_offset, os.SEEK_SET)
 
-                file.read(48) # padding
+                if version == xmodel.VERSIONS.COD2:
+                    file.read(48) # padding
+                else:
+                    file.read(44) # padding
 
                 texture_count = file_io.read_ushort(file)
 
@@ -72,6 +77,6 @@ class Material:
 
                 return True
 
-        except Exception as e:
-            log.error_log(e)
+        except:
+            log.error_log(traceback.print_exc())
             return False

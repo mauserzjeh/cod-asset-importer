@@ -6,7 +6,7 @@ bl_info = {
     "name": "Call of Duty Asset Importer",
     "description": "Import various Call of Duty assets",
     "author": "Soma Rádóczi",
-    "version": (2, 0, 0),
+    "version": (2, 1, 0),
     "blender": (3, 0, 0),
     "location": "File > Import/Export",
     "category": "Import-Export",
@@ -15,13 +15,13 @@ bl_info = {
 
 operators_list = (
     {
-        "class": operators.D3DBSPImporter,
-        "text": "Call of Duty map (d3dbsp)",
+        "class": operators.MapImporter,
+        "text": "Call of Duty map",
         "function": None
     },
     {
         "class": operators.XModelImporter,
-        "text": "Call of Duty model (xmodel)",
+        "text": "Call of Duty xmodel",
         "function": None
     },
 )
