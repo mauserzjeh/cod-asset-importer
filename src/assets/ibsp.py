@@ -18,20 +18,35 @@ from .. utils import (
 Lump constants
 """
 class LUMPS(metaclass = enum.BaseEnum):
-    MATERIALS = 0
-    TRIANGLESOUPS = 6
-    VERTICES = 7
-    TRIANGLES = 8
-    ENTITIES  = 29
+    # CoD1 & CoD:UO
+    v59_MATERIALS = 0
+    v59_TRIANGLESOUPS = 6
+    v59_VERTICES = 7
+    v59_TRIANGLES = 8
+    v59_ENTITIES  = 29
+
+    # CoD2
+    v4_MATERIALS = 0
+    v4_TRIANGLESOUPS = 7
+    v4_VERTICES = 8
+    v4_TRIANGLES = 9
+    v4_ENTITIES = 37
 
 """
 Lump size fmt strings
 """
 class LUMPSIZES(metaclass = enum.BaseEnum):
-    MATERIALS = '64sQ'
-    TRIANGLESOUPS = '2HI2HI'
-    VERTICES = '3f2f8x3f4B'
-    TRIANGLES = '3H'
+    # CoD1 & CoD:UO
+    v59_MATERIALS = '64sQ'
+    v59_TRIANGLESOUPS = '2HI2HI'
+    v59_VERTICES = '3f2f8x3f4B'
+    v59_TRIANGLES = '3H'
+
+    # CoD2
+    v4_MATERIALS = '64sQ'
+    v4_TRIANGLESOUPS = '2HI2HI'
+    v4_VERTICES = '3f3f4B2f32x'
+    v4_TRIANGLES = '3H'
 
 """
 Entity key constants
@@ -43,12 +58,18 @@ class ENTITY_KEYS(metaclass = enum.BaseEnum):
     MODELSCALE = 'modelscale'
 
 """
-BSP class representing a BSP structure
+IBSP version constants
 """
-class BSP:
+class VERSIONS(metaclass = enum.BaseEnum):
+    COD1 = 0x3B # 59
+    COD2 = 0x04 # 4
+
+"""
+IBSP class represents an IBSP structure
+"""
+class IBSP:
 
     MAGIC = 'IBSP'
-    VERSION = 59
 
     # --------------------------------------------------------------------------------------------
     class _uv:
@@ -64,7 +85,7 @@ class BSP:
     class _color:
         __slots__ = ('red', 'green', 'blue', 'alpha')
 
-        def __init__(self, red: int = 0, green: int = 0, blue: int = 0, alpha: int = 0) -> None:
+        def __init__(self, red: float = 0.0, green: float = 0.0, blue: float = 0.0, alpha: float = 0.0) -> None:
             self.red = red
             self.green = green
             self.blue = blue
@@ -87,8 +108,12 @@ class BSP:
             self.name = name
             self.flag = flag
 
-        def read(self, file) -> None:
-            material = file_io.read_fmt(file, LUMPSIZES.MATERIALS, collections.namedtuple('material', 'name, flag'))
+        def read(self, file: bytes, version: int) -> None:
+            if version == VERSIONS.COD1:
+                material = file_io.read_fmt(file, LUMPSIZES.v59_MATERIALS, collections.namedtuple('material', 'name, flag'))
+            else:
+                material = file_io.read_fmt(file, LUMPSIZES.v4_MATERIALS, collections.namedtuple('material', 'name, flag'))
+
             self.name = material.name.rstrip(b'\x00').decode('utf-8')
             self.flag = material.flag
 
@@ -103,8 +128,13 @@ class BSP:
             self.triangles_offset = triangles_offset
             self.triangles_length = triangles_length
 
-        def read(self, file) -> None:
-            trianglesoup = file_io.read_fmt(file, LUMPSIZES.TRIANGLESOUPS, collections.namedtuple('trianglesoup', 'material_idx, draw_order, vertices_offset, vertices_length, triangles_length, triangles_offset'))
+        def read(self, file: bytes, version: int) -> None:
+            if version == VERSIONS.COD1:
+                trianglesoup = file_io.read_fmt(file, LUMPSIZES.v59_TRIANGLESOUPS, collections.namedtuple('trianglesoup', 'material_idx, draw_order, vertices_offset, vertices_length, triangles_length, triangles_offset'))
+            else:
+                trianglesoup = file_io.read_fmt(file, LUMPSIZES.v4_TRIANGLESOUPS, collections.namedtuple('trianglesoup', 'material_idx, draw_order, vertices_offset, vertices_length, triangles_length, triangles_offset'))
+
+
             self.material_idx = trianglesoup.material_idx
             self.draw_order = trianglesoup.draw_order
             self.vertices_offset = trianglesoup.vertices_offset
@@ -119,11 +149,16 @@ class BSP:
         def __init__(self) -> None:
             self.position = mathutils.Vector()
             self.normal = mathutils.Vector()
-            self.color = BSP._color()
-            self.uv = BSP._uv()
+            self.color = IBSP._color()
+            self.uv = IBSP._uv()
 
-        def read(self, file) -> None:
-            vertex = file_io.read_fmt(file, LUMPSIZES.VERTICES, collections.namedtuple('vertex', 'px, py, pz, u, v, nx, ny, nz, red, green, blue, alpha'))
+        def read(self, file: bytes, version: int) -> None:
+            if version == VERSIONS.COD1:
+                vertex = file_io.read_fmt(file, LUMPSIZES.v59_VERTICES, collections.namedtuple('vertex', 'px, py, pz, u, v, nx, ny, nz, red, green, blue, alpha'))
+            else:
+                vertex = file_io.read_fmt(file, LUMPSIZES.v4_VERTICES, collections.namedtuple('vertex', 'px, py, pz, nx, ny, nz, red, green, blue, alpha, u, v'))
+
+
             self.position = mathutils.Vector((
                 vertex.px,
                 vertex.py,
@@ -134,7 +169,7 @@ class BSP:
                 vertex.ny,
                 vertex.nz
             ))
-            self.color = BSP._color(
+            self.color = IBSP._color(
                 vertex.red / 255,
                 vertex.green / 255,
                 vertex.blue / 255,
@@ -142,7 +177,7 @@ class BSP:
             )
 
             # flip UV
-            self.uv = BSP._uv(
+            self.uv = IBSP._uv(
                 vertex.u,
                 1-vertex.v
             )
@@ -159,73 +194,107 @@ class BSP:
     class _surface:
         __slots__ = ('material', 'vertices', 'triangles')
 
-        def __init__(self, material: str, triangles: list[tuple], vertices: dict[int, BSP._vertex]) -> None:
+        def __init__(self, material: str, triangles: list[tuple], vertices: dict[int, IBSP._vertex]) -> None:
             self.material = material
             self.vertices = vertices
             self.triangles = triangles
 
     # --------------------------------------------------------------------------------------------
 
-    __slots__ = ('name', 'surfaces', 'entities', 'materials')
+    __slots__ = ('name', 'version', 'surfaces', 'entities', 'materials')
 
     def __init__(self) -> None:
         self.name = ''
+        self.version = 0
         self.surfaces = []
         self.entities = []
         self.materials = []
 
-    def _read_lumps(self, file) -> list[_lump]:
+    def _read_lumps(self, file: bytes) -> list[_lump]:
         lumps = []
-        for _ in range(32):
+        for _ in range(39):
             lump = file_io.read_fmt(file, '2I', collections.namedtuple('lump', 'length, offset'))
             lumps.append(self._lump(lump.length, lump.offset))
 
         return lumps
 
-    def _read_materials(self, file, materials_lump: _lump) -> list[_material]:
+    def _read_materials(self, file: bytes, version: int, lumps: list[_lump]) -> list[_material]:
+        if version == VERSIONS.COD1:
+            materials_lump = lumps[LUMPS.v59_MATERIALS]
+            materials_size = LUMPSIZES.v59_MATERIALS
+        else:
+            materials_lump = lumps[LUMPS.v4_MATERIALS]
+            materials_size = LUMPSIZES.v4_MATERIALS
+
         materials = []
         file.seek(materials_lump.offset, os.SEEK_SET)
-        for _ in range(0, materials_lump.length, struct.calcsize(LUMPSIZES.MATERIALS)):
+        for _ in range(0, materials_lump.length, struct.calcsize(materials_size)):
             material = self._material()
-            material.read(file)
+            material.read(file, version)
             materials.append(material)
         
         return materials
 
-    def _read_trianglesoups(self, file, trianglesoups_lump: _lump) -> list[_trianglesoup]:
+    def _read_trianglesoups(self, file: bytes, version: int, lumps: list[_lump]) -> list[_trianglesoup]:
+        if version == VERSIONS.COD1:
+            trianglesoups_lump = lumps[LUMPS.v59_TRIANGLESOUPS]
+            trianglesoups_size = LUMPSIZES.v59_TRIANGLESOUPS
+        else:
+            trianglesoups_lump = lumps[LUMPS.v4_TRIANGLESOUPS]
+            trianglesoups_size = LUMPSIZES.v4_TRIANGLESOUPS
+
         trianglesoups = []
         file.seek(trianglesoups_lump.offset, os.SEEK_SET)
-        for _ in range(0, trianglesoups_lump.length, struct.calcsize(LUMPSIZES.TRIANGLESOUPS)):
+        for _ in range(0, trianglesoups_lump.length, struct.calcsize(trianglesoups_size)):
             trianglesoup = self._trianglesoup()
-            trianglesoup.read(file)
+            trianglesoup.read(file, version)
             trianglesoups.append(trianglesoup)
 
         return trianglesoups
 
-    def _read_vertices(self, file, vertices_lump: _lump) -> list[_vertex]:
+    def _read_vertices(self, file: bytes, version: int, lumps: list[_lump]) -> list[_vertex]:
+        if version == VERSIONS.COD1:
+            vertices_lump = lumps[LUMPS.v59_VERTICES]
+            vertices_size = LUMPSIZES.v59_VERTICES
+        else:
+            vertices_lump = lumps[LUMPS.v4_VERTICES]
+            vertices_size = LUMPSIZES.v4_VERTICES
+
         vertices = []
         file.seek(vertices_lump.offset, os.SEEK_SET)    
-        for _ in range(0, vertices_lump.length, struct.calcsize(LUMPSIZES.VERTICES)):
+        for _ in range(0, vertices_lump.length, struct.calcsize(vertices_size)):
             vertex = self._vertex()
-            vertex.read(file)
+            vertex.read(file, version)
             vertices.append(vertex)
 
         return vertices
 
-    def _read_triangles(self, file, triangles_lump: _lump) -> list[tuple]:
+    def _read_triangles(self, file: bytes, version: int, lumps: list[_lump]) -> list[tuple]:
+        if version == VERSIONS.COD1:
+            triangles_lump = lumps[LUMPS.v59_TRIANGLES]
+            triangles_size = LUMPSIZES.v59_TRIANGLES
+        else:
+            triangles_lump = lumps[LUMPS.v4_TRIANGLES]
+            triangles_size = LUMPSIZES.v4_TRIANGLES
+
         triangles = []
         file.seek(triangles_lump.offset, os.SEEK_SET)
-        for _ in range(0, triangles_lump.length, struct.calcsize(LUMPSIZES.TRIANGLES)):
-            triangle = file_io.read_fmt(file, LUMPSIZES.TRIANGLES)
+        for _ in range(0, triangles_lump.length, struct.calcsize(triangles_size)):
+            triangle = file_io.read_fmt(file, triangles_size)
             triangles.append(triangle)
 
         return triangles
 
-    def _read_entities(self, file, entities_lump: _lump) -> list[_entity]:
+    def _read_entities(self, file: bytes, version: int, lumps: list[_lump]) -> list[_entity]:
+        if version == VERSIONS.COD1:
+            entities_lump = lumps[LUMPS.v59_ENTITIES]
+        else:
+            entities_lump = lumps[LUMPS.v4_ENTITIES]
+
         entities = []
         file.seek(entities_lump.offset, os.SEEK_SET)
         entity_data = file.read(entities_lump.length)
-
+        
         # create a valid json string and parse it
         entity_string = entity_data.rstrip(b'\x00').decode('utf-8')
         entity_string = f'[\n{entity_string}]'
@@ -241,7 +310,7 @@ class BSP:
             
             # skip everything that is not a valid xmodel 
             name = entity[ENTITY_KEYS.MODEL]
-            valid = re.match('^xmodel\/(.*)', name)
+            valid = re.match(r'^xmodel\/(.*)', name)
             if not valid:
                 continue
 
@@ -276,32 +345,18 @@ class BSP:
             with open(map, 'rb') as file:
                 header = file_io.read_fmt(file, '4si', collections.namedtuple('header', 'magic, version'))
                 header_magic = header.magic.decode('utf-8')
-                if header_magic != self.MAGIC or header.version != self.VERSION:
+                if header_magic != self.MAGIC or header.version not in VERSIONS:
                     log.info_log(f"{header_magic}{header.version} is not supported")
                     return False
 
-                # lumps
-                lumps = self._read_lumps(file)
+                self.version = header.version
 
-                # materials
-                materials_lump = lumps[LUMPS.MATERIALS]
-                self.materials = self._read_materials(file, materials_lump)
-                
-                # trianglesoups
-                trianglesoups_lump = lumps[LUMPS.TRIANGLESOUPS]
-                trianglesoups = self._read_trianglesoups(file, trianglesoups_lump)
-                
-                # vertices
-                vertices_lump = lumps[LUMPS.VERTICES]
-                vertices = self._read_vertices(file, vertices_lump)
-                
-                # triangles
-                triangles_lump = lumps[LUMPS.TRIANGLES]
-                triangles = self._read_triangles(file, triangles_lump)
-               
-                # entities
-                entities_lump = lumps[LUMPS.ENTITIES]
-                self.entities = self._read_entities(file, entities_lump)
+                lumps = self._read_lumps(file) # lumps
+                self.materials = self._read_materials(file, self.version, lumps) # materials
+                trianglesoups = self._read_trianglesoups(file, self.version, lumps) # trianglesoups
+                vertices = self._read_vertices(file, self.version, lumps) # vertices
+                triangles = self._read_triangles(file, self.version, lumps) # triangles
+                self.entities = self._read_entities(file, self.version, lumps) # entities
 
                 # create surfaces from triangles and vertices
                 for trianglesoup in trianglesoups:

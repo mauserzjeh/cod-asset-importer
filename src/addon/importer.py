@@ -12,8 +12,7 @@ import subprocess
 import traceback
 
 from .. assets import (
-    bsp as bsp_asset,
-    d3dbsp as d3dbsp_asset,
+    ibsp as ibsp_asset,
     material as material_asset,
     texture as texture_asset,
     xmodel as xmodel_asset,
@@ -27,120 +26,62 @@ from .. utils import (
 )
 
 # ----------------------------------------------------------------------------------
-# General --------------------------------------------------------------------------
+# MAP IMPORT -----------------------------------------------------------------------
 # ----------------------------------------------------------------------------------
 
 """
-Import an IWi texture file
-
-Importing logic / priorities
-    1. If .dds exist import it
-    
-    2. If .dds does not exists
-        a. then try convert the .iwi to .dds
-        b. import .dds if conversion was succesful
-    
-    3. If none of the above work, fallback to raw .iwi loading which is very slow with python
+Import an IBSP file
 """
-def _import_texture(assetpath: str, texture_name: str) -> bpy.types.Texture | bool:
-    start_time_texture = time.monotonic()
+def import_ibsp(assetpath: str, filepath: str) -> bool:
+    start_time_ibsp = time.monotonic()
 
-    TEXTURE = texture_asset.IWi()
-
-    texture_file = os.path.join(assetpath, texture_asset.IWi.PATH, texture_name)
-
-    # if no .dds exists then try to convert it on the fly via iwi2dds 
-    if not os.path.isfile(texture_file + '.dds'):
-        iwi2dds = os.path.abspath(os.path.join(os.path.dirname(__file__), os.pardir, 'bin', 'iwi2dds.exe'))
-        if os.path.isfile(iwi2dds):
-            try:
-                result = subprocess.run((iwi2dds, '-i', texture_file + '.iwi'), capture_output=True)
-                if result.returncode != 0:
-                    log.error_log(result.stderr.decode('utf-8'))
-
-            except:
-                log.error_log(traceback.print_exc())
-
-    try:
-        # try to load .dds 
-        texture_image = bpy.data.images.load(texture_file + '.dds', check_existing=True)
-        log.info_log(f"Loaded texture: {texture_name}")
-
-    except:
-        # if error happens when converting or loading the dds just fall back to .iwi parsing 
-        if not TEXTURE.load(texture_file + '.iwi'):
-            log.error_log(f"Error loading texture: {texture_name}")
-            return False
-
-        log.info_log(f"Loaded texture: {texture_name}")
-
-        texture_image = bpy.data.images.new(texture_name, TEXTURE.width, TEXTURE.height, alpha=True)
-        pixels = TEXTURE.texture_data
-    
-        # flip the image
-        p = numpy.asarray(pixels)
-        p.shape = (TEXTURE.height, TEXTURE.width, 4)
-        p = numpy.flipud(p)
-        texture_image.pixels = p.flatten().tolist()
-
-    texture_image.file_format = 'TARGA'
-    texture_image.pack()
-
-    done_time_texture = time.monotonic()
-    log.info_log(f"Imported texture: {texture_name} in {round(done_time_texture - start_time_texture, 2)} seconds.")
-
-    return texture_image
-
-# ----------------------------------------------------------------------------------
-# CoD2 -----------------------------------------------------------------------------
-# ----------------------------------------------------------------------------------
-
-"""
-Import a CoD2 d3dbsp file
-"""
-def import_d3dbsp(assetpath: str, filepath: str) -> bool:
-    start_time_d3dbsp = time.monotonic()
-
-    D3DBSP = d3dbsp_asset.D3DBSP()
-    if not D3DBSP.load(filepath):
-        log.error_log(f"Error loading d3dbsp: {os.path.basename(filepath)}")
+    IBSP = ibsp_asset.IBSP()
+    if not IBSP.load(filepath):
+        log.error_log(f"Error loading map: {filepath}")
         return False
     
-    log.info_log(f"Loaded d3dbsp: {D3DBSP.name}")
-
-    map_null = bpy.data.objects.new(D3DBSP.name, None)
+    map_null = bpy.data.objects.new(IBSP.name, None)
     bpy.context.scene.collection.objects.link(map_null)
 
-    map_geometry_null = bpy.data.objects.new(f"{D3DBSP.name}_geometry", None)
+    map_geometry_null = bpy.data.objects.new(f"{IBSP.name}_geometry", None)
     bpy.context.scene.collection.objects.link(map_geometry_null)
     map_geometry_null.parent = map_null
 
-    map_entities_null = bpy.data.objects.new(f"{D3DBSP.name}_entities", None)
+    map_entities_null = bpy.data.objects.new(f"{IBSP.name}_entities", None)
     bpy.context.scene.collection.objects.link(map_entities_null)
     map_entities_null.parent = map_null
 
     # import materials
-    start_time_materials = time.monotonic()
-    log.info_log(f"Importing materials for {D3DBSP.name}...")
-    failed_materials = []
-    failed_textures = []
-    for material in D3DBSP.materials:
-        if not bpy.data.materials.get(material.name) and material.name not in failed_materials:
-            if not _import_material_v20(assetpath, material.name, failed_textures):
-                failed_materials.append(material.name)
-    done_time_materials = time.monotonic()
-    log.info_log(f"Imported materials for {D3DBSP.name} in {round(done_time_materials - start_time_materials, 2)} seconds.")
+    for material in IBSP.materials:
+        if IBSP.version == ibsp_asset.VERSIONS.COD1:
+            material_name = os.path.join(*material.name.split('/')) # material names are path names as well, so we create a proper path
+
+            # the extension is not defined inside the v59 format 
+            # so we try to match a pattern and retrieve the first matching file 
+            texture_file = ''
+            for tex in glob.iglob(os.path.join(assetpath, material_name + '.*')):
+                texture_file = tex.removeprefix(assetpath).lstrip('/\\')
+                break
+            
+            if texture_file == '':
+                continue
+
+            _import_material_v14(assetpath, texture_file)
+        else:
+            _import_material_v20(assetpath, material.name)
 
     # import surfaces
-    start_time_surfaces = time.monotonic()
-    log.info_log(f"Creating surfaces for {D3DBSP.name}...")
-    for surface in D3DBSP.surfaces:
-        name = f"{D3DBSP.name}_geometry"
+    for surface in IBSP.surfaces:
+        name = f"{IBSP.name}_geometry"
 
         mesh = bpy.data.meshes.new(name)
         obj = bpy.data.objects.new(name, mesh)
         obj.parent = map_geometry_null
-        obj.active_material = bpy.data.materials.get(surface.material)
+
+        if IBSP.version == ibsp_asset.VERSIONS.COD1:
+            obj.active_material = bpy.data.materials.get(os.path.join(*surface.material.split('/')))
+        else:
+            obj.active_material = bpy.data.materials.get(surface.material)
 
         bpy.context.scene.collection.objects.link(obj)
         bpy.context.view_layer.objects.active = obj
@@ -210,20 +151,15 @@ def import_d3dbsp(assetpath: str, filepath: str) -> bool:
         mesh.polygons.foreach_set('use_smooth', [True] * polygon_count)
         mesh.use_auto_smooth = True
 
-    done_time_surfaces = time.monotonic()
-    log.info_log(f"Created surfaces for {D3DBSP.name} in {round(done_time_surfaces - start_time_surfaces, 2)} seconds.")
-
     # entities
-    start_time_entities = time.monotonic()
-    log.info_log(f"Importing entities for {D3DBSP.name}...")
     unique_entities = {}
-    for entity in D3DBSP.entities:
+    for entity in IBSP.entities:
         if entity.name in unique_entities:
             entity_null = blenderutils.copy_object_hierarchy(unique_entities[entity.name])[0]
             bpy.ops.object.select_all(action='DESELECT')
         else:
-            entity_path = os.path.join(assetpath, xmodel_asset.XModelV20.PATH, entity.name)
-            entity_null = import_xmodel_v20(assetpath, entity_path, True, failed_materials, failed_textures)
+            entity_path = os.path.join(assetpath, xmodel_asset.XModel.PATH, entity.name)
+            entity_null = import_xmodel(assetpath, entity_path, True)
             
         if entity_null:
             entity_null.parent = map_entities_null
@@ -238,39 +174,38 @@ def import_d3dbsp(assetpath: str, filepath: str) -> bool:
             if entity.name not in unique_entities:
                 unique_entities[entity.name] = entity_null
 
-    done_time_entities = time.monotonic()
-    log.info_log(f"Imported entities for {D3DBSP.name} in {round(done_time_entities - start_time_entities,2)} seconds.")
-
     done_time_d3dbsp = time.monotonic()
-    log.info_log(f"Imported d3dbsp: {D3DBSP.name} in {round(done_time_d3dbsp - start_time_d3dbsp, 2)} seconds.")
+    log.info_log(f"Imported map: {IBSP.name} [{round(done_time_d3dbsp - start_time_ibsp, 2)}s]")
 
     return True
 
+# ----------------------------------------------------------------------------------
+# MODEL IMPORT ---------------------------------------------------------------------
+# ----------------------------------------------------------------------------------
+
 """
-Import a CoD2 (v20) xmodel
-""" 
-def import_xmodel_v20(assetpath: str, filepath: str, import_skeleton: bool, failed_materials: list = None, failed_textures: list = None) -> bpy.types.Object | bool:
+Import an xmodel file
+"""
+def import_xmodel(assetpath: str, filepath: str, import_skeleton: bool) -> bpy.types.Object | bool:
     start_time_xmodel = time.monotonic()
-    
-    XMODEL = xmodel_asset.XModelV20()
+
+    XMODEL = xmodel_asset.XModel()
     if not XMODEL.load(filepath):
-        log.error_log(f"Error loading xmodel: {os.path.basename(filepath)}")
+        log.error_log(f"Error loading xmodel: {filepath}")
         return False
 
     lod0 = XMODEL.lods[0]
 
-    log.info_log(f"Loaded xmodel: {lod0.name}")
-
-    XMODELPART = xmodelpart_asset.XModelPartV20()
-    xmodel_part = os.path.join(assetpath, xmodelpart_asset.XModelPartV20.PATH, lod0.name)
+    XMODELPART = xmodelpart_asset.XModelPart()
+    xmodel_part = os.path.join(assetpath, xmodelpart_asset.XModelPart.PATH, lod0.name)
     if not XMODELPART.load(xmodel_part):
-        log.error_log(f"Error loading xmodelpart: {lod0.name}")
+        log.error_log(f"Error loading xmodelpart: {xmodel_part}")
         XMODELPART = None
 
-    XMODELSURF = xmodelsurf_asset.XModelSurfV20()
-    xmodel_surf = os.path.join(assetpath, xmodelsurf_asset.XModelSurfV20.PATH, lod0.name)
+    XMODELSURF = xmodelsurf_asset.XModelSurf()
+    xmodel_surf = os.path.join(assetpath, xmodelsurf_asset.XModelSurf.PATH, lod0.name)
     if not XMODELSURF.load(xmodel_surf, XMODELPART):
-        log.error_log(f"Error loading xmodelsurf: {lod0.name}")
+        log.error_log(f"Error loading xmodelsurf: {xmodel_surf}")
         return False
 
     xmodel_null = bpy.data.objects.new(XMODEL.name, None)
@@ -279,25 +214,24 @@ def import_xmodel_v20(assetpath: str, filepath: str, import_skeleton: bool, fail
     mesh_objects = []
 
     # import materials
-    start_time_materials = time.monotonic()
-    log.info_log(f"Importing materials for {lod0.name}...")
-    failed_materials = [] if failed_materials == None else failed_materials # cache
-    failed_textures = [] if failed_textures == None else failed_textures # cache
     for material in lod0.materials:
-        if not bpy.data.materials.get(material) and material not in failed_materials:
-            if not _import_material_v20(assetpath, material, failed_textures):
-                failed_materials.append(material)
-
-    done_time_materials = time.monotonic()
-    log.info_log(f"Imported materials for {lod0.name} in {round(done_time_materials - start_time_materials, 2)} seconds.")
+        if XMODEL.version == xmodel_asset.VERSIONS.COD1:
+            _import_material_v14(os.path.join(assetpath, 'skins'), material)
+        elif XMODEL.version == xmodel_asset.VERSIONS.COD2:
+            _import_material_v20(assetpath, material)
+        elif XMODEL.version == xmodel_asset.VERSIONS.COD4:
+            pass
 
     # create mesh
-    start_time_surfaces = time.monotonic()
-    log.info_log(f"Creating surfaces for {lod0.name}...")
     for i, surface in enumerate(XMODELSURF.surfaces):
         mesh = bpy.data.meshes.new(XMODELSURF.name)
         obj = bpy.data.objects.new(XMODELSURF.name, mesh)
-        obj.active_material = bpy.data.materials.get(lod0.materials[i])
+
+        if XMODEL.version == xmodel_asset.VERSIONS.COD1:
+            obj.active_material = bpy.data.materials.get(os.path.splitext(lod0.materials[i])[0])
+        else:
+            obj.active_material = bpy.data.materials.get(lod0.materials[i])
+            
 
         bpy.context.scene.collection.objects.link(obj)
         bpy.context.view_layer.objects.active = obj
@@ -381,14 +315,9 @@ def import_xmodel_v20(assetpath: str, filepath: str, import_skeleton: bool, fail
 
         mesh_objects.append(obj)
 
-    done_time_surfaces = time.monotonic()
-    log.info_log(f"Created surfaces for {lod0.name} in {round(done_time_surfaces - start_time_surfaces, 2)} seconds.")
-
     # create skeleton
     skeleton = None
     if import_skeleton and XMODELPART != None and len(XMODELPART.bones) > 1:
-        start_time_skeleton = time.monotonic()
-        log.info_log(f"Creating skeleton for {lod0.name}...")
 
         armature = bpy.data.armatures.new(f"{lod0.name}_armature")
         armature.display_type = 'STICK'
@@ -424,14 +353,6 @@ def import_xmodel_v20(assetpath: str, filepath: str, import_skeleton: bool, fail
             bone.matrix = bone_matrices[bone.name]
         
         bpy.ops.pose.armature_apply()
-
-        bpy.ops.object.mode_set(mode='EDIT', toggle=False)
-        bpy.ops.mesh.primitive_ico_sphere_add(subdivisions=3, radius=2)
-        bone_visualizer = bpy.context.active_object
-        bone_visualizer.data.name = bone_visualizer.name = 'bone_visualizer'
-        bone_visualizer.use_fake_user = True
-
-        bpy.context.view_layer.active_layer_collection.collection.objects.unlink(bone_visualizer)
         bpy.context.view_layer.objects.active = skeleton
 
         maxs = [0,0,0]
@@ -450,12 +371,8 @@ def import_xmodel_v20(assetpath: str, filepath: str, import_skeleton: bool, fail
         bpy.ops.object.mode_set(mode='EDIT')
         for bone in [armature.edit_bones[b.name] for b in XMODELPART.bones]:
             bone.tail = bone.head + (bone.tail - bone.head).normalized() * length
-            skeleton.pose.bones[bone.name].custom_shape = bone_visualizer
 
         bpy.ops.object.mode_set(mode='OBJECT')
-
-        done_time_skeleton = time.monotonic()
-        log.info_log(f"Created skeleton for {lod0.name} in {round(done_time_skeleton - start_time_skeleton, 2)} seconds.")
 
     for mesh_object in mesh_objects:
         if skeleton == None:
@@ -471,20 +388,108 @@ def import_xmodel_v20(assetpath: str, filepath: str, import_skeleton: bool, fail
         modifier.use_bone_envelopes = False
         modifier.use_vertex_groups = True
 
-
     bpy.context.view_layer.update()
     bpy.ops.object.mode_set(mode='OBJECT')
     bpy.ops.object.select_all(action='DESELECT')
 
     done_time_xmodel = time.monotonic()
-    log.info_log(f"Imported xmodel: {lod0.name} in {round(done_time_xmodel - start_time_xmodel, 2)} seconds.")
+    log.info_log(f"Imported xmodel: {lod0.name} [{round(done_time_xmodel - start_time_xmodel, 2)}s]")
 
     return xmodel_null
 
+# ----------------------------------------------------------------------------------
+# MATERIAL IMPORT ------------------------------------------------------------------
+# ----------------------------------------------------------------------------------
+
 """
-Import material for CoD2 (v20) assets and create node setup
+Import a material file for CoD1 & CoD:UO (v14) assets and create node setup
 """
-def _import_material_v20(assetpath: str, material_name: str, failed_textures: list = None) -> bpy.types.Material | bool:
+def _import_material_v14(assetpath: str, material_name: str) -> bool:
+    start_time_material = time.monotonic()
+
+    texture_file = os.path.join(assetpath, material_name)
+    material_name = os.path.splitext(material_name)[0] # strip off the extension when creating the name
+
+    if bpy.data.materials.get(material_name):
+        return True
+    
+    try:
+        texture_image = bpy.data.images.load(texture_file, check_existing=True)
+        material = bpy.data.materials.new(material_name)
+        material.use_nodes = True
+        material.blend_method = 'HASHED'
+        material.shadow_method = 'HASHED'
+
+        nodes = material.node_tree.nodes
+        links = material.node_tree.links
+
+        output_node = None
+        for node in nodes:
+            if node.type != 'OUTPUT_MATERIAL':
+                nodes.remove(node)
+                continue
+
+            if node.type == 'OUTPUT_MATERIAL' and output_node == None:
+                output_node = node
+
+        if output_node == None:
+            output_node = nodes.new(blenderutils.BLENDER_SHADERNODES.SHADERNODE_OUTPUTMATERIAL)
+
+        output_node.location = (300, 0)
+
+        mix_shader_node = nodes.new(blenderutils.BLENDER_SHADERNODES.SHADERNODE_MIXSHADER)
+        mix_shader_node.location = (100, 0)
+        links.new(mix_shader_node.outputs[blenderutils.BLENDER_SHADERNODES.OUTPUT_MIXSHADER_SHADER], output_node.inputs[blenderutils.BLENDER_SHADERNODES.INPUT_OUTPUTMATERIAL_SURFACE])
+
+        transparent_bsdf_node = nodes.new(blenderutils.BLENDER_SHADERNODES.SHADERNODE_BSDFTRANSPARENT)
+        transparent_bsdf_node.location = (-200, 100)
+        links.new(transparent_bsdf_node.outputs[blenderutils.BLENDER_SHADERNODES.OUTPUT_BSDFTRANSPARENT_BSDF], mix_shader_node.inputs[blenderutils.BLENDER_SHADERNODES.INPUT_MIXSHADER_SHADER1])
+
+        principled_bsdf_node = nodes.new(blenderutils.BLENDER_SHADERNODES.SHADERNODE_BSDFPRINCIPLED)
+        principled_bsdf_node.location = (-200, 0)
+        principled_bsdf_node.width = 200
+        links.new(principled_bsdf_node.outputs[blenderutils.BLENDER_SHADERNODES.OUTPUT_BSDFTRANSPARENT_BSDF], mix_shader_node.inputs[blenderutils.BLENDER_SHADERNODES.INPUT_MIXSHADER_SHADER2])
+
+        texture_node = nodes.new(blenderutils.BLENDER_SHADERNODES.SHADERNODE_TEXIMAGE)
+        texture_node.label = 'colorMap'
+        texture_node.location = (-700, 0)
+        texture_node.image = texture_image
+        links.new(texture_node.outputs[blenderutils.BLENDER_SHADERNODES.OUTPUT_TEXIMAGE_COLOR], principled_bsdf_node.inputs[blenderutils.BLENDER_SHADERNODES.INPUT_BSDFPRINCIPLED_BASECOLOR])
+
+        invert_node = nodes.new(blenderutils.BLENDER_SHADERNODES.SHADERNODE_INVERT)
+        invert_node.location = (-400, 0)
+        
+        invert_fac_default_value = 0.0
+        transparent_textures = [
+            'foliage_masked',
+            'foliage_detail'
+        ]
+        for tt in transparent_textures:
+            if tt in material_name.lower():
+                invert_fac_default_value = 1.0
+                break
+        
+        invert_node.inputs[blenderutils.BLENDER_SHADERNODES.INPUT_INVERT_FAC].default_value = invert_fac_default_value
+
+        links.new(invert_node.outputs[blenderutils.BLENDER_SHADERNODES.OUTPUT_INVERT_COLOR], mix_shader_node.inputs[blenderutils.BLENDER_SHADERNODES.INPUT_MIXSHADER_FAC])
+        links.new(texture_node.outputs[blenderutils.BLENDER_SHADERNODES.OUTPUT_TEXIMAGE_ALPHA], invert_node.inputs[blenderutils.BLENDER_SHADERNODES.INPUT_INVERT_COLOR])
+
+        done_time_material = time.monotonic()
+        log.info_log(f"Imported material: {material_name} [{round(done_time_material - start_time_material, 2)}s]")
+        return True
+
+    except:
+        log.error_log(traceback.print_exc())
+        return False
+
+
+"""
+Import a material file for CoD2 (v20) assets and create node setup
+"""
+def _import_material_v20(assetpath: str, material_name: str) -> bool:
+    if bpy.data.materials.get(material_name):
+        return True
+
     start_time_material = time.monotonic()
 
     MATERIAL = material_asset.Material()
@@ -492,8 +497,6 @@ def _import_material_v20(assetpath: str, material_name: str, failed_textures: li
     if not MATERIAL.load(material_file):
         log.error_log(f"Error loading material: {material_name}")
         return False
-
-    log.info_log(f"Loaded material: {MATERIAL.name}")
     
     material = bpy.data.materials.new(MATERIAL.name)
     material.use_nodes = True
@@ -530,19 +533,10 @@ def _import_material_v20(assetpath: str, material_name: str, failed_textures: li
     principled_bsdf_node.width = 200
     links.new(principled_bsdf_node.outputs[blenderutils.BLENDER_SHADERNODES.OUTPUT_BSDFTRANSPARENT_BSDF], mix_shader_node.inputs[blenderutils.BLENDER_SHADERNODES.INPUT_MIXSHADER_SHADER2])
 
-    log.info_log(f"Importing textures and creating material for {MATERIAL.name}...")
-
-    failed_textures = [] if failed_textures == None else failed_textures
     for i, t in enumerate(MATERIAL.textures):
-        if t.name in failed_textures:
+        texture_image = _import_texture(assetpath, t.name)
+        if texture_image == False:
             continue
-
-        texture_image = bpy.data.images.get(t.name)
-        if texture_image == None:
-            texture_image = _import_texture(assetpath, t.name)
-            if texture_image == False:
-                failed_textures.append(t.name)
-                continue
 
         texture_node = nodes.new(blenderutils.BLENDER_SHADERNODES.SHADERNODE_TEXIMAGE)
         texture_node.label = t.type
@@ -608,701 +602,63 @@ def _import_material_v20(assetpath: str, material_name: str, failed_textures: li
             links.new(texture_node.outputs[blenderutils.BLENDER_SHADERNODES.OUTPUT_TEXIMAGE_ALPHA], combine_rgb_node.inputs[blenderutils.BLENDER_SHADERNODES.INPUT_COMBINERGB_R])
 
     done_time_material = time.monotonic()
-    log.info_log(f"Imported material {MATERIAL.name} in {round(done_time_material - start_time_material, 2)} seconds.")
-
-    return material
-
-
-# ----------------------------------------------------------------------------------
-# CoD1 -----------------------------------------------------------------------------
-# ----------------------------------------------------------------------------------
-
-"""
-Import a .bsp file
-"""
-def import_bsp(assetpath: str, filepath: str) -> bool:
-    start_time_bsp = time.monotonic()
-
-    BSP = bsp_asset.BSP()
-    if not BSP.load(filepath):
-        log.error_log(f"Error loading bsp: {os.path.basename(filepath)}")
-        return False
-    
-    log.info_log(f"Loaded bsp: {BSP.name}")
-
-    map_null = bpy.data.objects.new(BSP.name, None)
-    bpy.context.scene.collection.objects.link(map_null)
-
-    map_geometry_null = bpy.data.objects.new(f"{BSP.name}_geometry", None)
-    bpy.context.scene.collection.objects.link(map_geometry_null)
-    map_geometry_null.parent = map_null
-
-    map_entities_null = bpy.data.objects.new(f"{BSP.name}_entities", None)
-    bpy.context.scene.collection.objects.link(map_entities_null)
-    map_entities_null.parent = map_null
-
-    # import materials
-    start_time_materials = time.monotonic()
-    log.info_log(f"Importing materials for {BSP.name}...")
-    failed_materials = []
-    for material in BSP.materials:
-        material_name = os.path.join(*material.name.split('/')) # material names are path names as well, so we create a proper path
-        if not bpy.data.materials.get(material_name) and material_name not in failed_materials:
-
-            # the extension is not defined inside the bsp format 
-            # so we try to match a pattern and retrieve the first matching file 
-            texture_file = ''
-            for tex in glob.iglob(os.path.join(assetpath, material_name + '.*')):
-                texture_file = tex.removeprefix(assetpath).lstrip('/\\')
-                break
-            
-            if texture_file == '':
-                failed_materials.append(material_name)
-                continue
-
-            if not _import_material_v14(assetpath, texture_file):
-                failed_materials.append(material_name)
-
-    done_time_materials = time.monotonic()
-    log.info_log(f"Imported materials for {BSP.name} in {round(done_time_materials - start_time_materials, 2)} seconds.")
-
-    # import surfaces
-    start_time_surfaces = time.monotonic()
-    log.info_log(f"Creating surfaces for {BSP.name}...")
-    for surface in BSP.surfaces:
-        name = f"{BSP.name}_geometry"
-
-        mesh = bpy.data.meshes.new(name)
-        obj = bpy.data.objects.new(name, mesh)
-        obj.parent = map_geometry_null
-        obj.active_material = bpy.data.materials.get(os.path.join(*surface.material.split('/')))
-
-        bpy.context.scene.collection.objects.link(obj)
-        bpy.context.view_layer.objects.active = obj
-        obj.select_set(True)
-
-        mesh_data = bpy.context.object.data
-        bm = bmesh.new()
-
-        surface_uvs = []
-        surface_vertex_colors = []
-        surface_normals = []
-
-        for triangle in surface.triangles:
-            
-            vertex1 = surface.vertices[triangle[0]]
-            vertex2 = surface.vertices[triangle[2]]
-            vertex3 = surface.vertices[triangle[1]]
-
-            v1 = bm.verts.new(vertex1.position.to_tuple())
-            v2 = bm.verts.new(vertex2.position.to_tuple())
-            v3 = bm.verts.new(vertex3.position.to_tuple())
-
-            triangle_uvs = []
-            triangle_uvs.append(vertex1.uv.to_tuple())
-            triangle_uvs.append(vertex2.uv.to_tuple())
-            triangle_uvs.append(vertex3.uv.to_tuple())
-            surface_uvs.append(triangle_uvs)
-
-            triangle_vertex_colors = []
-            triangle_vertex_colors.append(vertex1.color.to_tuple())
-            triangle_vertex_colors.append(vertex2.color.to_tuple())
-            triangle_vertex_colors.append(vertex3.color.to_tuple())
-            surface_vertex_colors.append(triangle_vertex_colors)
-
-            triangle_normals = []
-            triangle_normals.append(vertex1.normal.to_tuple())
-            triangle_normals.append(vertex2.normal.to_tuple())
-            triangle_normals.append(vertex3.normal.to_tuple())
-            surface_normals.append(triangle_normals)
-
-            bm.verts.ensure_lookup_table()
-            bm.verts.index_update()
-
-            bm.faces.new((v1, v2, v3))
-            bm.faces.ensure_lookup_table()
-            bm.faces.index_update()
-
-        uv_layer = bm.loops.layers.uv.new()
-        vertex_color_layer = bm.loops.layers.color.new()
-        vertex_normal_buffer = []
-
-        for face, uv, color, normal in zip(bm.faces, surface_uvs, surface_vertex_colors, surface_normals):
-            for loop, uv_data, color_data, normal_data in zip(face.loops, uv, color, normal):
-                loop[uv_layer].uv = uv_data
-                loop[vertex_color_layer] = color_data
-                vertex_normal_buffer.append(normal_data)
-
-        bm.to_mesh(mesh_data)
-        bm.free()
-
-        # set normals        
-        mesh.create_normals_split()
-        mesh.validate(clean_customdata=False)
-        mesh.normals_split_custom_set(vertex_normal_buffer)
-
-        polygon_count = len(mesh.polygons)
-        mesh.polygons.foreach_set('use_smooth', [True] * polygon_count)
-        mesh.use_auto_smooth = True
-
-    done_time_surfaces = time.monotonic()
-    log.info_log(f"Created surfaces for {BSP.name} in {round(done_time_surfaces - start_time_surfaces, 2)} seconds.")
-
-    # entities
-    start_time_entities = time.monotonic()
-    log.info_log(f"Importing entities for {BSP.name}...")
-    unique_entities = {}
-    for entity in BSP.entities:
-        if entity.name in unique_entities:
-            entity_null = blenderutils.copy_object_hierarchy(unique_entities[entity.name])[0]
-            bpy.ops.object.select_all(action='DESELECT')
-        else:
-            entity_path = os.path.join(assetpath, xmodel_asset.XModelV14.PATH, entity.name)
-            entity_null = import_xmodel_v14(assetpath, entity_path, True)
-
-        if entity_null:
-            entity_null.parent = map_entities_null
-            entity_null.location = entity.origin.to_tuple()
-            entity_null.rotation_euler = (
-                math.radians(entity.angles.z), 
-                math.radians(entity.angles.x), 
-                math.radians(entity.angles.y)
-            )
-            entity_null.scale = (entity.scale, entity.scale, entity.scale)
-
-            if entity.name not in unique_entities:
-                unique_entities[entity.name] = entity_null
-
-    done_time_entities = time.monotonic()
-    log.info_log(f"Imported entities for {BSP.name} in {round(done_time_entities - start_time_entities,2)} seconds.")
-
-    done_time_bsp = time.monotonic()
-    log.info_log(f"Imported bsp: {BSP.name} in {round(done_time_bsp - start_time_bsp, 2)} seconds.")
+    log.info_log(f"Imported material: {MATERIAL.name} [{round(done_time_material - start_time_material, 2)}s]")
 
     return True
 
-"""
-Import a CoD1 (v14) xmodel
-"""
-def import_xmodel_v14(assetpath: str, filepath: str, import_skeleton: bool, failed_textures: list = None) -> bpy.types.Object | bool:
-    start_time_xmodel = time.monotonic()
-    XMODEL = xmodel_asset.XModelV14()
-    if not XMODEL.load(filepath):
-        log.error_log(f"Error loading xmodel: {os.path.basename(filepath)}")
-        return False
-
-    lod0 = XMODEL.lods[0]
-
-    log.info_log(f"Loaded xmodel: {lod0.name}")
-
-    XMODELPART = xmodelpart_asset.XModelPartV14()
-    xmodel_part = os.path.join(assetpath, xmodelpart_asset.XModelPartV14.PATH, lod0.name)
-    if not XMODELPART.load(xmodel_part):
-        log.error_log(f"Error loading xmodelpart: {lod0.name}")
-        XMODELPART = None
-
-    XMODELSURF = xmodelsurf_asset.XModelSurfV14()
-    xmodel_surf = os.path.join(assetpath, xmodelsurf_asset.XModelSurfV14.PATH, lod0.name)
-    if not XMODELSURF.load(xmodel_surf, XMODELPART):
-        log.error_log(f"Error loading xmodelsurf: {lod0.name}")
-        return False
-
-    xmodel_null = bpy.data.objects.new(XMODEL.name, None)
-    bpy.context.scene.collection.objects.link(xmodel_null)
-
-    mesh_objects = []
-
-    # import textures aka materials, just they only contain a single texture, the colormap
-    start_time_textures = time.monotonic()
-    log.info_log(f"Importing textures for {lod0.name}...")
-    failed_textures = [] if failed_textures == None else failed_textures # cache
-    for texture in lod0.textures:
-        texture_noext = os.path.splitext(texture)[0] # strip off extension for namecheck
-        if not bpy.data.materials.get(texture_noext) and texture_noext not in failed_textures:
-            if not _import_material_v14(os.path.join(assetpath, 'skins'), texture):
-                failed_textures.append(texture_noext)
-            
-    done_time_textures = time.monotonic()
-    log.info_log(f"Imported materials for {lod0.name} in {round(done_time_textures - start_time_textures, 2)} seconds.")
-
-    # create mesh
-    start_time_surfaces = time.monotonic()
-    log.info_log(f"Creating surfaces for {lod0.name}...")
-    for i, surface in enumerate(XMODELSURF.surfaces):
-        mesh = bpy.data.meshes.new(XMODELSURF.name)
-        obj = bpy.data.objects.new(XMODELSURF.name, mesh)
-        obj.active_material = bpy.data.materials.get(os.path.splitext(lod0.textures[i])[0])
-
-        bpy.context.scene.collection.objects.link(obj)
-        bpy.context.view_layer.objects.active = obj
-        obj.select_set(True)
-
-
-        mesh_data = bpy.context.object.data
-        bm = bmesh.new()
-        vertex_weight_layer = bm.verts.layers.deform.new()
-
-        surface_uvs = []
-        surface_normals = []
-
-        for triangle in surface.triangles:
-            
-            vertex1 = surface.vertices[triangle[0]]
-            vertex2 = surface.vertices[triangle[2]]
-            vertex3 = surface.vertices[triangle[1]]
-
-            triangle_uvs = []
-            triangle_uvs.append(vertex1.uv.to_tuple())
-            triangle_uvs.append(vertex2.uv.to_tuple())
-            triangle_uvs.append(vertex3.uv.to_tuple())
-            surface_uvs.append(triangle_uvs)
-
-            triangle_normals = []
-            triangle_normals.append(vertex1.normal.to_tuple())
-            triangle_normals.append(vertex2.normal.to_tuple())
-            triangle_normals.append(vertex3.normal.to_tuple())
-            surface_normals.append(triangle_normals)
-
-            v1 = bm.verts.new(vertex1.position.to_tuple())
-            v2 = bm.verts.new(vertex2.position.to_tuple())
-            v3 = bm.verts.new(vertex3.position.to_tuple())
-
-            bm.verts.ensure_lookup_table()
-            bm.verts.index_update()
-
-            verts_assoc = {
-                v1: vertex1,
-                v2: vertex2,
-                v3: vertex3
-            }
-
-            for bvert, svert in verts_assoc.items():
-                for weight in svert.weights:
-                    bm.verts[bvert.index][vertex_weight_layer][weight.bone] = weight.influence
-
-            bm.faces.new((v1, v2, v3))
-            bm.faces.ensure_lookup_table()
-            bm.faces.index_update()
-
-        uv_layer = bm.loops.layers.uv.new()
-        vertex_normal_buffer = []
-
-        for face, uv, normal in zip(bm.faces, surface_uvs, surface_normals):
-            for loop, uv_data, normal_data in zip(face.loops, uv, normal):
-                loop[uv_layer].uv = uv_data
-                vertex_normal_buffer.append(normal_data)
-
-        bm.to_mesh(mesh_data)
-        bm.free()
-
-        # set normals        
-        mesh.create_normals_split()
-        mesh.validate(clean_customdata=False)
-        mesh.normals_split_custom_set(vertex_normal_buffer)
-
-        polygon_count = len(mesh.polygons)
-        mesh.polygons.foreach_set('use_smooth', [True] * polygon_count)
-        mesh.use_auto_smooth = True
-
-        mesh_objects.append(obj)
-
-    done_time_surfaces = time.monotonic()
-    log.info_log(f"Created surfaces for {lod0.name} in {round(done_time_surfaces - start_time_surfaces, 2)} seconds.")
-
-    # create skeleton
-    skeleton = None
-    if import_skeleton and XMODELPART != None and len(XMODELPART.bones) > 1:
-        start_time_skeleton = time.monotonic()
-        log.info_log(f"Creating skeleton for {lod0.name}...")
-
-        armature = bpy.data.armatures.new(f"{lod0.name}_armature")
-        armature.display_type = 'STICK'
-
-        skeleton = bpy.data.objects.new(f"{lod0.name}_skeleton", armature)
-        skeleton.parent = xmodel_null
-        skeleton.show_in_front = True
-        bpy.context.scene.collection.objects.link(skeleton)
-        bpy.context.view_layer.objects.active = skeleton
-        bpy.ops.object.mode_set(mode='EDIT')
-
-        bone_matrices = {}
-
-        for bone in XMODELPART.bones:
-
-            new_bone = armature.edit_bones.new(bone.name)
-            new_bone.tail = (0, 0.05, 0)
-
-            matrix_rotation = bone.local_transform.rotation.to_matrix().to_4x4()
-            matrix_transform = mathutils.Matrix.Translation(bone.local_transform.position)
-
-            matrix = matrix_transform @ matrix_rotation
-            bone_matrices[bone.name] = matrix
-
-            if bone.parent > -1:
-                new_bone.parent = armature.edit_bones[bone.parent]
-
-        bpy.context.view_layer.objects.active = skeleton
-        bpy.ops.object.mode_set(mode='POSE')
-
-        for bone in skeleton.pose.bones:
-            bone.matrix_basis.identity()
-            bone.matrix = bone_matrices[bone.name]
-        
-        bpy.ops.pose.armature_apply()
-
-        bpy.ops.object.mode_set(mode='EDIT', toggle=False)
-        bpy.ops.mesh.primitive_ico_sphere_add(subdivisions=3, radius=2)
-        bone_visualizer = bpy.context.active_object
-        bone_visualizer.data.name = bone_visualizer.name = 'bone_visualizer'
-        bone_visualizer.use_fake_user = True
-
-        bpy.context.view_layer.active_layer_collection.collection.objects.unlink(bone_visualizer)
-        bpy.context.view_layer.objects.active = skeleton
-
-        maxs = [0,0,0]
-        mins = [0,0,0]
-
-        for bone in armature.bones:
-            for i in range(3):
-                maxs[i] = max(maxs[i], bone.head_local[i])
-                mins[i] = min(mins[i], bone.head_local[i])
-
-        dimensions = []
-        for i in range(3):
-            dimensions.append(maxs[i] - mins[i])
-
-        length = max(0.001, (dimensions[0] + dimensions[1] + dimensions[2]) / 600)
-        bpy.ops.object.mode_set(mode='EDIT')
-        for bone in [armature.edit_bones[b.name] for b in XMODELPART.bones]:
-            bone.tail = bone.head + (bone.tail - bone.head).normalized() * length
-            skeleton.pose.bones[bone.name].custom_shape = bone_visualizer
-
-        bpy.ops.object.mode_set(mode='OBJECT')
-
-        done_time_skeleton = time.monotonic()
-        log.info_log(f"Created skeleton for {lod0.name} in {round(done_time_skeleton - start_time_skeleton, 2)} seconds.")
-
-    for mesh_object in mesh_objects:
-        if skeleton == None:
-            mesh_object.parent = xmodel_null
-            continue
-
-        for bone in XMODELPART.bones:
-            mesh_object.vertex_groups.new(name=bone.name)
-
-        mesh_object.parent = skeleton
-        modifier = mesh_object.modifiers.new('armature_rig', 'ARMATURE')
-        modifier.object = skeleton
-        modifier.use_bone_envelopes = False
-        modifier.use_vertex_groups = True
-
-
-    bpy.context.view_layer.update()
-    bpy.ops.object.mode_set(mode='OBJECT')
-    bpy.ops.object.select_all(action='DESELECT')
-
-    done_time_xmodel = time.monotonic()
-    log.info_log(f"Imported xmodel: {lod0.name} in {round(done_time_xmodel - start_time_xmodel, 2)} seconds.")
-
-    return xmodel_null
+# ----------------------------------------------------------------------------------
+# TEXTURE IMPORT -------------------------------------------------------------------
+# ----------------------------------------------------------------------------------
 
 """
-Import a material for CoD1 (v14) assets and create node setup
+Import an IWi texture file
 """
-def _import_material_v14(assetpath: str, texture_name: str) -> bpy.types.Material | bool:
-    start_time_material = time.monotonic()
-    texture_file = os.path.join(assetpath, texture_name)
+def _import_texture(assetpath: str, texture_name: str) -> bpy.types.Texture | bool:
+    start_time_texture = time.monotonic()
+    
+    texture_image = bpy.data.images.get(texture_name)
+    if texture_image != None:
+        return texture_image
+
+    texture_file = os.path.join(assetpath, texture_asset.IWi.PATH, texture_name)
+
+    # if no .dds exists then try to convert it on the fly via iwi2dds 
+    if not os.path.isfile(texture_file + '.dds'):
+        iwi2dds = os.path.abspath(os.path.join(os.path.dirname(__file__), os.pardir, 'bin', 'iwi2dds.exe'))
+        if os.path.isfile(iwi2dds):
+            try:
+                result = subprocess.run((iwi2dds, '-i', texture_file + '.iwi'), capture_output=True)
+                if result.returncode != 0:
+                    log.error_log(result.stderr.decode('utf-8'))
+
+            except:
+                log.error_log(traceback.print_exc())
+
     try:
-        texture_image = bpy.data.images.load(texture_file, check_existing=True)
-        texture_name = os.path.splitext(texture_name)[0] # strip off the extension when creating the name
-        material = bpy.data.materials.new(texture_name)
-        material.use_nodes = True
-        material.blend_method = 'HASHED'
-        material.shadow_method = 'HASHED'
-
-        nodes = material.node_tree.nodes
-        links = material.node_tree.links
-
-        output_node = None
-        for node in nodes:
-            if node.type != 'OUTPUT_MATERIAL':
-                nodes.remove(node)
-                continue
-
-            if node.type == 'OUTPUT_MATERIAL' and output_node == None:
-                output_node = node
-
-        if output_node == None:
-            output_node = nodes.new(blenderutils.BLENDER_SHADERNODES.SHADERNODE_OUTPUTMATERIAL)
-
-        output_node.location = (300, 0)
-
-        mix_shader_node = nodes.new(blenderutils.BLENDER_SHADERNODES.SHADERNODE_MIXSHADER)
-        mix_shader_node.location = (100, 0)
-        links.new(mix_shader_node.outputs[blenderutils.BLENDER_SHADERNODES.OUTPUT_MIXSHADER_SHADER], output_node.inputs[blenderutils.BLENDER_SHADERNODES.INPUT_OUTPUTMATERIAL_SURFACE])
-
-        transparent_bsdf_node = nodes.new(blenderutils.BLENDER_SHADERNODES.SHADERNODE_BSDFTRANSPARENT)
-        transparent_bsdf_node.location = (-200, 100)
-        links.new(transparent_bsdf_node.outputs[blenderutils.BLENDER_SHADERNODES.OUTPUT_BSDFTRANSPARENT_BSDF], mix_shader_node.inputs[blenderutils.BLENDER_SHADERNODES.INPUT_MIXSHADER_SHADER1])
-
-        principled_bsdf_node = nodes.new(blenderutils.BLENDER_SHADERNODES.SHADERNODE_BSDFPRINCIPLED)
-        principled_bsdf_node.location = (-200, 0)
-        principled_bsdf_node.width = 200
-        links.new(principled_bsdf_node.outputs[blenderutils.BLENDER_SHADERNODES.OUTPUT_BSDFTRANSPARENT_BSDF], mix_shader_node.inputs[blenderutils.BLENDER_SHADERNODES.INPUT_MIXSHADER_SHADER2])
-
-        texture_node = nodes.new(blenderutils.BLENDER_SHADERNODES.SHADERNODE_TEXIMAGE)
-        texture_node.label = 'colorMap'
-        texture_node.location = (-700, 0)
-        texture_node.image = texture_image
-        links.new(texture_node.outputs[blenderutils.BLENDER_SHADERNODES.OUTPUT_TEXIMAGE_COLOR], principled_bsdf_node.inputs[blenderutils.BLENDER_SHADERNODES.INPUT_BSDFPRINCIPLED_BASECOLOR])
-        # links.new(texture_node.outputs[blenderutils.BLENDER_SHADERNODES.OUTPUT_TEXIMAGE_ALPHA], mix_shader_node.inputs[blenderutils.BLENDER_SHADERNODES.INPUT_MIXSHADER_FAC])
-
-
-        invert_node = nodes.new(blenderutils.BLENDER_SHADERNODES.SHADERNODE_INVERT)
-        invert_node.location = (-400, 0)
-        
-        invert_fac_default_value = 0.0
-        if 'foliage_masked' in texture_name.lower():
-            invert_fac_default_value = 1.0
-        
-        invert_node.inputs[blenderutils.BLENDER_SHADERNODES.INPUT_INVERT_FAC].default_value = invert_fac_default_value
-
-        links.new(invert_node.outputs[blenderutils.BLENDER_SHADERNODES.OUTPUT_INVERT_COLOR], mix_shader_node.inputs[blenderutils.BLENDER_SHADERNODES.INPUT_MIXSHADER_FAC])
-        links.new(texture_node.outputs[blenderutils.BLENDER_SHADERNODES.OUTPUT_TEXIMAGE_ALPHA], invert_node.inputs[blenderutils.BLENDER_SHADERNODES.INPUT_INVERT_COLOR])
-
-        done_time_material = time.monotonic()
-        log.info_log(f"Imported material {texture_name} in {round(done_time_material - start_time_material, 2)} seconds.")
-        return material
+        # try to load .dds 
+        texture_image = bpy.data.images.load(texture_file + '.dds', check_existing=True)
 
     except:
-        log.error_log(traceback.print_exc())
-        return False
 
-# ----------------------------------------------------------------------------------
-# CoD4 -----------------------------------------------------------------------------
-# ----------------------------------------------------------------------------------
+        # if error happens when converting or loading the dds just fall back to .iwi parsing 
+        TEXTURE = texture_asset.IWi()
+        if not TEXTURE.load(texture_file + '.iwi'):
+            log.error_log(f"Error loading texture: {texture_name}")
+            return False
 
-"""
-Import a CoD4 (v25) xmodel
-"""
-def import_xmodel_v25(assetpath: str, filepath: str, import_skeleton: bool) -> bpy.types.Object | bool:
-    start_time_xmodel = time.monotonic()
+        texture_image = bpy.data.images.new(texture_name, TEXTURE.width, TEXTURE.height, alpha=True)
+        pixels = TEXTURE.texture_data
 
-    XMODEL = xmodel_asset.XModelV25()
-    if not XMODEL.load(filepath):
-        log.error_log(f"Error loading xmodel: {os.path.basename(filepath)}")
-        return False
+        # flip the image
+        p = numpy.asarray(pixels)
+        p.shape = (TEXTURE.height, TEXTURE.width, 4)
+        p = numpy.flipud(p)
+        texture_image.pixels = p.flatten().tolist()
 
-    lod0 = XMODEL.lods[0]
+    texture_image.file_format = 'TARGA'
+    texture_image.pack()
 
-    log.info_log(f"Loaded xmodel: {lod0.name}")
+    done_time_texture = time.monotonic()
+    log.info_log(f"Imported texture: {texture_name} [{round(done_time_texture - start_time_texture, 2)}s]")
 
-    XMODELPART = xmodelpart_asset.XModelPartV25()
-    xmodel_part = os.path.join(assetpath, xmodelpart_asset.XModelPartV25.PATH, lod0.name)
-    if not XMODELPART.load(xmodel_part):
-        log.error_log(f"Error loading xmodelpart: {lod0.name}")
-        XMODELPART = None
-
-    XMODELSURF = xmodelsurf_asset.XModelSurfV25()
-    xmodel_surf = os.path.join(assetpath, xmodelsurf_asset.XModelSurfV25.PATH, lod0.name)
-    if not XMODELSURF.load(xmodel_surf):
-        log.error_log(f"Error loading xmodelsurf: {lod0.name}")
-        return False
-    
-    xmodel_null = bpy.data.objects.new(XMODEL.name, None)
-    bpy.context.scene.collection.objects.link(xmodel_null)
-
-    mesh_objects = []
-
-    # import materials
-    # TODO
-
-    # create mesh
-    start_time_surfaces = time.monotonic()
-    log.info_log(f"Creating surfaces for {lod0.name}...")
-    for i, surface in enumerate(XMODELSURF.surfaces):
-        mesh = bpy.data.meshes.new(XMODELSURF.name)
-        obj = bpy.data.objects.new(XMODELSURF.name, mesh)
-        obj.active_material = bpy.data.materials.get(lod0.materials[i])
-
-        bpy.context.scene.collection.objects.link(obj)
-        bpy.context.view_layer.objects.active = obj
-        obj.select_set(True)
-
-
-        mesh_data = bpy.context.object.data
-        bm = bmesh.new()
-        vertex_weight_layer = bm.verts.layers.deform.new()
-
-        surface_uvs = []
-        surface_vertex_colors = []
-        surface_normals = []
-
-        for triangle in surface.triangles:
-            
-            vertex1 = surface.vertices[triangle[0]]
-            vertex2 = surface.vertices[triangle[2]]
-            vertex3 = surface.vertices[triangle[1]]
-
-            triangle_uvs = []
-            triangle_uvs.append(vertex1.uv.to_tuple())
-            triangle_uvs.append(vertex2.uv.to_tuple())
-            triangle_uvs.append(vertex3.uv.to_tuple())
-            surface_uvs.append(triangle_uvs)
-
-            triangle_vertex_colors = []
-            triangle_vertex_colors.append(vertex1.color.to_tuple())
-            triangle_vertex_colors.append(vertex2.color.to_tuple())
-            triangle_vertex_colors.append(vertex3.color.to_tuple())
-            surface_vertex_colors.append(triangle_vertex_colors)
-
-            triangle_normals = []
-            triangle_normals.append(vertex1.normal.to_tuple())
-            triangle_normals.append(vertex2.normal.to_tuple())
-            triangle_normals.append(vertex3.normal.to_tuple())
-            surface_normals.append(triangle_normals)
-
-            v1 = bm.verts.new(vertex1.position.to_tuple())
-            v2 = bm.verts.new(vertex2.position.to_tuple())
-            v3 = bm.verts.new(vertex3.position.to_tuple())
-
-            bm.verts.ensure_lookup_table()
-            bm.verts.index_update()
-
-            verts_assoc = {
-                v1: vertex1,
-                v2: vertex2,
-                v3: vertex3
-            }
-
-            for bvert, svert in verts_assoc.items():
-                for weight in svert.weights:
-                    bm.verts[bvert.index][vertex_weight_layer][weight.bone] = weight.influence
-
-            bm.faces.new((v1, v2, v3))
-            bm.faces.ensure_lookup_table()
-            bm.faces.index_update()
-
-        uv_layer = bm.loops.layers.uv.new()
-        vertex_color_layer = bm.loops.layers.color.new()
-        vertex_normal_buffer = []
-
-        for face, uv, color, normal in zip(bm.faces, surface_uvs, surface_vertex_colors, surface_normals):
-            for loop, uv_data, color_data, normal_data in zip(face.loops, uv, color, normal):
-                loop[uv_layer].uv = uv_data
-                loop[vertex_color_layer] = color_data
-                vertex_normal_buffer.append(normal_data)
-
-        bm.to_mesh(mesh_data)
-        bm.free()
-
-        # set normals        
-        mesh.create_normals_split()
-        mesh.validate(clean_customdata=False)
-        mesh.normals_split_custom_set(vertex_normal_buffer)
-
-        polygon_count = len(mesh.polygons)
-        mesh.polygons.foreach_set('use_smooth', [True] * polygon_count)
-        mesh.use_auto_smooth = True
-
-        mesh_objects.append(obj)
-
-    done_time_surfaces = time.monotonic()
-    log.info_log(f"Created surfaces for {lod0.name} in {round(done_time_surfaces - start_time_surfaces, 2)} seconds.")
-
-    # create skeleton
-    skeleton = None
-    if import_skeleton and XMODELPART != None and len(XMODELPART.bones) > 1:
-        start_time_skeleton = time.monotonic()
-        log.info_log(f"Creating skeleton for {lod0.name}...")
-
-        armature = bpy.data.armatures.new(f"{lod0.name}_armature")
-        armature.display_type = 'STICK'
-
-        skeleton = bpy.data.objects.new(f"{lod0.name}_skeleton", armature)
-        skeleton.parent = xmodel_null
-        skeleton.show_in_front = True
-        bpy.context.scene.collection.objects.link(skeleton)
-        bpy.context.view_layer.objects.active = skeleton
-        bpy.ops.object.mode_set(mode='EDIT')
-
-        bone_matrices = {}
-
-        for bone in XMODELPART.bones:
-
-            new_bone = armature.edit_bones.new(bone.name)
-            new_bone.tail = (0, 0.05, 0)
-
-            matrix_rotation = bone.local_transform.rotation.to_matrix().to_4x4()
-            matrix_transform = mathutils.Matrix.Translation(bone.local_transform.position)
-
-            matrix = matrix_transform @ matrix_rotation
-            bone_matrices[bone.name] = matrix
-
-            if bone.parent > -1:
-                new_bone.parent = armature.edit_bones[bone.parent]
-
-        bpy.context.view_layer.objects.active = skeleton
-        bpy.ops.object.mode_set(mode='POSE')
-
-        for bone in skeleton.pose.bones:
-            bone.matrix_basis.identity()
-            bone.matrix = bone_matrices[bone.name]
-        
-        bpy.ops.pose.armature_apply()
-
-        bpy.ops.object.mode_set(mode='EDIT', toggle=False)
-        bpy.ops.mesh.primitive_ico_sphere_add(subdivisions=3, radius=2)
-        bone_visualizer = bpy.context.active_object
-        bone_visualizer.data.name = bone_visualizer.name = 'bone_visualizer'
-        bone_visualizer.use_fake_user = True
-
-        bpy.context.view_layer.active_layer_collection.collection.objects.unlink(bone_visualizer)
-        bpy.context.view_layer.objects.active = skeleton
-
-        maxs = [0,0,0]
-        mins = [0,0,0]
-
-        for bone in armature.bones:
-            for i in range(3):
-                maxs[i] = max(maxs[i], bone.head_local[i])
-                mins[i] = min(mins[i], bone.head_local[i])
-
-        dimensions = []
-        for i in range(3):
-            dimensions.append(maxs[i] - mins[i])
-
-        length = max(0.001, (dimensions[0] + dimensions[1] + dimensions[2]) / 600)
-        bpy.ops.object.mode_set(mode='EDIT')
-        for bone in [armature.edit_bones[b.name] for b in XMODELPART.bones]:
-            bone.tail = bone.head + (bone.tail - bone.head).normalized() * length
-            skeleton.pose.bones[bone.name].custom_shape = bone_visualizer
-
-        bpy.ops.object.mode_set(mode='OBJECT')
-
-        done_time_skeleton = time.monotonic()
-        log.info_log(f"Created skeleton for {lod0.name} in {round(done_time_skeleton - start_time_skeleton, 2)} seconds.")
-
-    for mesh_object in mesh_objects:
-        if skeleton == None:
-            mesh_object.parent = xmodel_null
-            continue
-
-        for bone in XMODELPART.bones:
-            mesh_object.vertex_groups.new(name=bone.name)
-
-        mesh_object.parent = skeleton
-        modifier = mesh_object.modifiers.new('armature_rig', 'ARMATURE')
-        modifier.object = skeleton
-        modifier.use_bone_envelopes = False
-        modifier.use_vertex_groups = True
-
-
-    bpy.context.view_layer.update()
-    bpy.ops.object.mode_set(mode='OBJECT')
-    bpy.ops.object.select_all(action='DESELECT')
-
-    done_time_xmodel = time.monotonic()
-    log.info_log(f"Imported xmodel: {lod0.name} in {round(done_time_xmodel - start_time_xmodel, 2)} seconds.")
-
-    return xmodel_null
+    return texture_image

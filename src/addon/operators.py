@@ -3,15 +3,6 @@ import bpy
 import os
 
 from . import importer
-from .. utils import (
-    data as datautils,
-    log
-)
-from .. assets import (
-    d3dbsp,
-    bsp,
-    xmodel,
-)
 
 """
 Imports a map file into blender
@@ -30,16 +21,7 @@ class MapImporter(bpy.types.Operator):
         if os.path.basename(self.filepath).startswith("mp_"):
             assetpath = os.path.abspath(os.path.join(os.path.dirname(self.filepath), os.pardir, os.pardir))
 
-        version = datautils.PeekMapVersion(self.filepath)
-        if version == d3dbsp.D3DBSP.VERSION:
-            importer.import_d3dbsp(assetpath, self.filepath)
-            return {'FINISHED'}
-
-        if version == bsp.BSP.VERSION:
-            importer.import_bsp(assetpath, self.filepath)
-            return {'FINISHED'}
-
-        log.error_log(f"Unsupported map version {version}")
+        importer.import_ibsp(assetpath, self.filepath)
         return {'FINISHED'}
 
     def invoke(self, context, event):
@@ -57,21 +39,7 @@ class XModelImporter(bpy.types.Operator):
     filepath : bpy.props.StringProperty(subtype='FILE_PATH')
     def execute(self, context):
         assetpath = os.path.abspath(os.path.join(os.path.dirname(self.filepath), os.pardir))
-
-        version = datautils.PeekXmodelVersion(self.filepath)
-        if version == xmodel.XModelV20.VERSION:
-            importer.import_xmodel_v20(assetpath, self.filepath, True)
-            return {'FINISHED'}
-
-        if version == xmodel.XModelV14.VERSION:
-            importer.import_xmodel_v14(assetpath, self.filepath, True)
-            return {'FINISHED'}
-
-        if version == xmodel.XModelV25.VERSION:
-            importer.import_xmodel_v25(assetpath, self.filepath, True)
-            return {'FINISHED'}
-
-        log.error_log(f"Unsupported xmodel version {version}")
+        importer.import_xmodel(assetpath, self.filepath, True)
         return {'FINISHED'}
 
     def invoke(self, context, event):

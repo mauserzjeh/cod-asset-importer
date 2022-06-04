@@ -80,7 +80,7 @@ class IWi:
         
         max_idx = 0
         for i in range(len(mipmaps)):
-            if mipmaps[i].size > mipmaps[max_idx].size:
+            if mipmaps[i]['size'] > mipmaps[max_idx]['size']:
                 max_idx = i
 
         return mipmaps[max_idx]
@@ -114,10 +114,10 @@ class IWi:
                 file_size = file.seek(0, os.SEEK_END)
                 mipmap = self._highest_mipmap(offsets, curr_offset, file_size)
 
-                file.seek(mipmap.offset, os.SEEK_SET)
-                raw_texture_data = file.read(mipmap.size)
+                file.seek(mipmap['offset'], os.SEEK_SET)
+                raw_texture_data = file.read(mipmap['size'])
                 if len(raw_texture_data) == 0:
-                    raise ValueError("Data length is 0")
+                    raise ValueError("data length is 0")
                 
                 self.texture_data = decode.decode(raw_texture_data, self.width, self.height, self.format)
                 return True
