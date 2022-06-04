@@ -11,6 +11,8 @@ Blender add-on for importing various Call of Duty assets via the game files.
 - Call of Duty 2
     - D3DBSP - Compiled map files
     - XModel - Compiled models
+- Call of Duty 4 Modern Warfare
+    - XModel - Compiled models
 
 ## Installation & setup
 First of all, extract all the necessary game specific contents. Make sure to have the exact same folder structure as they have originally.
@@ -35,6 +37,18 @@ Files can be found inside the .iwd files.
   .
   ├── images/
   ├── maps/
+  ├── materials/
+  ├── xanim/
+  ├── xmodel/
+  ├── xmodelalias/
+  ├── xmodelparts/
+  └── xmodelsurfs/
+```
+### Call of Duty 4 Modern Warfare
+Images can be found inside the .iwd files. The rest of the assets can be acquired by installing modtools.
+```
+  .
+  ├── images/
   ├── materials/
   ├── xanim/
   ├── xmodel/
