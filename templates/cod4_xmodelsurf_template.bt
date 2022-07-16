@@ -98,10 +98,16 @@ typedef struct {
     
     SetBackColor( cNone );
     if(num_verts != num_verts2) {
+        local int i = 0;
         do {
             u16 p <hidden=true>;
+            i++;
         } while (p != 0);
-        FSkip( 2 );
+
+        if (i > 1) {
+            FSkip( 2 );
+        }
+        
         VERT_PHYSIQUED verts[num_verts] <optimize=false>;
     } else {
         FSkip( 4 ); // padding
