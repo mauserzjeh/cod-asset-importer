@@ -164,12 +164,12 @@ def import_ibsp(assetpath: str, filepath: str) -> bool:
         if entity_null:
             entity_null.parent = map_entities_null
             entity_null.location = entity.origin.to_tuple()
+            entity_null.scale = entity.scale.to_tuple()
             entity_null.rotation_euler = (
                 math.radians(entity.angles.z), 
                 math.radians(entity.angles.x), 
                 math.radians(entity.angles.y)
             )
-            entity_null.scale = (entity.scale, entity.scale, entity.scale)
 
             if entity.name not in unique_entities:
                 unique_entities[entity.name] = entity_null

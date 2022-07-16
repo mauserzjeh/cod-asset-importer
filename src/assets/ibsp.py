@@ -185,7 +185,7 @@ class IBSP:
     class _entity:
         __slots__ = ('name', 'angles', 'origin', 'scale')
 
-        def __init__(self, name: str = '', angles: mathutils.Vector = None, origin: mathutils.Vector = None, scale: float = 1.0) -> None:
+        def __init__(self, name: str = '', angles: mathutils.Vector = None, origin: mathutils.Vector = None, scale: mathutils.Vector = None) -> None:
             self.name = name
             self.angles = angles
             self.origin = origin
@@ -330,9 +330,17 @@ class IBSP:
                 origin.y = float(o[1])
                 origin.z = float(o[2])
 
-            scale = 1.0
+            scale = mathutils.Vector((1.0, 1.0, 1.0))
             if ENTITY_KEYS.MODELSCALE in entity:
-                scale = float(entity[ENTITY_KEYS.MODELSCALE])
+                s = entity[ENTITY_KEYS.MODELSCALE].split(' ')
+                if len(s) == 3:
+                    scale.x = float(s[0])
+                    scale.y = float(s[1])
+                    scale.z = float(s[2])
+                elif len(s) == 1:
+                    scale.x = float(s[0])
+                    scale.y = float(s[0])
+                    scale.z = float(s[0])
 
             e = self._entity(name, angles, origin, scale)
             entities.append(e)
