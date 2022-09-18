@@ -285,6 +285,18 @@ class IBSP:
 
         return triangles
 
+    def _parse_transform(self, transform: str, default_value: float) -> tuple:
+        t = transform.split(' ')
+        if len(t) == 3:
+            return [float(t[0]), float(t[1]), float(t[2])]
+        elif len(t) == 1:
+            if t[0] == '':
+                return [default_value, default_value, default_value]
+            else:
+                return [float(t[0]), float(t[0]), float(t[0])]
+
+        return [default_value, default_value, default_value]
+
     def _read_entities(self, file: bytes, version: int, lumps: list[_lump]) -> list[_entity]:
         if version == VERSIONS.COD1:
             entities_lump = lumps[LUMPS.v59_ENTITIES]
@@ -318,29 +330,24 @@ class IBSP:
 
             angles = mathutils.Vector()
             if ENTITY_KEYS.ANGLES in entity:
-                a = entity[ENTITY_KEYS.ANGLES].split(' ')
-                angles.x = float(a[0])
-                angles.y = float(a[1])
-                angles.z = float(a[2])
+                a = self._parse_transform(entity[ENTITY_KEYS.ANGLES], 0)
+                angles.x = a[0]
+                angles.y = a[1]
+                angles.z = a[2]
 
             origin = mathutils.Vector()
             if ENTITY_KEYS.ORIGIN in entity:
-                o = entity[ENTITY_KEYS.ORIGIN].split(' ')
-                origin.x = float(o[0])
-                origin.y = float(o[1])
-                origin.z = float(o[2])
+                o = self._parse_transform(entity[ENTITY_KEYS.ORIGIN], 0)
+                origin.x = o[0]
+                origin.y = o[1]
+                origin.z = o[2]
 
             scale = mathutils.Vector((1.0, 1.0, 1.0))
             if ENTITY_KEYS.MODELSCALE in entity:
-                s = entity[ENTITY_KEYS.MODELSCALE].split(' ')
-                if len(s) == 3:
-                    scale.x = float(s[0])
-                    scale.y = float(s[1])
-                    scale.z = float(s[2])
-                elif len(s) == 1:
-                    scale.x = float(s[0])
-                    scale.y = float(s[0])
-                    scale.z = float(s[0])
+                s = self._parse_transform(entity[ENTITY_KEYS.MODELSCALE], 1)
+                scale.x = s[0]
+                scale.y = s[1]
+                scale.z = s[2]
 
             e = self._entity(name, angles, origin, scale)
             entities.append(e)
