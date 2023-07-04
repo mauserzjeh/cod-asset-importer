@@ -45,7 +45,7 @@ typedef struct {
     SetBackColor( cLtGreen );
     u16 header;
     
-    FSkip( 26 ); // padding
+    FSkip( 26 ); // padding CoD4: 26, CoD5: 27
     
     local int num_lods = 4;
     LOD lods[num_lods] <optimize=false>;
