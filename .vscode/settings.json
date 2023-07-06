@@ -1,7 +1,7 @@
 {
     "python.analysis.extraPaths": [
-        "${workspaceFolder}\\src",
-        "D:\\CODING\\PERSONAL\\blender_autocomplete\\3.0",
-        "D:\\PROGRAMS\\STEAM\\steamapps\\common\\Blender\\3.2\\scripts\\modules"
+        "${workspaceFolder}\\packages\\plugin",
+        "D:\\CODING\\PERSONAL\\blender_autocomplete\\3.4",
+        "D:\\PROGRAMS\\STEAM\\steamapps\\common\\Blender\\3.6\\scripts\\modules"
     ]
 }
