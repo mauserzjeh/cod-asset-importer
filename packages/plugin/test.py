@@ -4,6 +4,7 @@ ibsp = assets.IBSP()
 try:
     ibsp.Load("E:/MOVIEMAKING/CALL OF DUTY/3D STUFF/CODASSETS/COD2ASSETS/maps/mp/mp_decoy.d3dbsp")
     print(ibsp.Name)
+    print(ibsp.Entities[0])
 except Exception as e:
     print(e)
 

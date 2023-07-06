@@ -14,11 +14,11 @@ type (
 	}
 
 	xmodelSurfVertex struct {
-		Normal   vec3
-		Color    color
-		UV       uv
+		Normal   Vec3
+		Color    Color
+		UV       UV
 		Bone     uint16
-		Position vec3
+		Position Vec3
 		Weights  []xmodelSurfWeight
 	}
 
@@ -29,7 +29,7 @@ type (
 
 	xmodelSurfSurface struct {
 		Vertices  []xmodelSurfVertex
-		Triangles []triangle
+		Triangles []Triangle
 	}
 )
 
@@ -38,49 +38,49 @@ const (
 )
 
 // Load
-func (self *XModelSurf) Load(filePath string, xmodelPart *XModelPart) error {
+func (s *XModelSurf) Load(filePath string, xmodelPart *XModelPart) error {
 	f, err := os.Open(filePath)
 	if err != nil {
 		return errorLogAndReturn(err)
 	}
 	defer f.Close()
 
-	self.Name = fileNameWithoutExt(filePath)
+	s.Name = fileNameWithoutExt(filePath)
 
-	err = binary.Read(f, binary.LittleEndian, &self.Version)
+	err = binary.Read(f, binary.LittleEndian, &s.Version)
 	if err != nil {
 		return errorLogAndReturn(err)
 	}
 
-	switch self.Version {
+	switch s.Version {
 	case VERSION_COD1:
-		err := self.loadV14(f, xmodelPart)
+		err := s.loadV14(f, xmodelPart)
 		if err != nil {
 			return errorLogAndReturn(err)
 		}
 
 		return nil
 	case VERSION_COD2:
-		err := self.loadV20(f, xmodelPart)
+		err := s.loadV20(f, xmodelPart)
 		if err != nil {
 			return errorLogAndReturn(err)
 		}
 
 		return nil
 	case VERSION_COD4:
-		err := self.loadV25(f, xmodelPart)
+		err := s.loadV25(f, xmodelPart)
 		if err != nil {
 			return errorLogAndReturn(err)
 		}
 
 		return nil
 	default:
-		return fmt.Errorf("invalid xmodelsurf version: %v", self.Version)
+		return fmt.Errorf("invalid xmodelsurf version: %v", s.Version)
 	}
 }
 
 // loadV14
-func (self *XModelSurf) loadV14(f *os.File, xmodelPart *XModelPart) error {
+func (s *XModelSurf) loadV14(f *os.File, xmodelPart *XModelPart) error {
 	var surfaceCount uint16
 	err := binary.Read(f, binary.LittleEndian, &surfaceCount)
 	if err != nil {
@@ -111,7 +111,7 @@ func (self *XModelSurf) loadV14(f *os.File, xmodelPart *XModelPart) error {
 			defaultBoneIdx = surfaceHeader.DefaultBoneIdx
 		}
 
-		triangles := []triangle{}
+		triangles := []Triangle{}
 		for {
 			var idxCount byte
 			err := binary.Read(f, binary.LittleEndian, &idxCount)
@@ -137,7 +137,7 @@ func (self *XModelSurf) loadV14(f *os.File, xmodelPart *XModelPart) error {
 			}
 
 			if idx1 != idx2 && idx1 != idx3 && idx2 != idx3 {
-				triangles = append(triangles, triangle{
+				triangles = append(triangles, Triangle{
 					V1: idx1,
 					V2: idx2,
 					V3: idx3,
@@ -155,7 +155,7 @@ func (self *XModelSurf) loadV14(f *os.File, xmodelPart *XModelPart) error {
 				}
 
 				if idx4 != idx2 && idx4 != idx5 && idx2 != idx5 {
-					triangles = append(triangles, triangle{
+					triangles = append(triangles, Triangle{
 						V1: idx4,
 						V2: idx2,
 						V3: idx5,
@@ -174,7 +174,7 @@ func (self *XModelSurf) loadV14(f *os.File, xmodelPart *XModelPart) error {
 				}
 
 				if idx4 != idx2 && idx4 != idx3 && idx2 != idx3 {
-					triangles = append(triangles, triangle{
+					triangles = append(triangles, Triangle{
 						V1: idx4,
 						V2: idx2,
 						V3: idx3,
@@ -242,7 +242,7 @@ func (self *XModelSurf) loadV14(f *os.File, xmodelPart *XModelPart) error {
 				vertex.Normal = xmodelPartBone.WorldTransform.Rotation.transformVec(vertex.Normal)
 			}
 
-			vertex.Color = color{
+			vertex.Color = Color{
 				R: 1,
 				G: 1,
 				B: 1,
@@ -286,7 +286,7 @@ func (self *XModelSurf) loadV14(f *os.File, xmodelPart *XModelPart) error {
 			}
 		}
 
-		self.Surfaces = append(self.Surfaces, xmodelSurfSurface{
+		s.Surfaces = append(s.Surfaces, xmodelSurfSurface{
 			Vertices:  vertices,
 			Triangles: triangles,
 		})
@@ -296,7 +296,7 @@ func (self *XModelSurf) loadV14(f *os.File, xmodelPart *XModelPart) error {
 }
 
 // loadV20
-func (self *XModelSurf) loadV20(f *os.File, xmodelPart *XModelPart) error {
+func (s *XModelSurf) loadV20(f *os.File, xmodelPart *XModelPart) error {
 	var surfaceCount uint16
 	err := binary.Read(f, binary.LittleEndian, &surfaceCount)
 	if err != nil {
@@ -339,7 +339,7 @@ func (self *XModelSurf) loadV20(f *os.File, xmodelPart *XModelPart) error {
 				return errorLogAndReturn(err)
 			}
 
-			vertex.Color = color{
+			vertex.Color = Color{
 				R: float32(vertexColor[0]) / 255,
 				G: float32(vertexColor[1]) / 255,
 				B: float32(vertexColor[2]) / 255,
@@ -430,9 +430,9 @@ func (self *XModelSurf) loadV20(f *os.File, xmodelPart *XModelPart) error {
 			vertices = append(vertices, vertex)
 		}
 
-		triangles := []triangle{}
+		triangles := []Triangle{}
 		for l := 0; l < int(surfaceHeader.TriangleCount); l++ {
-			var tri triangle
+			var tri Triangle
 			err := binary.Read(f, binary.LittleEndian, &tri)
 			if err != nil {
 				return errorLogAndReturn(err)
@@ -441,7 +441,7 @@ func (self *XModelSurf) loadV20(f *os.File, xmodelPart *XModelPart) error {
 			triangles = append(triangles, tri)
 		}
 
-		self.Surfaces = append(self.Surfaces, xmodelSurfSurface{
+		s.Surfaces = append(s.Surfaces, xmodelSurfSurface{
 			Vertices:  vertices,
 			Triangles: triangles,
 		})
@@ -451,7 +451,7 @@ func (self *XModelSurf) loadV20(f *os.File, xmodelPart *XModelPart) error {
 }
 
 // loadV25
-func (self *XModelSurf) loadV25(f *os.File, xmodelPart *XModelPart) error {
+func (s *XModelSurf) loadV25(f *os.File, xmodelPart *XModelPart) error {
 	var surfaceCount uint16
 	err := binary.Read(f, binary.LittleEndian, &surfaceCount)
 	if err != nil {
@@ -510,7 +510,7 @@ func (self *XModelSurf) loadV25(f *os.File, xmodelPart *XModelPart) error {
 				return errorLogAndReturn(err)
 			}
 
-			vertex.Color = color{
+			vertex.Color = Color{
 				R: float32(clr[0]) / 255,
 				G: float32(clr[1]) / 255,
 				B: float32(clr[2]) / 255,
@@ -580,16 +580,16 @@ func (self *XModelSurf) loadV25(f *os.File, xmodelPart *XModelPart) error {
 			vertices = append(vertices, vertex)
 		}
 
-		triangles := []triangle{}
+		triangles := []Triangle{}
 		for l := 0; l < int(surfaceHeader.TriangleCount); l++ {
-			var tri triangle
+			var tri Triangle
 			err := binary.Read(f, binary.LittleEndian, &tri)
 			if err != nil {
 				return errorLogAndReturn(err)
 			}
 		}
 
-		self.Surfaces = append(self.Surfaces, xmodelSurfSurface{
+		s.Surfaces = append(s.Surfaces, xmodelSurfSurface{
 			Vertices:  vertices,
 			Triangles: triangles,
 		})

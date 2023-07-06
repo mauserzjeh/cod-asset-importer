@@ -28,14 +28,14 @@ const (
 )
 
 // Load
-func (self *Material) Load(filePath string, version int) error {
+func (s *Material) Load(filePath string, version int) error {
 	f, err := os.Open(filePath)
 	if err != nil {
 		return errorLogAndReturn(err)
 	}
 	defer f.Close()
 
-	self.Name = fileNameWithoutExt(filePath)
+	s.Name = fileNameWithoutExt(filePath)
 
 	var nameOffset uint32
 	err = binary.Read(f, binary.LittleEndian, &nameOffset)
@@ -52,7 +52,7 @@ func (self *Material) Load(filePath string, version int) error {
 	if err != nil {
 		return errorLogAndReturn(err)
 	}
-	self.Name, err = readString(f)
+	s.Name, err = readString(f)
 	if err != nil {
 		return errorLogAndReturn(err)
 	}
@@ -100,7 +100,7 @@ func (self *Material) Load(filePath string, version int) error {
 		return errorLogAndReturn(err)
 	}
 
-	self.Techset, err = readString(f)
+	s.Techset, err = readString(f)
 	if err != nil {
 		return errorLogAndReturn(err)
 	}
@@ -154,7 +154,7 @@ func (self *Material) Load(filePath string, version int) error {
 			return errorLogAndReturn(err)
 		}
 
-		self.Textures = append(self.Textures, t)
+		s.Textures = append(s.Textures, t)
 		_, err = f.Seek(currentOffset, io.SeekStart)
 		if err != nil {
 			return errorLogAndReturn(err)

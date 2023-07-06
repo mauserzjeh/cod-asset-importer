@@ -14,32 +14,32 @@ import (
 )
 
 type (
-	vec3 struct {
+	Vec3 struct {
 		X float32
 		Y float32
 		Z float32
 	}
 
-	quat struct {
+	Quat struct {
 		X float32
 		Y float32
 		Z float32
 		W float32
 	}
 
-	color struct {
+	Color struct {
 		R float32
 		G float32
 		B float32
 		A float32
 	}
 
-	uv struct {
+	UV struct {
 		U float32
 		V float32
 	}
 
-	triangle struct {
+	Triangle struct {
 		V1 uint16
 		V2 uint16
 		V3 uint16
@@ -53,8 +53,8 @@ const (
 )
 
 // add
-func (v vec3) add(o vec3) vec3 {
-	return vec3{
+func (v Vec3) add(o Vec3) Vec3 {
+	return Vec3{
 		X: v.X + o.X,
 		Y: v.Y + o.Y,
 		Z: v.Z + o.Z,
@@ -62,8 +62,8 @@ func (v vec3) add(o vec3) vec3 {
 }
 
 // div
-func (v vec3) div(d float32) vec3 {
-	return vec3{
+func (v Vec3) div(d float32) Vec3 {
+	return Vec3{
 		X: v.X / d,
 		Y: v.Y / d,
 		Z: v.Z / d,
@@ -71,18 +71,18 @@ func (v vec3) div(d float32) vec3 {
 }
 
 // transformVec
-func (q quat) transformVec(v vec3) vec3 {
-	a := vec3{
+func (q Quat) transformVec(v Vec3) Vec3 {
+	a := Vec3{
 		X: q.Y*v.Z - q.Z*v.Y + v.X*q.W,
 		Y: q.Z*v.X - q.X*v.Z + v.Y*q.W,
 		Z: q.X*v.Y - q.Y*v.X + v.Z*q.W,
 	}
-	b := vec3{
+	b := Vec3{
 		q.Y*a.Z - q.Z*a.Y,
 		q.Z*a.X - q.X*a.Z,
 		q.X*a.Y - q.Y*a.X,
 	}
-	return vec3{
+	return Vec3{
 		X: v.X + b.X + b.X,
 		Y: v.Y + b.Y + b.Y,
 		Z: v.Z + b.Z + b.Z,
@@ -90,8 +90,8 @@ func (q quat) transformVec(v vec3) vec3 {
 }
 
 // multiply
-func (q quat) multiply(o quat) quat {
-	return quat{
+func (q Quat) multiply(o Quat) Quat {
+	return Quat{
 		X: q.W*o.W - q.X*o.X - q.Y*o.Y - q.Z*o.Z,
 		Y: q.W*o.X + q.X*o.W + q.Y*o.Z - q.Z*o.Y,
 		Z: q.W*o.Y - q.X*o.Z + q.Y*o.W + q.Z*o.X,

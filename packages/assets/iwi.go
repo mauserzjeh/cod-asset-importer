@@ -54,27 +54,27 @@ const (
 )
 
 // mipMaps calculate mipmap offsets and sizes from the given offsets
-func (self iwiMipmapOffsets) mipMaps(first int32, size int32) iwiMipmaps {
-	m := make(iwiMipmaps, len(self))
+func (s iwiMipmapOffsets) mipMaps(first int32, size int32) iwiMipmaps {
+	m := make(iwiMipmaps, len(s))
 
-	for i := 0; i < len(self); i++ {
+	for i := 0; i < len(s); i++ {
 		switch i {
 		case 0:
 			m[i] = iwiMipmap{
-				offset: self[i],
-				size:   size - self[i],
+				offset: s[i],
+				size:   size - s[i],
 			}
 
-		case len(self) - 1:
+		case len(s) - 1:
 			m[i] = iwiMipmap{
 				offset: first,
-				size:   self[i] - first,
+				size:   s[i] - first,
 			}
 
 		default:
 			m[i] = iwiMipmap{
-				offset: self[i],
-				size:   self[i-1] - self[i],
+				offset: s[i],
+				size:   s[i-1] - s[i],
 			}
 		}
 	}
@@ -82,24 +82,24 @@ func (self iwiMipmapOffsets) mipMaps(first int32, size int32) iwiMipmaps {
 	return m
 }
 
-func (self iwiMipmaps) Len() int           { return len(self) }                    // Sort interface - Len
-func (self iwiMipmaps) Less(i, j int) bool { return self[i].size < self[j].size }  // Sort interface-  Less
-func (self iwiMipmaps) Swap(i, j int)      { self[i], self[j] = self[j], self[i] } // Sort interface - Swap
+func (s iwiMipmaps) Len() int           { return len(s) }                // Sort interface - Len
+func (s iwiMipmaps) Less(i, j int) bool { return s[i].size < s[j].size } // Sort interface-  Less
+func (s iwiMipmaps) Swap(i, j int)      { s[i], s[j] = s[j], s[i] }      // Sort interface - Swap
 
 // Load
-func (self *IWI) Load(filepath string) error {
+func (s *IWI) Load(filepath string) error {
 	f, err := os.Open(filepath)
 	if err != nil {
 		return errorLogAndReturn(err)
 	}
 	defer f.Close()
 
-	err = self.readHeader(f)
+	err = s.readHeader(f)
 	if err != nil {
 		return errorLogAndReturn(err)
 	}
 
-	err = self.readInfo(f)
+	err = s.readInfo(f)
 	if err != nil {
 		return errorLogAndReturn(err)
 	}
@@ -136,8 +136,8 @@ func (self *IWI) Load(filepath string) error {
 		return errorLogAndReturn(err)
 	}
 
-	self.Data = data
-	err = self.decodeData()
+	s.Data = data
+	err = s.decodeData()
 	if err != nil {
 		return errorLogAndReturn(err)
 	}
@@ -145,14 +145,14 @@ func (self *IWI) Load(filepath string) error {
 }
 
 // readHeader
-func (self *IWI) readHeader(f *os.File) error {
-	err := binary.Read(f, binary.LittleEndian, &self.Header)
+func (s *IWI) readHeader(f *os.File) error {
+	err := binary.Read(f, binary.LittleEndian, &s.Header)
 	if err != nil {
 		return errorLogAndReturn(err)
 	}
 
-	if self.Header.Magic != [3]byte{'I', 'W', 'i'} {
-		return fmt.Errorf("invalid magic: %s", string(self.Header.Magic[:]))
+	if s.Header.Magic != [3]byte{'I', 'W', 'i'} {
+		return fmt.Errorf("invalid magic: %s", string(s.Header.Magic[:]))
 	}
 
 	supportedVersions := []uint8{
@@ -163,22 +163,22 @@ func (self *IWI) readHeader(f *os.File) error {
 
 	supported := false
 	for _, sv := range supportedVersions {
-		if sv == self.Header.Version {
+		if sv == s.Header.Version {
 			supported = true
 			break
 		}
 	}
 
 	if !supported {
-		return fmt.Errorf("invalid IWi version: %v", self.Header.Version)
+		return fmt.Errorf("invalid IWi version: %v", s.Header.Version)
 	}
 
 	return nil
 }
 
 // readInfo
-func (self *IWI) readInfo(f *os.File) error {
-	err := binary.Read(f, binary.LittleEndian, &self.Info)
+func (s *IWI) readInfo(f *os.File) error {
+	err := binary.Read(f, binary.LittleEndian, &s.Info)
 	if err != nil {
 		return errorLogAndReturn(err)
 	}
@@ -186,28 +186,28 @@ func (self *IWI) readInfo(f *os.File) error {
 }
 
 // decodeData
-func (self *IWI) decodeData() error {
+func (s *IWI) decodeData() error {
 	var err error
-	switch self.Info.Format {
+	switch s.Info.Format {
 	case IWI_FORMAT_DXT1:
-		self.RawData, err = decodeDXT1(self.Data, uint(self.Info.Width), uint(self.Info.Height))
+		s.RawData, err = decodeDXT1(s.Data, uint(s.Info.Width), uint(s.Info.Height))
 		if err != nil {
 			return errorLogAndReturn(err)
 		}
 		return nil
 	case IWI_FORMAT_DXT3:
-		self.RawData, err = decodeDXT3(self.Data, uint(self.Info.Width), uint(self.Info.Height))
+		s.RawData, err = decodeDXT3(s.Data, uint(s.Info.Width), uint(s.Info.Height))
 		if err != nil {
 			return errorLogAndReturn(err)
 		}
 		return nil
 	case IWI_FORMAT_DXT5:
-		self.RawData, err = decodeDXT5(self.Data, uint(self.Info.Width), uint(self.Info.Height))
+		s.RawData, err = decodeDXT5(s.Data, uint(s.Info.Width), uint(s.Info.Height))
 		if err != nil {
 			return errorLogAndReturn(err)
 		}
 		return nil
 	default:
-		return fmt.Errorf("unsupported decode format: %v", self.Info.Format)
+		return fmt.Errorf("unsupported decode format: %v", s.Info.Format)
 	}
 }
