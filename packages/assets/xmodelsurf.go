@@ -10,25 +10,25 @@ type (
 	XModelSurf struct {
 		Name     string
 		Version  uint16
-		Surfaces []xmodelSurfSurface
+		Surfaces []XmodelSurfSurface
 	}
 
-	xmodelSurfVertex struct {
+	XmodelSurfVertex struct {
 		Normal   Vec3
 		Color    Color
 		UV       UV
 		Bone     uint16
 		Position Vec3
-		Weights  []xmodelSurfWeight
+		Weights  []XmodelSurfWeight
 	}
 
-	xmodelSurfWeight struct {
+	XmodelSurfWeight struct {
 		Bone      uint16
 		Influence float32
 	}
 
-	xmodelSurfSurface struct {
-		Vertices  []xmodelSurfVertex
+	XmodelSurfSurface struct {
+		Vertices  []XmodelSurfVertex
 		Triangles []Triangle
 	}
 )
@@ -91,8 +91,8 @@ func (s *XModelSurf) loadV14(f *os.File, xmodelPart *XModelPart) error {
 		var surfaceHeader struct {
 			_              byte
 			VertexCount    uint16
-			_              [2]byte
 			TriangleCount  uint16
+			_              [2]byte
 			DefaultBoneIdx uint16
 		}
 
@@ -119,9 +119,7 @@ func (s *XModelSurf) loadV14(f *os.File, xmodelPart *XModelPart) error {
 				return errorLogAndReturn(err)
 			}
 
-			var idx1 uint16
-			var idx2 uint16
-			var idx3 uint16
+			var idx1, idx2, idx3 uint16
 
 			err = binary.Read(f, binary.LittleEndian, &idx1)
 			if err != nil {
@@ -167,7 +165,7 @@ func (s *XModelSurf) loadV14(f *os.File, xmodelPart *XModelPart) error {
 					break
 				}
 
-				idx2 := idx5
+				idx2 = idx5
 				err = binary.Read(f, binary.LittleEndian, &idx3)
 				if err != nil {
 					return errorLogAndReturn(err)
@@ -190,9 +188,9 @@ func (s *XModelSurf) loadV14(f *os.File, xmodelPart *XModelPart) error {
 		}
 
 		boneWeightCounts := make([]uint16, surfaceHeader.VertexCount)
-		vertices := []xmodelSurfVertex{}
+		vertices := []XmodelSurfVertex{}
 		for k := 0; k < int(surfaceHeader.VertexCount); k++ {
-			vertex := xmodelSurfVertex{}
+			vertex := XmodelSurfVertex{}
 			err := binary.Read(f, binary.LittleEndian, &vertex.Normal)
 			if err != nil {
 				return errorLogAndReturn(err)
@@ -249,7 +247,7 @@ func (s *XModelSurf) loadV14(f *os.File, xmodelPart *XModelPart) error {
 				A: 1,
 			}
 			vertex.Bone = vertexBoneIdx
-			vertex.Weights = append(vertex.Weights, xmodelSurfWeight{
+			vertex.Weights = append(vertex.Weights, XmodelSurfWeight{
 				Bone:      vertexBoneIdx,
 				Influence: 1,
 			})
@@ -279,14 +277,14 @@ func (s *XModelSurf) loadV14(f *os.File, xmodelPart *XModelPart) error {
 				weightInfluence = weightInfluence / RIGGED
 
 				vertices[m].Weights[0].Influence -= weightInfluence
-				vertices[m].Weights = append(vertices[m].Weights, xmodelSurfWeight{
+				vertices[m].Weights = append(vertices[m].Weights, XmodelSurfWeight{
 					Bone:      weightBoneIdx,
 					Influence: weightInfluence,
 				})
 			}
 		}
 
-		s.Surfaces = append(s.Surfaces, xmodelSurfSurface{
+		s.Surfaces = append(s.Surfaces, XmodelSurfSurface{
 			Vertices:  vertices,
 			Triangles: triangles,
 		})
@@ -325,9 +323,9 @@ func (s *XModelSurf) loadV20(f *os.File, xmodelPart *XModelPart) error {
 			defaultBoneIdx = surfaceHeader.DefaultBoneIdx
 		}
 
-		vertices := []xmodelSurfVertex{}
+		vertices := []XmodelSurfVertex{}
 		for j := 0; j < int(surfaceHeader.VertexCount); j++ {
-			vertex := xmodelSurfVertex{}
+			vertex := XmodelSurfVertex{}
 			err := binary.Read(f, binary.LittleEndian, &vertex.Normal)
 			if err != nil {
 				return errorLogAndReturn(err)
@@ -377,7 +375,7 @@ func (s *XModelSurf) loadV20(f *os.File, xmodelPart *XModelPart) error {
 				return errorLogAndReturn(err)
 			}
 
-			vertex.Weights = append(vertex.Weights, xmodelSurfWeight{
+			vertex.Weights = append(vertex.Weights, XmodelSurfWeight{
 				Bone:      vertexBoneIdx,
 				Influence: 1,
 			})
@@ -409,7 +407,7 @@ func (s *XModelSurf) loadV20(f *os.File, xmodelPart *XModelPart) error {
 					weightInfluenceFloat := float32(weightInfluence) / RIGGED
 
 					vertex.Weights[0].Influence -= weightInfluenceFloat
-					vertex.Weights = append(vertex.Weights, xmodelSurfWeight{
+					vertex.Weights = append(vertex.Weights, XmodelSurfWeight{
 						Bone:      weightBoneIdx,
 						Influence: weightInfluenceFloat,
 					})
@@ -441,7 +439,7 @@ func (s *XModelSurf) loadV20(f *os.File, xmodelPart *XModelPart) error {
 			triangles = append(triangles, tri)
 		}
 
-		s.Surfaces = append(s.Surfaces, xmodelSurfSurface{
+		s.Surfaces = append(s.Surfaces, XmodelSurfSurface{
 			Vertices:  vertices,
 			Triangles: triangles,
 		})
@@ -495,9 +493,9 @@ func (s *XModelSurf) loadV25(f *os.File, xmodelPart *XModelPart) error {
 			}
 		}
 
-		vertices := []xmodelSurfVertex{}
+		vertices := []XmodelSurfVertex{}
 		for j := 0; j < int(surfaceHeader.VertexCount); j++ {
-			vertex := xmodelSurfVertex{}
+			vertex := XmodelSurfVertex{}
 
 			err := binary.Read(f, binary.LittleEndian, &vertex.Normal)
 			if err != nil {
@@ -548,7 +546,7 @@ func (s *XModelSurf) loadV25(f *os.File, xmodelPart *XModelPart) error {
 				return errorLogAndReturn(err)
 			}
 
-			vertex.Weights = append(vertex.Weights, xmodelSurfWeight{
+			vertex.Weights = append(vertex.Weights, XmodelSurfWeight{
 				Bone:      vertexBoneIdx,
 				Influence: 1,
 			})
@@ -569,7 +567,7 @@ func (s *XModelSurf) loadV25(f *os.File, xmodelPart *XModelPart) error {
 
 					weightInfluenceFloat := float32(weightInfluence) / RIGGED
 					vertex.Weights[0].Influence -= weightInfluenceFloat
-					vertex.Weights = append(vertex.Weights, xmodelSurfWeight{
+					vertex.Weights = append(vertex.Weights, XmodelSurfWeight{
 						Bone:      weightBoneIdx,
 						Influence: weightInfluenceFloat,
 					})
@@ -589,7 +587,7 @@ func (s *XModelSurf) loadV25(f *os.File, xmodelPart *XModelPart) error {
 			}
 		}
 
-		s.Surfaces = append(s.Surfaces, xmodelSurfSurface{
+		s.Surfaces = append(s.Surfaces, XmodelSurfSurface{
 			Vertices:  vertices,
 			Triangles: triangles,
 		})

@@ -13,17 +13,17 @@ type (
 		Name    string
 		Version uint16
 		Type    byte
-		Bones   []xmodelPartBone
+		Bones   []XmodelPartBone
 	}
 
-	xmodelPartBone struct {
+	XmodelPartBone struct {
 		Name           string
 		Parent         int32
-		LocalTransform xmodelPartBoneTransform
-		WorldTransform xmodelPartBoneTransform
+		LocalTransform XmodelPartBoneTransform
+		WorldTransform XmodelPartBoneTransform
 	}
 
-	xmodelPartBoneTransform struct {
+	XmodelPartBoneTransform struct {
 		Positon  Vec3
 		Rotation Quat
 	}
@@ -153,7 +153,7 @@ var (
 )
 
 // genWorlTransformByParent
-func (s *xmodelPartBone) genWorlTransformByParent(parent xmodelPartBone) {
+func (s *XmodelPartBone) genWorlTransformByParent(parent XmodelPartBone) {
 	s.WorldTransform.Positon = parent.WorldTransform.Positon.add(parent.WorldTransform.Rotation.transformVec(s.LocalTransform.Positon))
 	s.WorldTransform.Rotation = parent.WorldTransform.Rotation.multiply(s.LocalTransform.Rotation)
 }
@@ -217,7 +217,7 @@ func (s *XModelPart) loadV14(f *os.File) error {
 	}
 
 	for i := 0; i < int(boneHeader.RootBoneCount); i++ {
-		s.Bones = append(s.Bones, xmodelPartBone{
+		s.Bones = append(s.Bones, XmodelPartBone{
 			Parent: -1,
 		})
 	}
@@ -243,7 +243,7 @@ func (s *XModelPart) loadV14(f *os.File) error {
 		qz := float32(rawBoneData.Rz) / ROTATION_DIVISOR
 		qw := float32(math.Sqrt((1 - float64(qx*qx) - float64(qy*qy) - float64(qz*qz))))
 
-		boneTransform := xmodelPartBoneTransform{
+		boneTransform := XmodelPartBoneTransform{
 			Rotation: Quat{
 				X: qx,
 				Y: qy,
@@ -257,7 +257,7 @@ func (s *XModelPart) loadV14(f *os.File) error {
 			},
 		}
 
-		s.Bones = append(s.Bones, xmodelPartBone{
+		s.Bones = append(s.Bones, XmodelPartBone{
 			Name:           "",
 			Parent:         int32(rawBoneData.Parent),
 			LocalTransform: boneTransform,
@@ -289,6 +289,8 @@ func (s *XModelPart) loadV14(f *os.File) error {
 			parentBone := s.Bones[currentBone.Parent]
 			currentBone.genWorlTransformByParent(parentBone)
 		}
+
+		s.Bones[i] = currentBone
 	}
 
 	return nil
@@ -306,7 +308,7 @@ func (s *XModelPart) loadV20(f *os.File) error {
 	}
 
 	for i := 0; i < int(boneHeader.RootBoneCount); i++ {
-		s.Bones = append(s.Bones, xmodelPartBone{
+		s.Bones = append(s.Bones, XmodelPartBone{
 			Parent: -1,
 		})
 	}
@@ -332,7 +334,7 @@ func (s *XModelPart) loadV20(f *os.File) error {
 		qz := float32(rawBoneData.Rz) / ROTATION_DIVISOR
 		qw := float32(math.Sqrt((1 - float64(qx*qx) - float64(qy*qy) - float64(qz*qz))))
 
-		boneTransform := xmodelPartBoneTransform{
+		boneTransform := XmodelPartBoneTransform{
 			Rotation: Quat{
 				X: qx,
 				Y: qy,
@@ -346,7 +348,7 @@ func (s *XModelPart) loadV20(f *os.File) error {
 			},
 		}
 
-		s.Bones = append(s.Bones, xmodelPartBone{
+		s.Bones = append(s.Bones, XmodelPartBone{
 			Name:           "",
 			Parent:         int32(rawBoneData.Parent),
 			LocalTransform: boneTransform,
@@ -373,6 +375,8 @@ func (s *XModelPart) loadV20(f *os.File) error {
 			parentBone := s.Bones[currentBone.Parent]
 			currentBone.genWorlTransformByParent(parentBone)
 		}
+
+		s.Bones[i] = currentBone
 	}
 
 	return nil
@@ -390,7 +394,7 @@ func (s *XModelPart) loadV25(f *os.File) error {
 	}
 
 	for i := 0; i < int(boneHeader.RootBoneCount); i++ {
-		s.Bones = append(s.Bones, xmodelPartBone{
+		s.Bones = append(s.Bones, XmodelPartBone{
 			Parent: -1,
 		})
 	}
@@ -416,7 +420,7 @@ func (s *XModelPart) loadV25(f *os.File) error {
 		qz := float32(rawBoneData.Rz) / ROTATION_DIVISOR
 		qw := float32(math.Sqrt((1 - float64(qx*qx) - float64(qy*qy) - float64(qz*qz))))
 
-		boneTransform := xmodelPartBoneTransform{
+		boneTransform := XmodelPartBoneTransform{
 			Rotation: Quat{
 				X: qx,
 				Y: qy,
@@ -430,7 +434,7 @@ func (s *XModelPart) loadV25(f *os.File) error {
 			},
 		}
 
-		s.Bones = append(s.Bones, xmodelPartBone{
+		s.Bones = append(s.Bones, XmodelPartBone{
 			Name:           "",
 			Parent:         int32(rawBoneData.Parent),
 			LocalTransform: boneTransform,
@@ -452,6 +456,8 @@ func (s *XModelPart) loadV25(f *os.File) error {
 			parentBone := s.Bones[currentBone.Parent]
 			currentBone.genWorlTransformByParent(parentBone)
 		}
+
+		s.Bones[i] = currentBone
 	}
 
 	return nil
