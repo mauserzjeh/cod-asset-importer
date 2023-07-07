@@ -64,31 +64,15 @@ type (
 		DrawOrder       uint16
 		VerticesOffset  uint32
 		VerticesLength  uint16
-		TrianglesOffset uint16
-		TrianglesLength uint32
+		TrianglesLength uint16
+		TrianglesOffset uint32
 	}
 
-	ibspVertexV4 struct {
+	IbspVertex struct {
 		Position Vec3
 		Normal   Vec3
 		Color    Color
 		UV       UV
-		_        [32]byte
-	}
-
-	ibspVertexV59 struct {
-		Position Vec3
-		UV       UV
-		_        [8]byte
-		Normal   Vec3
-		Color    Color
-	}
-
-	IbspVertex interface {
-		GetPosition() Vec3
-		GetNormal() Vec3
-		GetColor() Color
-		GetUV() UV
 	}
 
 	IbspEntity struct {
@@ -115,58 +99,6 @@ type (
 var (
 	validEntityModel = regexp.MustCompile(`(?i)^xmodel\/(?P<name>.*)`)
 )
-
-// newIBSPVertex
-func newIBSPVertex(version int32) (IbspVertex, error) {
-	switch version {
-	case IBSP_VER_v4:
-		return &ibspVertexV4{}, nil
-	case IBSP_VER_v59:
-		return &ibspVertexV59{}, nil
-	default:
-		return nil, fmt.Errorf("invalid version: %v", version)
-	}
-}
-
-// GetPosition
-func (s *ibspVertexV4) GetPosition() Vec3 {
-	return s.Position
-}
-
-// GetPosition
-func (s *ibspVertexV4) GetNormal() Vec3 {
-	return s.Normal
-}
-
-// GetPosition
-func (s *ibspVertexV4) GetColor() Color {
-	return s.Color
-}
-
-// GetPosition
-func (s *ibspVertexV4) GetUV() UV {
-	return s.UV
-}
-
-// GetPosition
-func (s *ibspVertexV59) GetPosition() Vec3 {
-	return s.Position
-}
-
-// GetPosition
-func (s *ibspVertexV59) GetNormal() Vec3 {
-	return s.Normal
-}
-
-// GetPosition
-func (s *ibspVertexV59) GetColor() Color {
-	return s.Color
-}
-
-// GetPosition
-func (s *ibspVertexV59) GetUV() UV {
-	return s.UV
-}
 
 // getName
 func (s *ibspMaterial) getName() string {
@@ -234,7 +166,7 @@ func (s *IBSP) Load(filePath string) error {
 		return errorLogAndReturn(err)
 	}
 
-	// s.loadSurfaces()
+	s.loadSurfaces()
 
 	return nil
 }
@@ -321,10 +253,25 @@ func (s *IBSP) readTriangleSoups(f *os.File) error {
 // readVertices
 func (s *IBSP) readVertices(f *os.File) error {
 	vertLumpIdx := LUMP_v59_VERTICES
-	vertSize := uint32(unsafe.Sizeof(ibspVertexV59{}))
+	var rawVertex struct {
+		Position Vec3
+		UV       UV
+		_        [8]byte
+		Normal   Vec3
+		Color    [4]byte
+	}
+	vertSize := uint32(unsafe.Sizeof(rawVertex))
+
 	if s.Header.Version == IBSP_VER_v4 {
 		vertLumpIdx = LUMP_v4_VERTICES
-		vertSize = uint32(unsafe.Sizeof(ibspVertexV4{}))
+		var rawVertex struct {
+			Position Vec3
+			Normal   Vec3
+			Color    [4]byte
+			UV       UV
+			_        [32]byte
+		}
+		vertSize = uint32(unsafe.Sizeof(rawVertex))
 	}
 
 	vertLump := s.Lumps[vertLumpIdx]
@@ -334,18 +281,23 @@ func (s *IBSP) readVertices(f *os.File) error {
 		return errorLogAndReturn(err)
 	}
 	for i := uint32(0); i < vertLump.Length; i += vertSize {
-		vertex, err := newIBSPVertex(s.Header.Version)
-		if err != nil {
-			errorLog(err)
-			return err
-		}
-		err = binary.Read(f, binary.LittleEndian, vertex)
+		err = binary.Read(f, binary.LittleEndian, &rawVertex)
 		if err != nil {
 			errorLog(err)
 			return err
 		}
 
-		s.Vertices = append(s.Vertices, vertex)
+		s.Vertices = append(s.Vertices, IbspVertex{
+			Position: rawVertex.Position,
+			Normal:   rawVertex.Position,
+			Color: Color{
+				R: float32(rawVertex.Color[0]) / 255,
+				G: float32(rawVertex.Color[1]) / 255,
+				B: float32(rawVertex.Color[2]) / 255,
+				A: float32(rawVertex.Color[3]) / 255,
+			},
+			UV: rawVertex.UV,
+		})
 	}
 
 	return nil
@@ -392,7 +344,7 @@ func (s *IBSP) readEntities(f *os.File) error {
 	if err != nil {
 		return errorLogAndReturn(err)
 	}
-	entitiesData := make([]byte, entLump.Offset)
+	entitiesData := make([]byte, entLump.Length)
 	_, err = f.Read(entitiesData)
 	if err != nil && err != io.EOF {
 		return errorLogAndReturn(err)
@@ -464,7 +416,6 @@ func (s *IBSP) readEntities(f *os.File) error {
 	return nil
 }
 
-// TODO fix -> panic: runtime error: index out of range [28123] with length 27656 / mp_decoy.d3dbsp
 // loadSurfaces
 func (s *IBSP) loadSurfaces() {
 	for _, ts := range s.TriangleSoups {
@@ -476,12 +427,11 @@ func (s *IBSP) loadSurfaces() {
 		triCount := ts.TrianglesLength / 3
 		for i := 0; i < int(triCount); i++ {
 			triIdx := int(ts.TrianglesOffset)/3 + i
-
 			tri := s.Triangles[triIdx]
 
-			vertIdx1 := uint16(ts.VerticesOffset) + tri.V1
-			vertIdx2 := uint16(ts.VerticesOffset) + tri.V2
-			vertIdx3 := uint16(ts.VerticesOffset) + tri.V3
+			vertIdx1 := uint16(ts.VerticesOffset + uint32(tri.V1))
+			vertIdx2 := uint16(ts.VerticesOffset + uint32(tri.V2))
+			vertIdx3 := uint16(ts.VerticesOffset + uint32(tri.V3))
 
 			surface.Triangles = append(surface.Triangles, Triangle{
 				V1: vertIdx1,
@@ -492,6 +442,7 @@ func (s *IBSP) loadSurfaces() {
 			surface.Vertices[vertIdx1] = s.Vertices[vertIdx1]
 			surface.Vertices[vertIdx2] = s.Vertices[vertIdx2]
 			surface.Vertices[vertIdx3] = s.Vertices[vertIdx3]
+
 		}
 
 		s.Surfaces = append(s.Surfaces, surface)
