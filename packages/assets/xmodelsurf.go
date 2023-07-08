@@ -38,49 +38,49 @@ const (
 )
 
 // Load
-func (s *XModelSurf) Load(filePath string, xmodelPart *XModelPart) error {
+func (xs *XModelSurf) Load(filePath string, xmodelPart *XModelPart) error {
 	f, err := os.Open(filePath)
 	if err != nil {
 		return errorLogAndReturn(err)
 	}
 	defer f.Close()
 
-	s.Name = fileNameWithoutExt(filePath)
+	xs.Name = fileNameWithoutExt(filePath)
 
-	err = binary.Read(f, binary.LittleEndian, &s.Version)
+	err = binary.Read(f, binary.LittleEndian, &xs.Version)
 	if err != nil {
 		return errorLogAndReturn(err)
 	}
 
-	switch s.Version {
+	switch xs.Version {
 	case VERSION_COD1:
-		err := s.loadV14(f, xmodelPart)
+		err := xs.loadV14(f, xmodelPart)
 		if err != nil {
 			return errorLogAndReturn(err)
 		}
 
 		return nil
 	case VERSION_COD2:
-		err := s.loadV20(f, xmodelPart)
+		err := xs.loadV20(f, xmodelPart)
 		if err != nil {
 			return errorLogAndReturn(err)
 		}
 
 		return nil
 	case VERSION_COD4:
-		err := s.loadV25(f, xmodelPart)
+		err := xs.loadV25(f, xmodelPart)
 		if err != nil {
 			return errorLogAndReturn(err)
 		}
 
 		return nil
 	default:
-		return fmt.Errorf("invalid xmodelsurf version: %v", s.Version)
+		return fmt.Errorf("invalid xmodelsurf version: %v", xs.Version)
 	}
 }
 
 // loadV14
-func (s *XModelSurf) loadV14(f *os.File, xmodelPart *XModelPart) error {
+func (xs *XModelSurf) loadV14(f *os.File, xmodelPart *XModelPart) error {
 	var surfaceCount uint16
 	err := binary.Read(f, binary.LittleEndian, &surfaceCount)
 	if err != nil {
@@ -284,7 +284,7 @@ func (s *XModelSurf) loadV14(f *os.File, xmodelPart *XModelPart) error {
 			}
 		}
 
-		s.Surfaces = append(s.Surfaces, XmodelSurfSurface{
+		xs.Surfaces = append(xs.Surfaces, XmodelSurfSurface{
 			Vertices:  vertices,
 			Triangles: triangles,
 		})
@@ -294,7 +294,7 @@ func (s *XModelSurf) loadV14(f *os.File, xmodelPart *XModelPart) error {
 }
 
 // loadV20
-func (s *XModelSurf) loadV20(f *os.File, xmodelPart *XModelPart) error {
+func (xs *XModelSurf) loadV20(f *os.File, xmodelPart *XModelPart) error {
 	var surfaceCount uint16
 	err := binary.Read(f, binary.LittleEndian, &surfaceCount)
 	if err != nil {
@@ -439,7 +439,7 @@ func (s *XModelSurf) loadV20(f *os.File, xmodelPart *XModelPart) error {
 			triangles = append(triangles, tri)
 		}
 
-		s.Surfaces = append(s.Surfaces, XmodelSurfSurface{
+		xs.Surfaces = append(xs.Surfaces, XmodelSurfSurface{
 			Vertices:  vertices,
 			Triangles: triangles,
 		})
@@ -449,7 +449,7 @@ func (s *XModelSurf) loadV20(f *os.File, xmodelPart *XModelPart) error {
 }
 
 // loadV25
-func (s *XModelSurf) loadV25(f *os.File, xmodelPart *XModelPart) error {
+func (xs *XModelSurf) loadV25(f *os.File, xmodelPart *XModelPart) error {
 	var surfaceCount uint16
 	err := binary.Read(f, binary.LittleEndian, &surfaceCount)
 	if err != nil {
@@ -587,7 +587,7 @@ func (s *XModelSurf) loadV25(f *os.File, xmodelPart *XModelPart) error {
 			}
 		}
 
-		s.Surfaces = append(s.Surfaces, XmodelSurfSurface{
+		xs.Surfaces = append(xs.Surfaces, XmodelSurfSurface{
 			Vertices:  vertices,
 			Triangles: triangles,
 		})

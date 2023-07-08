@@ -153,60 +153,60 @@ var (
 )
 
 // genWorlTransformByParent
-func (s *XmodelPartBone) genWorlTransformByParent(parent XmodelPartBone) {
-	s.WorldTransform.Positon = parent.WorldTransform.Positon.add(parent.WorldTransform.Rotation.transformVec(s.LocalTransform.Positon))
-	s.WorldTransform.Rotation = parent.WorldTransform.Rotation.multiply(s.LocalTransform.Rotation)
+func (xb *XmodelPartBone) genWorlTransformByParent(parent XmodelPartBone) {
+	xb.WorldTransform.Positon = parent.WorldTransform.Positon.add(parent.WorldTransform.Rotation.transformVec(xb.LocalTransform.Positon))
+	xb.WorldTransform.Rotation = parent.WorldTransform.Rotation.multiply(xb.LocalTransform.Rotation)
 }
 
 // Load
-func (s *XModelPart) Load(filePath string) error {
+func (xp *XModelPart) Load(filePath string) error {
 	f, err := os.Open(filePath)
 	if err != nil {
 		return errorLogAndReturn(err)
 	}
 	defer f.Close()
 
-	s.Name = fileNameWithoutExt(filePath)
-	l := len(s.Name)
+	xp.Name = fileNameWithoutExt(filePath)
+	l := len(xp.Name)
 	if l == 0 {
 		return errors.New("empty xmodelpart name")
 	}
-	s.Type = s.Name[l-1]
+	xp.Type = xp.Name[l-1]
 
-	err = binary.Read(f, binary.LittleEndian, &s.Version)
+	err = binary.Read(f, binary.LittleEndian, &xp.Version)
 	if err != nil {
 		return errorLogAndReturn(err)
 	}
 
-	switch s.Version {
+	switch xp.Version {
 	case VERSION_COD1:
-		err := s.loadV14(f)
+		err := xp.loadV14(f)
 		if err != nil {
 			return errorLogAndReturn(err)
 		}
 
 		return nil
 	case VERSION_COD2:
-		err := s.loadV20(f)
+		err := xp.loadV20(f)
 		if err != nil {
 			return errorLogAndReturn(err)
 		}
 
 		return nil
 	case VERSION_COD4:
-		err := s.loadV25(f)
+		err := xp.loadV25(f)
 		if err != nil {
 			return errorLogAndReturn(err)
 		}
 
 		return nil
 	default:
-		return fmt.Errorf("invalid xmodelpart version: %v", s.Version)
+		return fmt.Errorf("invalid xmodelpart version: %v", xp.Version)
 	}
 }
 
 // loadV14
-func (s *XModelPart) loadV14(f *os.File) error {
+func (xp *XModelPart) loadV14(f *os.File) error {
 	var boneHeader struct {
 		BoneCount     uint16
 		RootBoneCount uint16
@@ -217,7 +217,7 @@ func (s *XModelPart) loadV14(f *os.File) error {
 	}
 
 	for i := 0; i < int(boneHeader.RootBoneCount); i++ {
-		s.Bones = append(s.Bones, XmodelPartBone{
+		xp.Bones = append(xp.Bones, XmodelPartBone{
 			Parent: -1,
 		})
 	}
@@ -257,7 +257,7 @@ func (s *XModelPart) loadV14(f *os.File) error {
 			},
 		}
 
-		s.Bones = append(s.Bones, XmodelPartBone{
+		xp.Bones = append(xp.Bones, XmodelPartBone{
 			Name:           "",
 			Parent:         int32(rawBoneData.Parent),
 			LocalTransform: boneTransform,
@@ -266,7 +266,7 @@ func (s *XModelPart) loadV14(f *os.File) error {
 	}
 
 	for i := 0; i < int(boneHeader.RootBoneCount+boneHeader.BoneCount); i++ {
-		currentBone := s.Bones[i]
+		currentBone := xp.Bones[i]
 
 		boneName, err := readString(f)
 		if err != nil {
@@ -280,24 +280,24 @@ func (s *XModelPart) loadV14(f *os.File) error {
 			return errorLogAndReturn(err)
 		}
 
-		if localViewModelPos, ok := VIEWHAND_TABLE_COD1[boneName]; s.Type == XMODEL_TYPE_VIEWHANDS && ok {
+		if localViewModelPos, ok := VIEWHAND_TABLE_COD1[boneName]; xp.Type == XMODEL_TYPE_VIEWHANDS && ok {
 			currentBone.LocalTransform.Positon = localViewModelPos.div(INCH_TO_CM)
 			currentBone.WorldTransform.Positon = localViewModelPos.div(INCH_TO_CM)
 		}
 
 		if currentBone.Parent > -1 {
-			parentBone := s.Bones[currentBone.Parent]
+			parentBone := xp.Bones[currentBone.Parent]
 			currentBone.genWorlTransformByParent(parentBone)
 		}
 
-		s.Bones[i] = currentBone
+		xp.Bones[i] = currentBone
 	}
 
 	return nil
 }
 
 // loadV20
-func (s *XModelPart) loadV20(f *os.File) error {
+func (xp *XModelPart) loadV20(f *os.File) error {
 	var boneHeader struct {
 		BoneCount     uint16
 		RootBoneCount uint16
@@ -308,7 +308,7 @@ func (s *XModelPart) loadV20(f *os.File) error {
 	}
 
 	for i := 0; i < int(boneHeader.RootBoneCount); i++ {
-		s.Bones = append(s.Bones, XmodelPartBone{
+		xp.Bones = append(xp.Bones, XmodelPartBone{
 			Parent: -1,
 		})
 	}
@@ -348,7 +348,7 @@ func (s *XModelPart) loadV20(f *os.File) error {
 			},
 		}
 
-		s.Bones = append(s.Bones, XmodelPartBone{
+		xp.Bones = append(xp.Bones, XmodelPartBone{
 			Name:           "",
 			Parent:         int32(rawBoneData.Parent),
 			LocalTransform: boneTransform,
@@ -357,7 +357,7 @@ func (s *XModelPart) loadV20(f *os.File) error {
 	}
 
 	for i := 0; i < int(boneHeader.RootBoneCount+boneHeader.BoneCount); i++ {
-		currentBone := s.Bones[i]
+		currentBone := xp.Bones[i]
 
 		boneName, err := readString(f)
 		if err != nil {
@@ -366,24 +366,24 @@ func (s *XModelPart) loadV20(f *os.File) error {
 
 		currentBone.Name = boneName
 
-		if localViewModelPos, ok := VIEWHAND_TABLE_COD2[boneName]; s.Type == XMODEL_TYPE_VIEWHANDS && ok {
+		if localViewModelPos, ok := VIEWHAND_TABLE_COD2[boneName]; xp.Type == XMODEL_TYPE_VIEWHANDS && ok {
 			currentBone.LocalTransform.Positon = localViewModelPos.div(INCH_TO_CM)
 			currentBone.WorldTransform.Positon = localViewModelPos.div(INCH_TO_CM)
 		}
 
 		if currentBone.Parent > -1 {
-			parentBone := s.Bones[currentBone.Parent]
+			parentBone := xp.Bones[currentBone.Parent]
 			currentBone.genWorlTransformByParent(parentBone)
 		}
 
-		s.Bones[i] = currentBone
+		xp.Bones[i] = currentBone
 	}
 
 	return nil
 }
 
 // loadV25
-func (s *XModelPart) loadV25(f *os.File) error {
+func (xp *XModelPart) loadV25(f *os.File) error {
 	var boneHeader struct {
 		BoneCount     uint16
 		RootBoneCount uint16
@@ -394,7 +394,7 @@ func (s *XModelPart) loadV25(f *os.File) error {
 	}
 
 	for i := 0; i < int(boneHeader.RootBoneCount); i++ {
-		s.Bones = append(s.Bones, XmodelPartBone{
+		xp.Bones = append(xp.Bones, XmodelPartBone{
 			Parent: -1,
 		})
 	}
@@ -434,7 +434,7 @@ func (s *XModelPart) loadV25(f *os.File) error {
 			},
 		}
 
-		s.Bones = append(s.Bones, XmodelPartBone{
+		xp.Bones = append(xp.Bones, XmodelPartBone{
 			Name:           "",
 			Parent:         int32(rawBoneData.Parent),
 			LocalTransform: boneTransform,
@@ -443,7 +443,7 @@ func (s *XModelPart) loadV25(f *os.File) error {
 	}
 
 	for i := 0; i < int(boneHeader.RootBoneCount+boneHeader.BoneCount); i++ {
-		currentBone := s.Bones[i]
+		currentBone := xp.Bones[i]
 
 		boneName, err := readString(f)
 		if err != nil {
@@ -453,11 +453,11 @@ func (s *XModelPart) loadV25(f *os.File) error {
 		currentBone.Name = boneName
 
 		if currentBone.Parent > -1 {
-			parentBone := s.Bones[currentBone.Parent]
+			parentBone := xp.Bones[currentBone.Parent]
 			currentBone.genWorlTransformByParent(parentBone)
 		}
 
-		s.Bones[i] = currentBone
+		xp.Bones[i] = currentBone
 	}
 
 	return nil

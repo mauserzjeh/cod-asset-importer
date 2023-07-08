@@ -50,6 +50,12 @@ const (
 	VERSION_COD1 = 0x0E
 	VERSION_COD2 = 0x14
 	VERSION_COD4 = 0x19
+
+	ASSETPATH_XMODEL      = "xmodel"
+	ASSETPATH_XMODELSURFS = "xmodelsurfs"
+	ASSETPATH_XMODELPARTS = "xmodelparts"
+	ASSETPATH_MATERIALS   = "materials"
+	ASSETPATH_TEXTURES    = "images"
 )
 
 // add

@@ -29,49 +29,49 @@ const (
 )
 
 // Load
-func (s *XModel) Load(filePath string) error {
+func (xm *XModel) Load(filePath string) error {
 	f, err := os.Open(filePath)
 	if err != nil {
 		return errorLogAndReturn(err)
 	}
 	defer f.Close()
 
-	s.Name = fileNameWithoutExt(filePath)
+	xm.Name = fileNameWithoutExt(filePath)
 
-	err = binary.Read(f, binary.LittleEndian, &s.Version)
+	err = binary.Read(f, binary.LittleEndian, &xm.Version)
 	if err != nil {
 		return errorLogAndReturn(err)
 	}
 
-	switch s.Version {
+	switch xm.Version {
 	case VERSION_COD1:
-		err := s.loadV14(f)
+		err := xm.loadV14(f)
 		if err != nil {
 			return errorLogAndReturn(err)
 		}
 
 		return nil
 	case VERSION_COD2:
-		err := s.loadV20(f)
+		err := xm.loadV20(f)
 		if err != nil {
 			return errorLogAndReturn(err)
 		}
 
 		return nil
 	case VERSION_COD4:
-		err := s.loadV25(f)
+		err := xm.loadV25(f)
 		if err != nil {
 			return errorLogAndReturn(err)
 		}
 
 		return nil
 	default:
-		return fmt.Errorf("invalid xmodel version: %v", s.Version)
+		return fmt.Errorf("invalid xmodel version: %v", xm.Version)
 	}
 }
 
 // loadV14
-func (s *XModel) loadV14(f *os.File) error {
+func (xm *XModel) loadV14(f *os.File) error {
 	err := readPadding(f, 24)
 	if err != nil {
 		return errorLogAndReturn(err)
@@ -93,7 +93,7 @@ func (s *XModel) loadV14(f *os.File) error {
 			continue
 		}
 
-		s.Lods = append(s.Lods, XModelLod{
+		xm.Lods = append(xm.Lods, XModelLod{
 			Name:     lodName,
 			Distance: lodDistance,
 		})
@@ -123,7 +123,7 @@ func (s *XModel) loadV14(f *os.File) error {
 		}
 	}
 
-	for i := 0; i < len(s.Lods); i++ {
+	for i := 0; i < len(xm.Lods); i++ {
 		var materialCount uint16
 		err = binary.Read(f, binary.LittleEndian, &materialCount)
 		if err != nil {
@@ -136,7 +136,7 @@ func (s *XModel) loadV14(f *os.File) error {
 				return errorLogAndReturn(err)
 			}
 
-			s.Lods[i].Textures = append(s.Lods[i].Textures, texture)
+			xm.Lods[i].Textures = append(xm.Lods[i].Textures, texture)
 		}
 	}
 
@@ -144,7 +144,7 @@ func (s *XModel) loadV14(f *os.File) error {
 }
 
 // loadV20
-func (s *XModel) loadV20(f *os.File) error {
+func (xm *XModel) loadV20(f *os.File) error {
 	err := readPadding(f, 25)
 	if err != nil {
 		return errorLogAndReturn(err)
@@ -166,7 +166,7 @@ func (s *XModel) loadV20(f *os.File) error {
 			continue
 		}
 
-		s.Lods = append(s.Lods, XModelLod{
+		xm.Lods = append(xm.Lods, XModelLod{
 			Name:     lodName,
 			Distance: lodDistance,
 		})
@@ -196,7 +196,7 @@ func (s *XModel) loadV20(f *os.File) error {
 		}
 	}
 
-	for i := 0; i < len(s.Lods); i++ {
+	for i := 0; i < len(xm.Lods); i++ {
 		var materialCount uint16
 		err = binary.Read(f, binary.LittleEndian, &materialCount)
 		if err != nil {
@@ -209,7 +209,7 @@ func (s *XModel) loadV20(f *os.File) error {
 				return errorLogAndReturn(err)
 			}
 
-			s.Lods[i].Textures = append(s.Lods[i].Textures, texture)
+			xm.Lods[i].Textures = append(xm.Lods[i].Textures, texture)
 		}
 	}
 
@@ -217,7 +217,7 @@ func (s *XModel) loadV20(f *os.File) error {
 }
 
 // loadV25
-func (s *XModel) loadV25(f *os.File) error {
+func (xm *XModel) loadV25(f *os.File) error {
 	err := readPadding(f, 26)
 	if err != nil {
 		return errorLogAndReturn(err)
@@ -239,7 +239,7 @@ func (s *XModel) loadV25(f *os.File) error {
 			continue
 		}
 
-		s.Lods = append(s.Lods, XModelLod{
+		xm.Lods = append(xm.Lods, XModelLod{
 			Name:     lodName,
 			Distance: lodDistance,
 		})
@@ -269,7 +269,7 @@ func (s *XModel) loadV25(f *os.File) error {
 		}
 	}
 
-	for i := 0; i < len(s.Lods); i++ {
+	for i := 0; i < len(xm.Lods); i++ {
 		var materialCount uint16
 		err = binary.Read(f, binary.LittleEndian, &materialCount)
 		if err != nil {
@@ -282,7 +282,7 @@ func (s *XModel) loadV25(f *os.File) error {
 				return errorLogAndReturn(err)
 			}
 
-			s.Lods[i].Textures = append(s.Lods[i].Textures, texture)
+			xm.Lods[i].Textures = append(xm.Lods[i].Textures, texture)
 		}
 	}
 
