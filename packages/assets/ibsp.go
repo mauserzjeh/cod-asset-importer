@@ -212,8 +212,7 @@ func (s *IBSP) readMaterials(f *os.File) error {
 		material := ibspMaterial{}
 		err := binary.Read(f, binary.LittleEndian, &material)
 		if err != nil {
-			errorLog(err)
-			return err
+			return errorLogAndReturn(err)
 		}
 
 		s.Materials = append(s.Materials, material)
@@ -240,8 +239,7 @@ func (s *IBSP) readTriangleSoups(f *os.File) error {
 		triangleSoup := ibspTriangleSoup{}
 		err := binary.Read(f, binary.LittleEndian, &triangleSoup)
 		if err != nil {
-			errorLog(err)
-			return err
+			return errorLogAndReturn(err)
 		}
 
 		s.TriangleSoups = append(s.TriangleSoups, triangleSoup)
@@ -283,8 +281,7 @@ func (s *IBSP) readVertices(f *os.File) error {
 	for i := uint32(0); i < vertLump.Length; i += vertSize {
 		err = binary.Read(f, binary.LittleEndian, &rawVertex)
 		if err != nil {
-			errorLog(err)
-			return err
+			return errorLogAndReturn(err)
 		}
 
 		s.Vertices = append(s.Vertices, IbspVertex{
@@ -321,8 +318,7 @@ func (s *IBSP) readTriangles(f *os.File) error {
 		tri := Triangle{}
 		err := binary.Read(f, binary.LittleEndian, &tri)
 		if err != nil {
-			errorLog(err)
-			return err
+			return errorLogAndReturn(err)
 		}
 
 		s.Triangles = append(s.Triangles, tri)
