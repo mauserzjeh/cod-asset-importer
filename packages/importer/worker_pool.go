@@ -3,7 +3,7 @@ package importer
 import "sync"
 
 type (
-	task func() error
+	task func()
 
 	workerPool struct {
 		pool       chan chan task

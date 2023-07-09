@@ -14,9 +14,9 @@ type (
 	}
 
 	XModelLod struct {
-		Name     string
-		Distance float32
-		Textures []string
+		Name      string
+		Distance  float32
+		Materials []string
 	}
 )
 
@@ -124,19 +124,19 @@ func (xm *XModel) loadV14(f *os.File) error {
 	}
 
 	for i := 0; i < len(xm.Lods); i++ {
-		var materialCount uint16
-		err = binary.Read(f, binary.LittleEndian, &materialCount)
+		var textureCount uint16
+		err = binary.Read(f, binary.LittleEndian, &textureCount)
 		if err != nil {
 			return errorLogAndReturn(err)
 		}
 
-		for j := 0; j < int(materialCount); j++ {
+		for j := 0; j < int(textureCount); j++ {
 			texture, err := readString(f)
 			if err != nil {
 				return errorLogAndReturn(err)
 			}
 
-			xm.Lods[i].Textures = append(xm.Lods[i].Textures, texture)
+			xm.Lods[i].Materials = append(xm.Lods[i].Materials, texture)
 		}
 	}
 
@@ -204,12 +204,12 @@ func (xm *XModel) loadV20(f *os.File) error {
 		}
 
 		for j := 0; j < int(materialCount); j++ {
-			texture, err := readString(f)
+			material, err := readString(f)
 			if err != nil {
 				return errorLogAndReturn(err)
 			}
 
-			xm.Lods[i].Textures = append(xm.Lods[i].Textures, texture)
+			xm.Lods[i].Materials = append(xm.Lods[i].Materials, material)
 		}
 	}
 
@@ -277,12 +277,12 @@ func (xm *XModel) loadV25(f *os.File) error {
 		}
 
 		for j := 0; j < int(materialCount); j++ {
-			texture, err := readString(f)
+			material, err := readString(f)
 			if err != nil {
 				return errorLogAndReturn(err)
 			}
 
-			xm.Lods[i].Textures = append(xm.Lods[i].Textures, texture)
+			xm.Lods[i].Materials = append(xm.Lods[i].Materials, material)
 		}
 	}
 
