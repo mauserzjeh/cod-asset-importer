@@ -1,4 +1,4 @@
-package assets
+package importer
 
 import (
 	"bytes"
@@ -15,28 +15,28 @@ import (
 const (
 
 	// CoD1 & CoD:UO
-	IBSP_VER_v59           = 0x3B
-	LUMP_v59_MATERIALS     = 0
-	LUMP_v59_TRIANGLESOUPS = 6
-	LUMP_v59_VERTICES      = 7
-	LUMP_v59_TRIANGLES     = 8
-	LUMP_v59_ENTITIES      = 29
+	iBSP_VER_v59           = 0x3B
+	lUMP_v59_MATERIALS     = 0
+	lUMP_v59_TRIANGLESOUPS = 6
+	lUMP_v59_VERTICES      = 7
+	lUMP_v59_TRIANGLES     = 8
+	lUMP_v59_ENTITIES      = 29
 
 	// CoD2
-	IBSP_VER_v4           = 0x4
-	LUMP_v4_MATERIALS     = 0
-	LUMP_v4_TRIANGLESOUPS = 7
-	LUMP_v4_VERTICES      = 8
-	LUMP_v4_TRIANGLES     = 9
-	LUMP_v4_ENTITIES      = 37
+	iBSP_VER_v4           = 0x4
+	lUMP_v4_MATERIALS     = 0
+	lUMP_v4_TRIANGLESOUPS = 7
+	lUMP_v4_VERTICES      = 8
+	lUMP_v4_TRIANGLES     = 9
+	lUMP_v4_ENTITIES      = 37
 )
 
 type (
 	IBSP struct {
 		Name          string
-		Header        ibspHeader
+		header        ibspHeader
 		lumps         [39]ibspLump
-		Materials     []ibspMaterial
+		materials     []ibspMaterial
 		vertices      []IbspVertex
 		triangles     []Triangle
 		triangleSoups []ibspTriangleSoup
@@ -100,8 +100,8 @@ var (
 	validEntityModel = regexp.MustCompile(`(?i)^xmodel\/(?P<name>.*)`)
 )
 
-// GetName
-func (mat *ibspMaterial) GetName() string {
+// getName
+func (mat *ibspMaterial) getName() string {
 	return string(bytes.Trim(mat.Name[:], "\x00"))
 }
 
@@ -121,8 +121,8 @@ func (ent *ibspRawEntity) valid() (bool, string) {
 	return true, matches[idx]
 }
 
-// Load
-func (ibsp *IBSP) Load(filePath string) error {
+// load
+func (ibsp *IBSP) load(filePath string) error {
 	f, err := os.Open(filePath)
 	if err != nil {
 		return errorLogAndReturn(err)
@@ -173,17 +173,17 @@ func (ibsp *IBSP) Load(filePath string) error {
 
 // readHeader
 func (ibsp *IBSP) readHeader(f *os.File) error {
-	err := binary.Read(f, binary.LittleEndian, &ibsp.Header)
+	err := binary.Read(f, binary.LittleEndian, &ibsp.header)
 	if err != nil {
 		return errorLogAndReturn(err)
 	}
 
-	if ibsp.Header.Magic != [4]byte{'I', 'B', 'S', 'P'} {
-		return fmt.Errorf("invalid magic: %s", string(ibsp.Header.Magic[:]))
+	if ibsp.header.Magic != [4]byte{'I', 'B', 'S', 'P'} {
+		return fmt.Errorf("invalid magic: %s", string(ibsp.header.Magic[:]))
 	}
 
-	if ibsp.Header.Version != IBSP_VER_v59 && ibsp.Header.Version != IBSP_VER_v4 {
-		return fmt.Errorf("invalid IBSP version: %v", ibsp.Header.Version)
+	if ibsp.header.Version != iBSP_VER_v59 && ibsp.header.Version != iBSP_VER_v4 {
+		return fmt.Errorf("invalid IBSP version: %v", ibsp.header.Version)
 	}
 
 	return nil
@@ -196,9 +196,9 @@ func (ibsp *IBSP) readLumps(f *os.File) error {
 
 // readMaterials
 func (ibsp *IBSP) readMaterials(f *os.File) error {
-	matLumpIdx := LUMP_v59_MATERIALS
-	if ibsp.Header.Version == IBSP_VER_v4 {
-		matLumpIdx = LUMP_v4_MATERIALS
+	matLumpIdx := lUMP_v59_MATERIALS
+	if ibsp.header.Version == iBSP_VER_v4 {
+		matLumpIdx = lUMP_v4_MATERIALS
 	}
 
 	matLump := ibsp.lumps[matLumpIdx]
@@ -215,7 +215,7 @@ func (ibsp *IBSP) readMaterials(f *os.File) error {
 			return errorLogAndReturn(err)
 		}
 
-		ibsp.Materials = append(ibsp.Materials, material)
+		ibsp.materials = append(ibsp.materials, material)
 	}
 
 	return nil
@@ -223,9 +223,9 @@ func (ibsp *IBSP) readMaterials(f *os.File) error {
 
 // readTriangleSoups
 func (ibsp *IBSP) readTriangleSoups(f *os.File) error {
-	tsLumpIdx := LUMP_v59_TRIANGLESOUPS
-	if ibsp.Header.Version == IBSP_VER_v4 {
-		tsLumpIdx = LUMP_v4_TRIANGLESOUPS
+	tsLumpIdx := lUMP_v59_TRIANGLESOUPS
+	if ibsp.header.Version == iBSP_VER_v4 {
+		tsLumpIdx = lUMP_v4_TRIANGLESOUPS
 	}
 
 	tsLump := ibsp.lumps[tsLumpIdx]
@@ -250,7 +250,7 @@ func (ibsp *IBSP) readTriangleSoups(f *os.File) error {
 
 // readVertices
 func (ibsp *IBSP) readVertices(f *os.File) error {
-	vertLumpIdx := LUMP_v59_VERTICES
+	vertLumpIdx := lUMP_v59_VERTICES
 	var rawVertex struct {
 		Position Vec3
 		UV       UV
@@ -260,8 +260,8 @@ func (ibsp *IBSP) readVertices(f *os.File) error {
 	}
 	vertSize := uint32(unsafe.Sizeof(rawVertex))
 
-	if ibsp.Header.Version == IBSP_VER_v4 {
-		vertLumpIdx = LUMP_v4_VERTICES
+	if ibsp.header.Version == iBSP_VER_v4 {
+		vertLumpIdx = lUMP_v4_VERTICES
 		var rawVertex struct {
 			Position Vec3
 			Normal   Vec3
@@ -302,9 +302,9 @@ func (ibsp *IBSP) readVertices(f *os.File) error {
 
 // readTriangles
 func (ibsp *IBSP) readTriangles(f *os.File) error {
-	triLumpIdx := LUMP_v59_TRIANGLES
-	if ibsp.Header.Version == IBSP_VER_v4 {
-		triLumpIdx = LUMP_v4_TRIANGLES
+	triLumpIdx := lUMP_v59_TRIANGLES
+	if ibsp.header.Version == iBSP_VER_v4 {
+		triLumpIdx = lUMP_v4_TRIANGLES
 	}
 
 	triLump := ibsp.lumps[triLumpIdx]
@@ -329,9 +329,9 @@ func (ibsp *IBSP) readTriangles(f *os.File) error {
 
 // readEntities
 func (ibsp *IBSP) readEntities(f *os.File) error {
-	entLumpIdx := LUMP_v59_ENTITIES
-	if ibsp.Header.Version == IBSP_VER_v4 {
-		entLumpIdx = LUMP_v4_ENTITIES
+	entLumpIdx := lUMP_v59_ENTITIES
+	if ibsp.header.Version == iBSP_VER_v4 {
+		entLumpIdx = lUMP_v4_ENTITIES
 	}
 
 	entLump := ibsp.lumps[entLumpIdx]
@@ -416,7 +416,7 @@ func (ibsp *IBSP) readEntities(f *os.File) error {
 func (ibsp *IBSP) loadSurfaces() {
 	for _, ts := range ibsp.triangleSoups {
 		surface := IbspSurface{
-			Material: ibsp.Materials[ts.MaterialIdx].GetName(),
+			Material: ibsp.materials[ts.MaterialIdx].getName(),
 			Vertices: make(map[uint16]IbspVertex),
 		}
 

@@ -76,5 +76,5 @@ func (wp *workerPool) stop() {
 
 // addTask
 func (wp *workerPool) addTask(r task) {
-
+	wp.requests <- r
 }

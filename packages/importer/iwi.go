@@ -1,4 +1,4 @@
-package assets
+package importer
 
 import (
 	"encoding/binary"
@@ -10,9 +10,8 @@ import (
 
 type (
 	IWI struct {
-		Header  iwiHeader
-		Info    iwiInfo
-		Data    []byte
+		header  iwiHeader
+		info    iwiInfo
 		RawData []byte
 	}
 
@@ -39,18 +38,18 @@ type (
 
 const (
 	// IWI Versions
-	IWI_VERSION_COD2 = 0x05 // CoD2
-	IWI_VERSION_COD4 = 0x06 // CoD4
-	IWI_VERSION_COD5 = 0x06 // CoD5
+	iWI_VERSION_COD2 = 0x05 // CoD2
+	iWI_VERSION_COD4 = 0x06 // CoD4
+	iWI_VERSION_COD5 = 0x06 // CoD5
 
 	// IWI Format
-	IWI_FORMAT_ARGB32 = 0x01 // ARGB32
-	IWI_FORMAT_RGB24  = 0x02 // RGB24
-	IWI_FORMAT_GA16   = 0x03 // GA16
-	IWI_FORMAT_A8     = 0x04 // A8
-	IWI_FORMAT_DXT1   = 0x0B // DXT1
-	IWI_FORMAT_DXT3   = 0x0C // DXT3
-	IWI_FORMAT_DXT5   = 0x0D // DXT5
+	iWI_FORMAT_ARGB32 = 0x01 // ARGB32
+	iWI_FORMAT_RGB24  = 0x02 // RGB24
+	iWI_FORMAT_GA16   = 0x03 // GA16
+	iWI_FORMAT_A8     = 0x04 // A8
+	iWI_FORMAT_DXT1   = 0x0B // DXT1
+	iWI_FORMAT_DXT3   = 0x0C // DXT3
+	iWI_FORMAT_DXT5   = 0x0D // DXT5
 )
 
 // mipMaps calculate mipmap offsets and sizes from the given offsets
@@ -136,8 +135,7 @@ func (iwi *IWI) Load(filepath string) error {
 		return errorLogAndReturn(err)
 	}
 
-	iwi.Data = data
-	err = iwi.decodeData()
+	err = iwi.decodeData(data)
 	if err != nil {
 		return errorLogAndReturn(err)
 	}
@@ -146,31 +144,31 @@ func (iwi *IWI) Load(filepath string) error {
 
 // readHeader
 func (iwi *IWI) readHeader(f *os.File) error {
-	err := binary.Read(f, binary.LittleEndian, &iwi.Header)
+	err := binary.Read(f, binary.LittleEndian, &iwi.header)
 	if err != nil {
 		return errorLogAndReturn(err)
 	}
 
-	if iwi.Header.Magic != [3]byte{'I', 'W', 'i'} {
-		return fmt.Errorf("invalid magic: %s", string(iwi.Header.Magic[:]))
+	if iwi.header.Magic != [3]byte{'I', 'W', 'i'} {
+		return fmt.Errorf("invalid magic: %s", string(iwi.header.Magic[:]))
 	}
 
 	supportedVersions := []uint8{
-		IWI_VERSION_COD2,
-		IWI_VERSION_COD4,
-		IWI_VERSION_COD5,
+		iWI_VERSION_COD2,
+		iWI_VERSION_COD4,
+		iWI_VERSION_COD5,
 	}
 
 	supported := false
 	for _, sv := range supportedVersions {
-		if sv == iwi.Header.Version {
+		if sv == iwi.header.Version {
 			supported = true
 			break
 		}
 	}
 
 	if !supported {
-		return fmt.Errorf("invalid IWi version: %v", iwi.Header.Version)
+		return fmt.Errorf("invalid IWi version: %v", iwi.header.Version)
 	}
 
 	return nil
@@ -178,7 +176,7 @@ func (iwi *IWI) readHeader(f *os.File) error {
 
 // readInfo
 func (iwi *IWI) readInfo(f *os.File) error {
-	err := binary.Read(f, binary.LittleEndian, &iwi.Info)
+	err := binary.Read(f, binary.LittleEndian, &iwi.info)
 	if err != nil {
 		return errorLogAndReturn(err)
 	}
@@ -186,28 +184,28 @@ func (iwi *IWI) readInfo(f *os.File) error {
 }
 
 // decodeData
-func (iwi *IWI) decodeData() error {
+func (iwi *IWI) decodeData(data []byte) error {
 	var err error
-	switch iwi.Info.Format {
-	case IWI_FORMAT_DXT1:
-		iwi.RawData, err = decodeDXT1(iwi.Data, uint(iwi.Info.Width), uint(iwi.Info.Height))
+	switch iwi.info.Format {
+	case iWI_FORMAT_DXT1:
+		iwi.RawData, err = decodeDXT1(data, uint(iwi.info.Width), uint(iwi.info.Height))
 		if err != nil {
 			return errorLogAndReturn(err)
 		}
 		return nil
-	case IWI_FORMAT_DXT3:
-		iwi.RawData, err = decodeDXT3(iwi.Data, uint(iwi.Info.Width), uint(iwi.Info.Height))
+	case iWI_FORMAT_DXT3:
+		iwi.RawData, err = decodeDXT3(data, uint(iwi.info.Width), uint(iwi.info.Height))
 		if err != nil {
 			return errorLogAndReturn(err)
 		}
 		return nil
-	case IWI_FORMAT_DXT5:
-		iwi.RawData, err = decodeDXT5(iwi.Data, uint(iwi.Info.Width), uint(iwi.Info.Height))
+	case iWI_FORMAT_DXT5:
+		iwi.RawData, err = decodeDXT5(data, uint(iwi.info.Width), uint(iwi.info.Height))
 		if err != nil {
 			return errorLogAndReturn(err)
 		}
 		return nil
 	default:
-		return fmt.Errorf("unsupported decode format: %v", iwi.Info.Format)
+		return fmt.Errorf("unsupported decode format: %v", iwi.info.Format)
 	}
 }

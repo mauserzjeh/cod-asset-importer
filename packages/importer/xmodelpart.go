@@ -1,4 +1,4 @@
-package assets
+package importer
 
 import (
 	"encoding/binary"
@@ -10,10 +10,10 @@ import (
 
 type (
 	XModelPart struct {
-		Name    string
-		Version uint16
-		Type    byte
-		Bones   []XmodelPartBone
+		name           string
+		version        uint16
+		xmodelPartType byte
+		Bones          []XmodelPartBone
 	}
 
 	XmodelPartBone struct {
@@ -30,12 +30,12 @@ type (
 )
 
 const (
-	ROTATION_DIVISOR = 32768.0
-	INCH_TO_CM       = 2.54
+	rOTATION_DIVISOR = 32768.0
+	iNCH_TO_CM       = 2.54
 )
 
 var (
-	VIEWHAND_TABLE_COD1 = map[string]Vec3{
+	vIEWHAND_TABLE_COD1 = map[string]Vec3{
 		"tag_view":           {X: 0.0, Y: 0.0, Z: 0.0},
 		"tag_torso":          {X: 0.0, Y: 0.0, Z: 0.0},
 		"tag_weapon":         {X: 0.0, Y: 0.0, Z: 0.0},
@@ -93,7 +93,7 @@ var (
 		"r wrist01":          {X: 0.0, Y: 0.0, Z: 0.0},
 	}
 
-	VIEWHAND_TABLE_COD2 = map[string]Vec3{
+	vIEWHAND_TABLE_COD2 = map[string]Vec3{
 		"tag_view":        {X: 0.0, Y: 0.0, Z: 0.0},
 		"tag_torso":       {X: -11.76486, Y: 0.0, Z: -3.497466},
 		"j_shoulder_le":   {X: 2.859542, Y: 20.16072, Z: -4.597286},
@@ -158,27 +158,27 @@ func (xb *XmodelPartBone) genWorlTransformByParent(parent XmodelPartBone) {
 	xb.WorldTransform.Rotation = parent.WorldTransform.Rotation.multiply(xb.LocalTransform.Rotation)
 }
 
-// Load
-func (xp *XModelPart) Load(filePath string) error {
+// load
+func (xp *XModelPart) load(filePath string) error {
 	f, err := os.Open(filePath)
 	if err != nil {
 		return errorLogAndReturn(err)
 	}
 	defer f.Close()
 
-	xp.Name = fileNameWithoutExt(filePath)
-	l := len(xp.Name)
+	xp.name = fileNameWithoutExt(filePath)
+	l := len(xp.name)
 	if l == 0 {
 		return errors.New("empty xmodelpart name")
 	}
-	xp.Type = xp.Name[l-1]
+	xp.xmodelPartType = xp.name[l-1]
 
-	err = binary.Read(f, binary.LittleEndian, &xp.Version)
+	err = binary.Read(f, binary.LittleEndian, &xp.version)
 	if err != nil {
 		return errorLogAndReturn(err)
 	}
 
-	switch xp.Version {
+	switch xp.version {
 	case VERSION_COD1:
 		err := xp.loadV14(f)
 		if err != nil {
@@ -201,7 +201,7 @@ func (xp *XModelPart) Load(filePath string) error {
 
 		return nil
 	default:
-		return fmt.Errorf("invalid xmodelpart version: %v", xp.Version)
+		return fmt.Errorf("invalid xmodelpart version: %v", xp.version)
 	}
 }
 
@@ -238,9 +238,9 @@ func (xp *XModelPart) loadV14(f *os.File) error {
 			return errorLogAndReturn(err)
 		}
 
-		qx := float32(rawBoneData.Rx) / ROTATION_DIVISOR
-		qy := float32(rawBoneData.Ry) / ROTATION_DIVISOR
-		qz := float32(rawBoneData.Rz) / ROTATION_DIVISOR
+		qx := float32(rawBoneData.Rx) / rOTATION_DIVISOR
+		qy := float32(rawBoneData.Ry) / rOTATION_DIVISOR
+		qz := float32(rawBoneData.Rz) / rOTATION_DIVISOR
 		qw := float32(math.Sqrt((1 - float64(qx*qx) - float64(qy*qy) - float64(qz*qz))))
 
 		boneTransform := XmodelPartBoneTransform{
@@ -280,9 +280,9 @@ func (xp *XModelPart) loadV14(f *os.File) error {
 			return errorLogAndReturn(err)
 		}
 
-		if localViewModelPos, ok := VIEWHAND_TABLE_COD1[boneName]; xp.Type == XMODEL_TYPE_VIEWHANDS && ok {
-			currentBone.LocalTransform.Positon = localViewModelPos.div(INCH_TO_CM)
-			currentBone.WorldTransform.Positon = localViewModelPos.div(INCH_TO_CM)
+		if localViewModelPos, ok := vIEWHAND_TABLE_COD1[boneName]; xp.xmodelPartType == xMODEL_TYPE_VIEWHANDS && ok {
+			currentBone.LocalTransform.Positon = localViewModelPos.div(iNCH_TO_CM)
+			currentBone.WorldTransform.Positon = localViewModelPos.div(iNCH_TO_CM)
 		}
 
 		if currentBone.Parent > -1 {
@@ -329,9 +329,9 @@ func (xp *XModelPart) loadV20(f *os.File) error {
 			return errorLogAndReturn(err)
 		}
 
-		qx := float32(rawBoneData.Rx) / ROTATION_DIVISOR
-		qy := float32(rawBoneData.Ry) / ROTATION_DIVISOR
-		qz := float32(rawBoneData.Rz) / ROTATION_DIVISOR
+		qx := float32(rawBoneData.Rx) / rOTATION_DIVISOR
+		qy := float32(rawBoneData.Ry) / rOTATION_DIVISOR
+		qz := float32(rawBoneData.Rz) / rOTATION_DIVISOR
 		qw := float32(math.Sqrt((1 - float64(qx*qx) - float64(qy*qy) - float64(qz*qz))))
 
 		boneTransform := XmodelPartBoneTransform{
@@ -366,9 +366,9 @@ func (xp *XModelPart) loadV20(f *os.File) error {
 
 		currentBone.Name = boneName
 
-		if localViewModelPos, ok := VIEWHAND_TABLE_COD2[boneName]; xp.Type == XMODEL_TYPE_VIEWHANDS && ok {
-			currentBone.LocalTransform.Positon = localViewModelPos.div(INCH_TO_CM)
-			currentBone.WorldTransform.Positon = localViewModelPos.div(INCH_TO_CM)
+		if localViewModelPos, ok := vIEWHAND_TABLE_COD2[boneName]; xp.xmodelPartType == xMODEL_TYPE_VIEWHANDS && ok {
+			currentBone.LocalTransform.Positon = localViewModelPos.div(iNCH_TO_CM)
+			currentBone.WorldTransform.Positon = localViewModelPos.div(iNCH_TO_CM)
 		}
 
 		if currentBone.Parent > -1 {
@@ -415,9 +415,9 @@ func (xp *XModelPart) loadV25(f *os.File) error {
 			return errorLogAndReturn(err)
 		}
 
-		qx := float32(rawBoneData.Rx) / ROTATION_DIVISOR
-		qy := float32(rawBoneData.Ry) / ROTATION_DIVISOR
-		qz := float32(rawBoneData.Rz) / ROTATION_DIVISOR
+		qx := float32(rawBoneData.Rx) / rOTATION_DIVISOR
+		qy := float32(rawBoneData.Ry) / rOTATION_DIVISOR
+		qz := float32(rawBoneData.Rz) / rOTATION_DIVISOR
 		qw := float32(math.Sqrt((1 - float64(qx*qx) - float64(qy*qy) - float64(qz*qz))))
 
 		boneTransform := XmodelPartBoneTransform{

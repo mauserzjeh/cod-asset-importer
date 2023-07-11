@@ -1,4 +1,4 @@
-package assets
+package importer
 
 import (
 	"encoding/binary"
@@ -8,9 +8,9 @@ import (
 
 type (
 	Material struct {
-		Techset  string
+		techset  string
 		Name     string
-		Textures []materialTexture
+		textures []materialTexture
 	}
 
 	materialTexture struct {
@@ -100,7 +100,7 @@ func (mat *Material) Load(filePath string, version int) error {
 		return errorLogAndReturn(err)
 	}
 
-	mat.Techset, err = readString(f)
+	mat.techset, err = readString(f)
 	if err != nil {
 		return errorLogAndReturn(err)
 	}
@@ -154,7 +154,7 @@ func (mat *Material) Load(filePath string, version int) error {
 			return errorLogAndReturn(err)
 		}
 
-		mat.Textures = append(mat.Textures, t)
+		mat.textures = append(mat.textures, t)
 		_, err = f.Seek(currentOffset, io.SeekStart)
 		if err != nil {
 			return errorLogAndReturn(err)

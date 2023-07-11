@@ -1,4 +1,4 @@
-package assets
+package importer
 
 import (
 	"encoding/binary"
@@ -9,8 +9,8 @@ import (
 type (
 	XModel struct {
 		Name    string
-		Version uint16
-		Lods    []XModelLod
+		version uint16
+		lods    []XModelLod
 	}
 
 	XModelLod struct {
@@ -21,15 +21,15 @@ type (
 )
 
 const (
-	XMODEL_TYPE_RIGID      = 0
-	XMODEL_TYPE_ANIMATED   = 1
-	XMODEL_TYPE_VIEWMODEL  = 2
-	XMODEL_TYPE_PLAYERBODY = 3
-	XMODEL_TYPE_VIEWHANDS  = 4
+	xMODEL_TYPE_RIGID      = 0
+	xMODEL_TYPE_ANIMATED   = 1
+	xMODEL_TYPE_VIEWMODEL  = 2
+	xMODEL_TYPE_PLAYERBODY = 3
+	xMODEL_TYPE_VIEWHANDS  = 4
 )
 
-// Load
-func (xm *XModel) Load(filePath string) error {
+// load
+func (xm *XModel) load(filePath string) error {
 	f, err := os.Open(filePath)
 	if err != nil {
 		return errorLogAndReturn(err)
@@ -38,12 +38,12 @@ func (xm *XModel) Load(filePath string) error {
 
 	xm.Name = fileNameWithoutExt(filePath)
 
-	err = binary.Read(f, binary.LittleEndian, &xm.Version)
+	err = binary.Read(f, binary.LittleEndian, &xm.version)
 	if err != nil {
 		return errorLogAndReturn(err)
 	}
 
-	switch xm.Version {
+	switch xm.version {
 	case VERSION_COD1:
 		err := xm.loadV14(f)
 		if err != nil {
@@ -66,7 +66,7 @@ func (xm *XModel) Load(filePath string) error {
 
 		return nil
 	default:
-		return fmt.Errorf("invalid xmodel version: %v", xm.Version)
+		return fmt.Errorf("invalid xmodel version: %v", xm.version)
 	}
 }
 
@@ -93,7 +93,7 @@ func (xm *XModel) loadV14(f *os.File) error {
 			continue
 		}
 
-		xm.Lods = append(xm.Lods, XModelLod{
+		xm.lods = append(xm.lods, XModelLod{
 			Name:     lodName,
 			Distance: lodDistance,
 		})
@@ -123,7 +123,7 @@ func (xm *XModel) loadV14(f *os.File) error {
 		}
 	}
 
-	for i := 0; i < len(xm.Lods); i++ {
+	for i := 0; i < len(xm.lods); i++ {
 		var textureCount uint16
 		err = binary.Read(f, binary.LittleEndian, &textureCount)
 		if err != nil {
@@ -136,7 +136,7 @@ func (xm *XModel) loadV14(f *os.File) error {
 				return errorLogAndReturn(err)
 			}
 
-			xm.Lods[i].Materials = append(xm.Lods[i].Materials, texture)
+			xm.lods[i].Materials = append(xm.lods[i].Materials, texture)
 		}
 	}
 
@@ -166,7 +166,7 @@ func (xm *XModel) loadV20(f *os.File) error {
 			continue
 		}
 
-		xm.Lods = append(xm.Lods, XModelLod{
+		xm.lods = append(xm.lods, XModelLod{
 			Name:     lodName,
 			Distance: lodDistance,
 		})
@@ -196,7 +196,7 @@ func (xm *XModel) loadV20(f *os.File) error {
 		}
 	}
 
-	for i := 0; i < len(xm.Lods); i++ {
+	for i := 0; i < len(xm.lods); i++ {
 		var materialCount uint16
 		err = binary.Read(f, binary.LittleEndian, &materialCount)
 		if err != nil {
@@ -209,7 +209,7 @@ func (xm *XModel) loadV20(f *os.File) error {
 				return errorLogAndReturn(err)
 			}
 
-			xm.Lods[i].Materials = append(xm.Lods[i].Materials, material)
+			xm.lods[i].Materials = append(xm.lods[i].Materials, material)
 		}
 	}
 
@@ -239,7 +239,7 @@ func (xm *XModel) loadV25(f *os.File) error {
 			continue
 		}
 
-		xm.Lods = append(xm.Lods, XModelLod{
+		xm.lods = append(xm.lods, XModelLod{
 			Name:     lodName,
 			Distance: lodDistance,
 		})
@@ -269,7 +269,7 @@ func (xm *XModel) loadV25(f *os.File) error {
 		}
 	}
 
-	for i := 0; i < len(xm.Lods); i++ {
+	for i := 0; i < len(xm.lods); i++ {
 		var materialCount uint16
 		err = binary.Read(f, binary.LittleEndian, &materialCount)
 		if err != nil {
@@ -282,7 +282,7 @@ func (xm *XModel) loadV25(f *os.File) error {
 				return errorLogAndReturn(err)
 			}
 
-			xm.Lods[i].Materials = append(xm.Lods[i].Materials, material)
+			xm.lods[i].Materials = append(xm.lods[i].Materials, material)
 		}
 	}
 

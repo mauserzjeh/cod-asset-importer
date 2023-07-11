@@ -1,28 +1,47 @@
 package importer
 
-import "assets"
-
 type (
 	LoadedIBSP struct {
-		IBSP assets.IBSP
+		IBSP IBSP
 	}
 
 	LoadedModel struct {
-		XModel     assets.XModel
-		XModelPart assets.XModelPart
-		XModelSurf assets.XModelSurf
+		XModel     XModel
+		XModelPart XModelPart
+		XModelSurf XModelSurf
 		Materials  []LoadedMaterial
-		Angles     assets.Vec3
-		Origin     assets.Vec3
-		Scale      assets.Vec3
+		Angles     Vec3
+		Origin     Vec3
+		Scale      Vec3
 	}
 
 	LoadedMaterial struct {
-		Material assets.Material
-		Textures map[string]assets.IWI
+		Material Material
+		Textures map[string]LoadedTexture
 	}
 
 	LoadedTexture struct {
-		Texture assets.IWI
+		Texture IWI
+	}
+
+	Callbacks struct {
+		CallbackIBSP     func(LoadedIBSP)
+		CallbackModel    func(LoadedModel)
+		CallbackMaterial func(LoadedMaterial)
 	}
 )
+
+// SetCallbackIBSP
+func (c *Callbacks) SetCallbackIBSP(f func(LoadedIBSP)) {
+	c.CallbackIBSP = f
+}
+
+// SetCallbackModel
+func (c *Callbacks) SetCallbackModel(f func(LoadedModel)) {
+	c.CallbackModel = f
+}
+
+// CallbackMaterial
+func (c *Callbacks) SetCallbackMaterial(f func(LoadedMaterial)) {
+	c.CallbackMaterial = f
+}

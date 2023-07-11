@@ -1,4 +1,4 @@
-package assets
+package importer
 
 import (
 	"encoding/binary"
@@ -8,8 +8,8 @@ import (
 
 type (
 	XModelSurf struct {
-		Name     string
-		Version  uint16
+		name     string
+		version  uint16
 		Surfaces []XmodelSurfSurface
 	}
 
@@ -34,25 +34,25 @@ type (
 )
 
 const (
-	RIGGED = 65535
+	rIGGED = 65535
 )
 
-// Load
-func (xs *XModelSurf) Load(filePath string, xmodelPart *XModelPart) error {
+// load
+func (xs *XModelSurf) load(filePath string, xmodelPart *XModelPart) error {
 	f, err := os.Open(filePath)
 	if err != nil {
 		return errorLogAndReturn(err)
 	}
 	defer f.Close()
 
-	xs.Name = fileNameWithoutExt(filePath)
+	xs.name = fileNameWithoutExt(filePath)
 
-	err = binary.Read(f, binary.LittleEndian, &xs.Version)
+	err = binary.Read(f, binary.LittleEndian, &xs.version)
 	if err != nil {
 		return errorLogAndReturn(err)
 	}
 
-	switch xs.Version {
+	switch xs.version {
 	case VERSION_COD1:
 		err := xs.loadV14(f, xmodelPart)
 		if err != nil {
@@ -75,7 +75,7 @@ func (xs *XModelSurf) Load(filePath string, xmodelPart *XModelPart) error {
 
 		return nil
 	default:
-		return fmt.Errorf("invalid xmodelsurf version: %v", xs.Version)
+		return fmt.Errorf("invalid xmodelsurf version: %v", xs.version)
 	}
 }
 
@@ -102,7 +102,7 @@ func (xs *XModelSurf) loadV14(f *os.File, xmodelPart *XModelPart) error {
 		}
 
 		defaultBoneIdx := uint16(0)
-		if surfaceHeader.DefaultBoneIdx == RIGGED {
+		if surfaceHeader.DefaultBoneIdx == rIGGED {
 			err := readPadding(f, 4)
 			if err != nil {
 				return errorLogAndReturn(err)
@@ -206,7 +206,7 @@ func (xs *XModelSurf) loadV14(f *os.File, xmodelPart *XModelPart) error {
 			weightCount := uint16(0)
 			vertexBoneIdx := defaultBoneIdx
 
-			if surfaceHeader.DefaultBoneIdx == RIGGED {
+			if surfaceHeader.DefaultBoneIdx == rIGGED {
 				err = binary.Read(f, binary.LittleEndian, &weightCount)
 				if err != nil {
 					return errorLogAndReturn(err)
@@ -274,7 +274,7 @@ func (xs *XModelSurf) loadV14(f *os.File, xmodelPart *XModelPart) error {
 					return errorLogAndReturn(err)
 				}
 
-				weightInfluence = weightInfluence / RIGGED
+				weightInfluence = weightInfluence / rIGGED
 
 				vertices[m].Weights[0].Influence -= weightInfluence
 				vertices[m].Weights = append(vertices[m].Weights, XmodelSurfWeight{
@@ -314,7 +314,7 @@ func (xs *XModelSurf) loadV20(f *os.File, xmodelPart *XModelPart) error {
 		}
 
 		defaultBoneIdx := uint16(0)
-		if surfaceHeader.DefaultBoneIdx == RIGGED {
+		if surfaceHeader.DefaultBoneIdx == rIGGED {
 			err := readPadding(f, 2)
 			if err != nil {
 				return errorLogAndReturn(err)
@@ -358,7 +358,7 @@ func (xs *XModelSurf) loadV20(f *os.File, xmodelPart *XModelPart) error {
 			weightCount := uint8(0)
 			vertexBoneIdx := defaultBoneIdx
 
-			if surfaceHeader.DefaultBoneIdx == RIGGED {
+			if surfaceHeader.DefaultBoneIdx == rIGGED {
 				err := binary.Read(f, binary.LittleEndian, &weightCount)
 				if err != nil {
 					return errorLogAndReturn(err)
@@ -404,7 +404,7 @@ func (xs *XModelSurf) loadV20(f *os.File, xmodelPart *XModelPart) error {
 						return errorLogAndReturn(err)
 					}
 
-					weightInfluenceFloat := float32(weightInfluence) / RIGGED
+					weightInfluenceFloat := float32(weightInfluence) / rIGGED
 
 					vertex.Weights[0].Influence -= weightInfluenceFloat
 					vertex.Weights = append(vertex.Weights, XmodelSurfWeight{
@@ -565,7 +565,7 @@ func (xs *XModelSurf) loadV25(f *os.File, xmodelPart *XModelPart) error {
 						return errorLogAndReturn(err)
 					}
 
-					weightInfluenceFloat := float32(weightInfluence) / RIGGED
+					weightInfluenceFloat := float32(weightInfluence) / rIGGED
 					vertex.Weights[0].Influence -= weightInfluenceFloat
 					vertex.Weights = append(vertex.Weights, XmodelSurfWeight{
 						Bone:      weightBoneIdx,
