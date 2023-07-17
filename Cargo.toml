@@ -1,0 +1,12 @@
+[package]
+name = "cod_asset_importer"
+version = "1.0.0"
+authors = ["Soma Rádóczi"]
+edition = "2021"
+
+# [lib]
+# name = "cod_asset_importer"
+# crate-type = ["cdylib"]
+
+# [dependencies]
+# pyo3 = { version = "0.19.1", features = ["extension-module", "abi3", "abi3-py38"]}
