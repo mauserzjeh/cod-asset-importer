@@ -1,8 +1,7 @@
-use std::{io, fmt};
-
+use std::{fmt, io, string};
 
 pub struct Error {
-    pub error: String
+    pub error: String,
 }
 
 impl Error {
@@ -13,7 +12,17 @@ impl Error {
 
 impl From<io::Error> for Error {
     fn from(error: io::Error) -> Self {
-        Error { error:error.to_string() }
+        Error {
+            error: error.to_string(),
+        }
+    }
+}
+
+impl From<string::FromUtf8Error> for Error {
+    fn from(error: string::FromUtf8Error) -> Self {
+        Error {
+            error: error.to_string(),
+        }
     }
 }
 

@@ -12,12 +12,8 @@ use crate::utils::{binary, error::Error, Result};
 #[derive(Debug)]
 pub struct Ibsp {
     pub name: String,
-    // lumps: [IbspLump; 39],
     pub materials: Vec<IbspMaterial>,
-    // vertices: Vec<IbspVertex>,
-    // triangles: Vec<Triangle>,
-    // triangle_soups: Vec<IbspTriangleSoup>,
-    // entities: Vec<IbspEntity>,
+    pub entities: Vec<IbspEntity>,
     // surfaces: Vec<IbspSurface>,
 }
 
@@ -61,11 +57,12 @@ struct IbspVertex {
 }
 
 #[repr(C)]
-struct IbspEntity {
-    name: String,
-    angles: Vec3,
-    origin: Vec3,
-    scale: Vec3,
+#[derive(Debug)]
+pub struct IbspEntity {
+    pub name: String,
+    pub angles: Vec3,
+    pub origin: Vec3,
+    pub scale: Vec3,
 }
 
 #[repr(C)]
@@ -109,11 +106,13 @@ impl Ibsp {
         let materials = Self::read_materials(&mut file, header.version, &lumps)?;
         let triangle_soups = Self::read_trianglesoups(&mut file, header.version, &lumps)?;
         let vertices = Self::read_vertices(&mut file, header.version, &lumps)?;
-
+        let triangles = Self::read_triangles(&mut file, header.version, &lumps)?;
+        let entities = Self::read_entities(&mut file, header.version, &lumps)?;
 
         Ok(Ibsp {
             name: file_path,
             materials,
+            entities,
         })
     }
 
@@ -210,12 +209,16 @@ impl Ibsp {
         Ok(trianglesoups)
     }
 
-    fn read_vertices(file: &mut File, version: i32, lumps: &Vec<IbspLump>) -> Result<Vec<IbspVertex>> {
+    fn read_vertices(
+        file: &mut File,
+        version: i32,
+        lumps: &Vec<IbspLump>,
+    ) -> Result<Vec<IbspVertex>> {
         if version == IbspVersion::V59 as i32 {
             let vertices_lump_idx = IbspLumpIndexV59::Vertices as usize;
             let vertices_lump = lumps[vertices_lump_idx];
             let vertices = Self::read_vertices_v59(file, vertices_lump)?;
-            return Ok(vertices)
+            return Ok(vertices);
         }
 
         let vertices_lump_idx = IbspLumpIndexV4::Vertices as usize;
@@ -224,7 +227,7 @@ impl Ibsp {
         Ok(vertices)
     }
 
-    fn read_vertices_v59(file: &mut File, vertices_lump: IbspLump) -> Result<Vec<IbspVertex>>{
+    fn read_vertices_v59(file: &mut File, vertices_lump: IbspLump) -> Result<Vec<IbspVertex>> {
         let mut vertices: Vec<IbspVertex> = Vec::new();
         let vertex_size: usize = 44;
 
@@ -239,7 +242,7 @@ impl Ibsp {
 
             match binary::skip(file, 8) {
                 Ok(_) => (),
-                Err(error) => return Err(Error::new(error.to_string()))
+                Err(error) => return Err(Error::new(error.to_string())),
             }
 
             let nx = binary::read_f32(file)?;
@@ -249,19 +252,23 @@ impl Ibsp {
             let mut color = [0u8; 4];
             file.read_exact(&mut color)?;
 
-            vertices.push(IbspVertex { position: [px, py, pz], normal: [nx, ny, nz], color: [
-                color[0] as f32 / 255.0,
-                color[1] as f32 / 255.0,
-                color[2] as f32 / 255.0,
-                color[3] as f32 / 255.0,
-            ], uv: [u, v] })
+            vertices.push(IbspVertex {
+                position: [px, py, pz],
+                normal: [nx, ny, nz],
+                color: [
+                    color[0] as f32 / 255.0,
+                    color[1] as f32 / 255.0,
+                    color[2] as f32 / 255.0,
+                    color[3] as f32 / 255.0,
+                ],
+                uv: [u, v],
+            })
         }
 
         Ok(vertices)
     }
 
-
-    fn read_vertices_v4(file: &mut File, vertices_lump: IbspLump) -> Result<Vec<IbspVertex>>{
+    fn read_vertices_v4(file: &mut File, vertices_lump: IbspLump) -> Result<Vec<IbspVertex>> {
         let mut vertices: Vec<IbspVertex> = Vec::new();
         let vertex_size: usize = 68;
 
@@ -283,20 +290,76 @@ impl Ibsp {
 
             match binary::skip(file, 32) {
                 Ok(_) => (),
-                Err(error) => return Err(Error::new(error.to_string()))
+                Err(error) => return Err(Error::new(error.to_string())),
             }
 
-            vertices.push(IbspVertex { position: [px, py, pz], normal: [nx, ny, nz], color: [
-                color[0] as f32 / 255.0,
-                color[1] as f32 / 255.0,
-                color[2] as f32 / 255.0,
-                color[3] as f32 / 255.0,
-            ], uv: [u, v] })
+            vertices.push(IbspVertex {
+                position: [px, py, pz],
+                normal: [nx, ny, nz],
+                color: [
+                    color[0] as f32 / 255.0,
+                    color[1] as f32 / 255.0,
+                    color[2] as f32 / 255.0,
+                    color[3] as f32 / 255.0,
+                ],
+                uv: [u, v],
+            })
         }
 
         Ok(vertices)
     }
 
+    fn read_triangles(
+        file: &mut File,
+        version: i32,
+        lumps: &Vec<IbspLump>,
+    ) -> Result<Vec<Triangle>> {
+        let mut triangles: Vec<Triangle> = Vec::new();
+
+        let mut triangles_lump_idx = IbspLumpIndexV59::Triangles as usize;
+        if version == IbspVersion::V4 as i32 {
+            triangles_lump_idx = IbspLumpIndexV4::Triangles as usize;
+        }
+
+        let triangles_lump = lumps[triangles_lump_idx];
+        let triangle_size = size_of::<Triangle>();
+
+        file.seek(SeekFrom::Start(triangles_lump.offset as u64))?;
+        for _ in (0..triangles_lump.length).step_by(triangle_size) {
+            let idx1 = binary::read_u16(file)?;
+            let idx2 = binary::read_u16(file)?;
+            let idx3 = binary::read_u16(file)?;
+
+            triangles.push([idx1, idx2, idx3])
+        }
+
+        Ok(triangles)
+    }
+
+    fn read_entities(file: &mut File, version: i32, lumps: &Vec<IbspLump>) -> Result<Vec<IbspEntity>> {
+        let mut entities: Vec<IbspEntity> = Vec::new();
+
+        let mut entities_lump_idx = IbspLumpIndexV59::Entities as usize;
+        if version == IbspVersion::V4 as i32 {
+            entities_lump_idx = IbspLumpIndexV4::Entities as usize;
+        }
+
+        let entities_lump = lumps[entities_lump_idx];
+
+        file.seek(SeekFrom::Start(entities_lump.offset as u64))?;
+        let mut entities_data: Box<[u8]>  = Vec::with_capacity(entities_lump.length as usize).into_boxed_slice();
+        file.read_exact(&mut entities_data)?;
+
+        let mut entities_string = String::from_utf8(entities_data.into_vec())?;
+        entities_string = entities_string.trim_matches(char::from(0)).to_string();
+        entities_string = format!("[{}]", entities_string);
+        entities_string = str::replace(&entities_string, "}\n{\n", "},\n{\n");
+        entities_string = str::replace(&entities_string, "\"\n\"", "\",\n\"");
+        entities_string = str::replace(&entities_string, "\" \"", "\":\"");
+        entities_string = str::replace(&entities_string, "\\", "/");
 
 
+
+        Ok(entities)
+    }
 }
