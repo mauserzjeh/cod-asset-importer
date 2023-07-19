@@ -336,7 +336,11 @@ impl Ibsp {
         Ok(triangles)
     }
 
-    fn read_entities(file: &mut File, version: i32, lumps: &Vec<IbspLump>) -> Result<Vec<IbspEntity>> {
+    fn read_entities(
+        file: &mut File,
+        version: i32,
+        lumps: &Vec<IbspLump>,
+    ) -> Result<Vec<IbspEntity>> {
         let mut entities: Vec<IbspEntity> = Vec::new();
 
         let mut entities_lump_idx = IbspLumpIndexV59::Entities as usize;
@@ -347,7 +351,8 @@ impl Ibsp {
         let entities_lump = lumps[entities_lump_idx];
 
         file.seek(SeekFrom::Start(entities_lump.offset as u64))?;
-        let mut entities_data: Box<[u8]>  = Vec::with_capacity(entities_lump.length as usize).into_boxed_slice();
+        let mut entities_data: Box<[u8]> =
+            Vec::with_capacity(entities_lump.length as usize).into_boxed_slice();
         file.read_exact(&mut entities_data)?;
 
         let mut entities_string = String::from_utf8(entities_data.into_vec())?;
@@ -358,8 +363,81 @@ impl Ibsp {
         entities_string = str::replace(&entities_string, "\" \"", "\":\"");
         entities_string = str::replace(&entities_string, "\\", "/");
 
+        let re = regex::Regex::new(r"^xmodel\/(.*)").unwrap();
 
+        let entities_json = serde_json::from_str::<Vec<serde_json::Value>>(&entities_string)?;
+        for entity in entities_json.iter() {
+            let Some(name) = entity.get("model").unwrap_or(&serde_json::json!("")).as_str().and_then(|model| re.captures(model)).and_then(|caps| caps.get(1)).and_then(|m| Some(m.as_str())).and_then(|name| Some(name.to_string())) else {
+                continue
+            };
+
+            let angles = Self::parse_transform(
+                entity
+                    .get("angles")
+                    .unwrap_or(&serde_json::json!(""))
+                    .as_str()
+                    .unwrap(),
+            )
+            .unwrap_or([0f32; 3]);
+
+            let origin = Self::parse_transform(
+                entity
+                    .get("origin")
+                    .unwrap_or(&serde_json::json!(""))
+                    .as_str()
+                    .unwrap(),
+            )
+            .unwrap_or([0f32; 3]);
+
+            let scale = Self::parse_transform(
+                entity
+                    .get("modelscale")
+                    .unwrap_or(&serde_json::json!(""))
+                    .as_str()
+                    .unwrap(),
+            )
+            .unwrap_or([1f32; 3]);
+
+            entities.push(IbspEntity {
+                name,
+                angles,
+                origin,
+                scale,
+            });
+        }
 
         Ok(entities)
     }
+
+    fn parse_transform(transform: &str) -> Option<Vec3> {
+        let t = transform.split(' ').collect::<Vec<&str>>();
+        let l = t.len();
+
+        if l == 3 {
+            return Some([
+                t[0].parse::<f32>().unwrap_or(0.0),
+                t[1].parse::<f32>().unwrap_or(0.0),
+                t[2].parse::<f32>().unwrap_or(0.0),
+            ]);
+        } else if l == 1 {
+            return Some([
+                t[0].parse::<f32>().unwrap_or(0.0),
+                t[0].parse::<f32>().unwrap_or(0.0),
+                t[0].parse::<f32>().unwrap_or(0.0),
+            ]);
+        }
+
+        None
+    }
+
+    fn load_surfaces(triangle_soups: Vec<IbspTriangleSoup>, materials: Vec<IbspMaterial>, vertices: Vec<IbspVertex>, triangles: Vec<Triangle>) -> Vec<IbspSurface> {
+        let mut surfaces: Vec<IbspSurface> = Vec::new();
+        
+        // TODO
+
+        surfaces
+    }
+
+
+
 }

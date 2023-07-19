@@ -1,5 +1,8 @@
 use super::Result;
-use std::{fs::File, io::{Read, Seek, SeekFrom}};
+use std::{
+    fs::File,
+    io::{Read, Seek, SeekFrom},
+};
 
 pub fn read_i8(f: &mut File) -> Result<i8> {
     let mut buffer = [0u8; 1];
@@ -75,5 +78,10 @@ pub fn read_nullstr(f: &mut File) -> Result<String> {
 
 pub fn skip(f: &mut File, n: i64) -> Result<u64> {
     let offset = f.seek(SeekFrom::Current(n))?;
+    Ok(offset)
+}
+
+pub fn current_offset(f: &mut File) -> Result<u64> {
+    let offset = f.seek(SeekFrom::Current(0))?;
     Ok(offset)
 }

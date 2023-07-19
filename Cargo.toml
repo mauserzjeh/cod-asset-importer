@@ -10,4 +10,5 @@ edition = "2021"
 
 [dependencies]
 # pyo3 = { version = "0.19.1", features = ["extension-module", "abi3", "abi3-py38"]}
-serde = "1.0.17"
+serde_json = "1.0.103"
+regex = "1.9.1"
