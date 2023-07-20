@@ -7,7 +7,10 @@ fn main() {
     let res = Ibsp::load(file_path);
     match res {
         Ok(ibsp) => {
-            info_log!("{}", ibsp.name);
+            info_log!("name: {}", ibsp.name);
+            info_log!("materials_len: {}", ibsp.materials.len());
+            info_log!("entities_len: {}", ibsp.entities.len());
+            info_log!("surfaces_len: {}", ibsp.surfaces.len());
         },
         Err(error) => {
             error_log!("{}", error)

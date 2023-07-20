@@ -14,7 +14,7 @@ pub struct Ibsp {
     pub name: String,
     pub materials: Vec<IbspMaterial>,
     pub entities: Vec<IbspEntity>,
-    // surfaces: Vec<IbspSurface>,
+    pub surfaces: Vec<IbspSurface>,
 }
 
 #[repr(C)]
@@ -32,9 +32,9 @@ struct IbspLump {
 }
 
 #[repr(C)]
-#[derive(Debug)]
+#[derive(Clone, Copy, Debug)]
 pub struct IbspMaterial {
-    name: [u8; 64],
+    pub name: [u8; 64],
     flag: u64,
 }
 
@@ -49,11 +49,12 @@ struct IbspTriangleSoup {
 }
 
 #[repr(C)]
-struct IbspVertex {
-    position: Vec3,
-    normal: Vec3,
-    color: Color,
-    uv: UV,
+#[derive(Clone, Copy, Debug)]
+pub struct IbspVertex {
+    pub position: Vec3,
+    pub normal: Vec3,
+    pub color: Color,
+    pub uv: UV,
 }
 
 #[repr(C)]
@@ -66,10 +67,11 @@ pub struct IbspEntity {
 }
 
 #[repr(C)]
-struct IbspSurface {
-    material: String,
-    vertices: HashMap<u16, IbspVertex>,
-    triangles: Vec<Triangle>,
+#[derive(Debug)]
+pub struct IbspSurface {
+    pub material: String,
+    pub vertices: HashMap<u16, IbspVertex>,
+    pub triangles: Vec<Triangle>,
 }
 
 #[repr(i32)]
@@ -108,11 +110,13 @@ impl Ibsp {
         let vertices = Self::read_vertices(&mut file, header.version, &lumps)?;
         let triangles = Self::read_triangles(&mut file, header.version, &lumps)?;
         let entities = Self::read_entities(&mut file, header.version, &lumps)?;
+        let surfaces = Self::load_surfaces(triangle_soups, &materials, vertices, triangles);
 
         Ok(Ibsp {
             name: file_path,
             materials,
             entities,
+            surfaces,
         })
     }
 
@@ -336,40 +340,42 @@ impl Ibsp {
         Ok(triangles)
     }
 
+    // TODO fix reading
     fn read_entities(
         file: &mut File,
         version: i32,
         lumps: &Vec<IbspLump>,
     ) -> Result<Vec<IbspEntity>> {
         let mut entities: Vec<IbspEntity> = Vec::new();
-
+        
         let mut entities_lump_idx = IbspLumpIndexV59::Entities as usize;
         if version == IbspVersion::V4 as i32 {
             entities_lump_idx = IbspLumpIndexV4::Entities as usize;
         }
-
+        
         let entities_lump = lumps[entities_lump_idx];
-
+        
         file.seek(SeekFrom::Start(entities_lump.offset as u64))?;
         let mut entities_data: Box<[u8]> =
-            Vec::with_capacity(entities_lump.length as usize).into_boxed_slice();
+        Vec::with_capacity(entities_lump.length as usize).into_boxed_slice();
         file.read_exact(&mut entities_data)?;
-
+        
         let mut entities_string = String::from_utf8(entities_data.into_vec())?;
         entities_string = entities_string.trim_matches(char::from(0)).to_string();
         entities_string = format!("[{}]", entities_string);
-        entities_string = str::replace(&entities_string, "}\n{\n", "},\n{\n");
-        entities_string = str::replace(&entities_string, "\"\n\"", "\",\n\"");
-        entities_string = str::replace(&entities_string, "\" \"", "\":\"");
-        entities_string = str::replace(&entities_string, "\\", "/");
-
+        entities_string = entities_string.replace("}\n{\n", "},\n{\n");
+        entities_string = entities_string.replace("\"\n\"", "\",\n\"");
+        entities_string = entities_string.replace("\" \"", "\":\"");
+        entities_string = entities_string.replace("\\", "/");
+        
         let re = regex::Regex::new(r"^xmodel\/(.*)").unwrap();
-
+        
         let entities_json = serde_json::from_str::<Vec<serde_json::Value>>(&entities_string)?;
         for entity in entities_json.iter() {
             let Some(name) = entity.get("model").unwrap_or(&serde_json::json!("")).as_str().and_then(|model| re.captures(model)).and_then(|caps| caps.get(1)).and_then(|m| Some(m.as_str())).and_then(|name| Some(name.to_string())) else {
                 continue
             };
+
 
             let angles = Self::parse_transform(
                 entity
@@ -430,14 +436,40 @@ impl Ibsp {
         None
     }
 
-    fn load_surfaces(triangle_soups: Vec<IbspTriangleSoup>, materials: Vec<IbspMaterial>, vertices: Vec<IbspVertex>, triangles: Vec<Triangle>) -> Vec<IbspSurface> {
+    fn load_surfaces(triangle_soups: Vec<IbspTriangleSoup>, materials: &Vec<IbspMaterial>, vertices: Vec<IbspVertex>, triangles: Vec<Triangle>) -> Vec<IbspSurface> {
         let mut surfaces: Vec<IbspSurface> = Vec::new();
         
-        // TODO
+        for ts in triangle_soups.iter() {
+            let surface_material =  materials[ts.material_idx as usize].get_name();
+            let mut surface_triangles: Vec<Triangle> = Vec::new();
+            let mut surface_vertices: HashMap<u16, IbspVertex> = HashMap::new();
+
+            let tri_count = ts.triangles_length / 3;
+            for i in 0..tri_count {
+                let tri_idx = (ts.triangles_offset / 3 + i as u32) as usize;
+                let tri = triangles[tri_idx];
+
+                let vert_idx_1 = (ts.vertices_offset + tri[0] as u32) as u16;
+                let vert_idx_2 = (ts.vertices_offset + tri[1] as u32) as u16;
+                let vert_idx_3 = (ts.vertices_offset + tri[2] as u32) as u16;
+
+                surface_triangles.push([vert_idx_1, vert_idx_2, vert_idx_3]);
+                
+                surface_vertices.insert(vert_idx_1, vertices[vert_idx_1 as usize]);
+                surface_vertices.insert(vert_idx_2, vertices[vert_idx_2 as usize]);
+                surface_vertices.insert(vert_idx_3, vertices[vert_idx_3 as usize]);
+            }
+
+            surfaces.push(IbspSurface { material: surface_material, vertices: surface_vertices, triangles: surface_triangles })
+        }
 
         surfaces
     }
 
+}
 
-
+impl IbspMaterial {
+    pub fn get_name(&self) -> String {
+        std::str::from_utf8(&self.name).unwrap().trim_matches(char::from(0)).to_string()
+    }
 }
