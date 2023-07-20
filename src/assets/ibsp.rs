@@ -340,7 +340,6 @@ impl Ibsp {
         Ok(triangles)
     }
 
-    // TODO fix reading
     fn read_entities(
         file: &mut File,
         version: i32,
@@ -356,11 +355,10 @@ impl Ibsp {
         let entities_lump = lumps[entities_lump_idx];
         
         file.seek(SeekFrom::Start(entities_lump.offset as u64))?;
-        let mut entities_data: Box<[u8]> =
-        Vec::with_capacity(entities_lump.length as usize).into_boxed_slice();
+        let mut entities_data = vec![0u8; entities_lump.length as usize];
         file.read_exact(&mut entities_data)?;
         
-        let mut entities_string = String::from_utf8(entities_data.into_vec())?;
+        let mut entities_string = String::from_utf8(entities_data)?;
         entities_string = entities_string.trim_matches(char::from(0)).to_string();
         entities_string = format!("[{}]", entities_string);
         entities_string = entities_string.replace("}\n{\n", "},\n{\n");
