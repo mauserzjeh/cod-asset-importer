@@ -4,68 +4,176 @@ use std::{
     io::{Read, Seek, SeekFrom},
 };
 
-pub fn read_i8(f: &mut File) -> Result<i8> {
-    let mut buffer = [0u8; 1];
-    f.read_exact(&mut buffer)?;
-    Ok(i8::from_le_bytes(buffer))
+const SIZE_BYTE: usize = 1;
+const SIZE_SHORT: usize = 2;
+const SIZE_INT: usize = 4;
+const SIZE_LONG: usize = 8;
+const SIZE_FLOAT: usize = 4;
+const SIZE_DOUBLE: usize = 8;
+
+pub trait BinBytes {
+    fn from_bytes(bytes: Vec<u8>) -> Self;
+    fn buffer(n: usize) -> Vec<u8>;
+    fn size() -> usize;
 }
 
-pub fn read_u8(f: &mut File) -> Result<u8> {
-    let mut buffer = [0u8; 1];
+pub fn read<T: BinBytes>(f: &mut File) -> Result<T> {
+    let mut buffer = T::buffer(1);
     f.read_exact(&mut buffer)?;
-    Ok(u8::from_le_bytes(buffer))
+    Ok(T::from_bytes(buffer))
 }
 
-pub fn read_i16(f: &mut File) -> Result<i16> {
-    let mut buffer = [0u8; 2];
+pub fn read_vec<T: BinBytes>(f: &mut File, n: usize) -> Result<Vec<T>> {
+    let mut buffer = T::buffer(n);
     f.read_exact(&mut buffer)?;
-    Ok(i16::from_le_bytes(buffer))
+    let mut items: Vec<T> = Vec::new();
+    for i in 0..n {
+        let start = i * T::size();
+        let end = start + T::size();
+        let item = T::from_bytes(buffer[start..end].to_vec());
+        items.push(item)
+    }
+
+    Ok(items)
 }
 
-pub fn read_u16(f: &mut File) -> Result<u16> {
-    let mut buffer = [0u8; 2];
-    f.read_exact(&mut buffer)?;
-    Ok(u16::from_le_bytes(buffer))
+impl BinBytes for i8 {
+    fn from_bytes(bytes: Vec<u8>) -> Self {
+        i8::from_le_bytes([bytes[0]])
+    }
+    fn buffer(n: usize) -> Vec<u8> {
+        vec![0u8; SIZE_BYTE * n]
+    }
+    fn size() -> usize {
+        SIZE_BYTE
+    }
 }
 
-pub fn read_i32(f: &mut File) -> Result<i32> {
-    let mut buffer = [0u8; 4];
-    f.read_exact(&mut buffer)?;
-    Ok(i32::from_le_bytes(buffer))
+impl BinBytes for u8 {
+    fn from_bytes(bytes: Vec<u8>) -> Self {
+        u8::from_le_bytes([bytes[0]])
+    }
+    fn buffer(n: usize) -> Vec<u8> {
+        vec![0u8; SIZE_BYTE * n]
+    }
+    fn size() -> usize {
+        SIZE_BYTE
+    }
 }
 
-pub fn read_u32(f: &mut File) -> Result<u32> {
-    let mut buffer = [0u8; 4];
-    f.read_exact(&mut buffer)?;
-    Ok(u32::from_le_bytes(buffer))
+impl BinBytes for i16 {
+    fn from_bytes(bytes: Vec<u8>) -> Self {
+        i16::from_le_bytes([bytes[0], bytes[1]])
+    }
+
+    fn buffer(n: usize) -> Vec<u8> {
+        vec![0u8; SIZE_SHORT * n]
+    }
+    fn size() -> usize {
+        SIZE_SHORT
+    }
+}
+impl BinBytes for u16 {
+    fn from_bytes(bytes: Vec<u8>) -> Self {
+        u16::from_le_bytes([bytes[0], bytes[1]])
+    }
+
+    fn buffer(n: usize) -> Vec<u8> {
+        vec![0u8; SIZE_SHORT * n]
+    }
+    fn size() -> usize {
+        SIZE_SHORT
+    }
 }
 
-pub fn read_i64(f: &mut File) -> Result<i64> {
-    let mut buffer = [0u8; 8];
-    f.read_exact(&mut buffer)?;
-    Ok(i64::from_le_bytes(buffer))
+impl BinBytes for i32 {
+    fn from_bytes(bytes: Vec<u8>) -> Self {
+        i32::from_le_bytes([bytes[0], bytes[1], bytes[2], bytes[3]])
+    }
+
+    fn buffer(n: usize) -> Vec<u8> {
+        vec![0u8; SIZE_INT * n]
+    }
+    fn size() -> usize {
+        SIZE_INT
+    }
+}
+impl BinBytes for u32 {
+    fn from_bytes(bytes: Vec<u8>) -> Self {
+        u32::from_le_bytes([bytes[0], bytes[1], bytes[2], bytes[3]])
+    }
+
+    fn buffer(n: usize) -> Vec<u8> {
+        vec![0u8; SIZE_INT * n]
+    }
+    fn size() -> usize {
+        SIZE_INT
+    }
 }
 
-pub fn read_u64(f: &mut File) -> Result<u64> {
-    let mut buffer = [0u8; 8];
-    f.read_exact(&mut buffer)?;
-    Ok(u64::from_le_bytes(buffer))
+impl BinBytes for i64 {
+    fn from_bytes(bytes: Vec<u8>) -> Self {
+        i64::from_le_bytes([
+            bytes[0], bytes[1], bytes[2], bytes[3], bytes[4], bytes[5], bytes[6], bytes[7],
+        ])
+    }
+
+    fn buffer(n: usize) -> Vec<u8> {
+        vec![0u8; SIZE_LONG * n]
+    }
+
+    fn size() -> usize {
+        SIZE_LONG
+    }
+}
+impl BinBytes for u64 {
+    fn from_bytes(bytes: Vec<u8>) -> Self {
+        u64::from_le_bytes([
+            bytes[0], bytes[1], bytes[2], bytes[3], bytes[4], bytes[5], bytes[6], bytes[7],
+        ])
+    }
+
+    fn buffer(n: usize) -> Vec<u8> {
+        vec![0u8; SIZE_LONG * n]
+    }
+
+    fn size() -> usize {
+        SIZE_LONG
+    }
 }
 
-pub fn read_f32(f: &mut File) -> Result<f32> {
-    let mut buffer = [0u8; 4];
-    f.read_exact(&mut buffer)?;
-    Ok(f32::from_le_bytes(buffer))
+impl BinBytes for f32 {
+    fn from_bytes(bytes: Vec<u8>) -> Self {
+        f32::from_le_bytes([bytes[0], bytes[1], bytes[2], bytes[3]])
+    }
+
+    fn buffer(n: usize) -> Vec<u8> {
+        vec![0u8; SIZE_FLOAT * n]
+    }
+
+    fn size() -> usize {
+        SIZE_FLOAT
+    }
 }
 
-pub fn read_f64(f: &mut File) -> Result<f64> {
-    let mut buffer = [0u8; 8];
-    f.read_exact(&mut buffer)?;
-    Ok(f64::from_le_bytes(buffer))
+impl BinBytes for f64 {
+    fn from_bytes(bytes: Vec<u8>) -> Self {
+        f64::from_le_bytes([
+            bytes[0], bytes[1], bytes[2], bytes[3], bytes[4], bytes[5], bytes[6], bytes[7],
+        ])
+    }
+
+    fn buffer(n: usize) -> Vec<u8> {
+        vec![0u8; SIZE_DOUBLE * n]
+    }
+
+    fn size() -> usize {
+        SIZE_DOUBLE
+    }
 }
 
 pub fn read_nullstr(f: &mut File) -> Result<String> {
-    let mut buffer = [0u8; 1];
+    let mut buffer = [0u8; SIZE_BYTE];
     let mut nullstr: String = String::new();
     loop {
         f.read_exact(&mut buffer)?;

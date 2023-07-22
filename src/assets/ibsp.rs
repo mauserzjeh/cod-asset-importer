@@ -1,8 +1,9 @@
 use std::{
     collections::HashMap,
     fs::File,
-    io::{Read, Seek, SeekFrom},
+    io::{Seek, SeekFrom},
     mem::size_of,
+    str,
 };
 
 use super::{Color, Triangle, Vec3, UV};
@@ -121,30 +122,26 @@ impl Ibsp {
     }
 
     fn read_header(file: &mut File) -> Result<IbspHeader> {
-        let mut magic = [0u8; 4];
-        file.read_exact(&mut magic)?;
-
+        let magic = binary::read_vec::<u8>(file, 4)?;
         if magic != [b'I', b'B', b'S', b'P'] {
             return Err(Error::new(format!(
-                "invalid magic: {}{}{}{}",
-                magic[0], magic[1], magic[2], magic[3]
+                "invalid magic: {}",
+                str::from_utf8(&magic).unwrap()
             )));
         }
-        let version = binary::read_i32(file)?;
+        let version = binary::read::<i32>(file)?;
         if version != IbspVersion::V59 as i32 && version != IbspVersion::V4 as i32 {
             return Err(Error::new(format!("invalid IBSP version {}", version)));
         }
 
-        Ok(IbspHeader { magic, version })
+        Ok(IbspHeader { magic: magic.try_into().unwrap(), version })
     }
 
     fn read_lumps(file: &mut File) -> Result<Vec<IbspLump>> {
         let mut lumps: Vec<IbspLump> = Vec::new();
         for _ in 0..39 {
-            let length = binary::read_u32(file)?;
-            let offset = binary::read_u32(file)?;
-
-            lumps.push(IbspLump { length, offset });
+            let lump_data = binary::read_vec::<u32>(file, 2)?;
+            lumps.push(IbspLump { length: lump_data[0], offset: lump_data[1] });
         }
 
         Ok(lumps)
@@ -167,10 +164,9 @@ impl Ibsp {
 
         file.seek(SeekFrom::Start(materials_lump.offset as u64))?;
         for _ in (0..materials_lump.length).step_by(material_size) {
-            let mut name = [0u8; 64];
-            file.read_exact(&mut name)?;
-            let flag = binary::read_u64(file)?;
-            materials.push(IbspMaterial { name, flag })
+            let name = binary::read_vec::<u8>(file, 64)?;
+            let flag = binary::read::<u64>(file)?;
+            materials.push(IbspMaterial { name: name.try_into().unwrap(), flag })
         }
 
         Ok(materials)
@@ -193,12 +189,12 @@ impl Ibsp {
 
         file.seek(SeekFrom::Start(trianglesoups_lump.offset as u64))?;
         for _ in (0..trianglesoups_lump.length).step_by(triannglesoup_size) {
-            let material_idx = binary::read_u16(file)?;
-            let draw_order = binary::read_u16(file)?;
-            let vertices_offset = binary::read_u32(file)?;
-            let vertices_length = binary::read_u16(file)?;
-            let triangles_length = binary::read_u16(file)?;
-            let triangles_offset = binary::read_u32(file)?;
+            let material_idx = binary::read::<u16>(file)?;
+            let draw_order = binary::read::<u16>(file)?;
+            let vertices_offset = binary::read::<u32>(file)?;
+            let vertices_length = binary::read::<u16>(file)?;
+            let triangles_length = binary::read::<u16>(file)?;
+            let triangles_offset = binary::read::<u32>(file)?;
 
             trianglesoups.push(IbspTriangleSoup {
                 material_idx,
@@ -237,24 +233,20 @@ impl Ibsp {
 
         file.seek(SeekFrom::Start(vertices_lump.offset as u64))?;
         for _ in (0..vertices_lump.length).step_by(vertex_size) {
-            let px = binary::read_f32(file)?;
-            let py = binary::read_f32(file)?;
-            let pz = binary::read_f32(file)?;
+            let px = binary::read::<f32>(file)?;
+            let py = binary::read::<f32>(file)?;
+            let pz = binary::read::<f32>(file)?;
 
-            let u = binary::read_f32(file)?;
-            let v = binary::read_f32(file)?;
+            let u = binary::read::<f32>(file)?;
+            let v = binary::read::<f32>(file)?;
 
-            match binary::skip(file, 8) {
-                Ok(_) => (),
-                Err(error) => return Err(Error::new(error.to_string())),
-            }
+            binary::skip(file, 8)?;
 
-            let nx = binary::read_f32(file)?;
-            let ny = binary::read_f32(file)?;
-            let nz = binary::read_f32(file)?;
+            let nx = binary::read::<f32>(file)?;
+            let ny = binary::read::<f32>(file)?;
+            let nz = binary::read::<f32>(file)?;
 
-            let mut color = [0u8; 4];
-            file.read_exact(&mut color)?;
+            let color = binary::read_vec::<u8>(file, 4)?;
 
             vertices.push(IbspVertex {
                 position: [px, py, pz],
@@ -278,24 +270,20 @@ impl Ibsp {
 
         file.seek(SeekFrom::Start(vertices_lump.offset as u64))?;
         for _ in (0..vertices_lump.length).step_by(vertex_size) {
-            let px = binary::read_f32(file)?;
-            let py = binary::read_f32(file)?;
-            let pz = binary::read_f32(file)?;
+            let px = binary::read::<f32>(file)?;
+            let py = binary::read::<f32>(file)?;
+            let pz = binary::read::<f32>(file)?;
 
-            let nx = binary::read_f32(file)?;
-            let ny = binary::read_f32(file)?;
-            let nz = binary::read_f32(file)?;
+            let nx = binary::read::<f32>(file)?;
+            let ny = binary::read::<f32>(file)?;
+            let nz = binary::read::<f32>(file)?;
 
-            let mut color = [0u8; 4];
-            file.read_exact(&mut color)?;
+            let color = binary::read_vec::<u8>(file, 4)?;
 
-            let u = binary::read_f32(file)?;
-            let v = binary::read_f32(file)?;
+            let u = binary::read::<f32>(file)?;
+            let v = binary::read::<f32>(file)?;
 
-            match binary::skip(file, 32) {
-                Ok(_) => (),
-                Err(error) => return Err(Error::new(error.to_string())),
-            }
+            binary::skip(file, 32)?;
 
             vertices.push(IbspVertex {
                 position: [px, py, pz],
@@ -330,11 +318,8 @@ impl Ibsp {
 
         file.seek(SeekFrom::Start(triangles_lump.offset as u64))?;
         for _ in (0..triangles_lump.length).step_by(triangle_size) {
-            let idx1 = binary::read_u16(file)?;
-            let idx2 = binary::read_u16(file)?;
-            let idx3 = binary::read_u16(file)?;
-
-            triangles.push([idx1, idx2, idx3])
+            let idxs = binary::read_vec::<u16>(file, 3)?;
+            triangles.push([idxs[0], idxs[1], idxs[2]])
         }
 
         Ok(triangles)
@@ -355,8 +340,7 @@ impl Ibsp {
         let entities_lump = lumps[entities_lump_idx];
         
         file.seek(SeekFrom::Start(entities_lump.offset as u64))?;
-        let mut entities_data = vec![0u8; entities_lump.length as usize];
-        file.read_exact(&mut entities_data)?;
+        let entities_data = binary::read_vec(file, entities_lump.length as usize)?;
         
         let mut entities_string = String::from_utf8(entities_data)?;
         entities_string = entities_string.trim_matches(char::from(0)).to_string();
@@ -468,6 +452,6 @@ impl Ibsp {
 
 impl IbspMaterial {
     pub fn get_name(&self) -> String {
-        std::str::from_utf8(&self.name).unwrap().trim_matches(char::from(0)).to_string()
+        str::from_utf8(&self.name).unwrap().trim_matches(char::from(0)).to_string()
     }
 }
