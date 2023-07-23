@@ -1,13 +1,19 @@
+use std::{fs::File, os::windows::prelude::AsHandle};
+
+use valid_enum::ValidEnum;
+
+use crate::utils::{binary, error::Error, Result};
+
 pub struct XModel {
     name: String,
     version: u16,
-    lods: Vec<XModelLod>
+    lods: Vec<XModelLod>,
 }
 
 pub struct XModelLod {
     name: String,
     distance: f32,
-    materials: Vec<String>
+    materials: Vec<String>,
 }
 
 enum XModelType {
@@ -16,4 +22,147 @@ enum XModelType {
     Viewmodel,
     Playerbody,
     Viewhands,
+}
+
+#[derive(ValidEnum)]
+#[valid_enum(u16)]
+pub enum XModelVersion {
+    V14 = 0x0E,
+    V20 = 0x14,
+    V25 = 0x19,
+}
+
+impl XModel {
+    pub fn load(file_path: String) -> Result<XModel> {
+        let mut file = File::open(&file_path)?;
+
+        let version = binary::read::<u16>(&mut file)?;
+
+        let mut xmodel = XModel {
+            name: file_path,
+            version,
+            lods: Vec::new(),
+        };
+
+        match XModelVersion::valid(version) {
+            Some(XModelVersion::V14) => {
+                xmodel.load_v14(&mut file)?;
+                return Ok(xmodel);
+            }
+            Some(XModelVersion::V20) => {
+                xmodel.load_v20(&mut file)?;
+                return Ok(xmodel);
+            }
+            Some(XModelVersion::V25) => {
+                xmodel.load_v25(&mut file)?;
+                return Ok(xmodel);
+            }
+            None => return Err(Error::new(format!("invalid xmodel version {}", version))),
+        }
+    }
+
+    fn load_v14(&mut self, file: &mut File) -> Result<()> {
+        binary::skip(file, 24)?;
+
+        for _ in 0..3 {
+            let distance = binary::read::<f32>(file)?;
+            let name = binary::read_string(file)?;
+
+            if name.len() > 0 {
+                self.lods.push(XModelLod {
+                    name,
+                    distance,
+                    materials: Vec::new(),
+                })
+            }
+        }
+
+        binary::skip(file, 4)?;
+
+        let padding_count = binary::read::<u32>(file)?;
+        for _ in 0..padding_count {
+            let sub_padding_count = binary::read::<u32>(file)?;
+            binary::skip(file, ((sub_padding_count * 48) + 36) as i64)?;
+        }
+
+        for k in 0..self.lods.len() {
+            let texture_count = binary::read::<u16>(file)?;
+            for _ in 0..texture_count {
+                let texture = binary::read_string(file)?;
+                self.lods[k].materials.push(texture);
+            }
+        }
+
+        Ok(())
+    }
+
+    fn load_v20(&mut self, file: &mut File) -> Result<()> {
+        binary::skip(file, 25)?;
+
+        for _ in 0..4 {
+            let distance = binary::read::<f32>(file)?;
+            let name = binary::read_string(file)?;
+
+            if name.len() > 0 {
+                self.lods.push(XModelLod {
+                    name,
+                    distance,
+                    materials: Vec::new(),
+                })
+            }
+        }
+
+        binary::skip(file, 4)?;
+
+        let padding_count = binary::read::<u32>(file)?;
+        for _ in 0..padding_count {
+            let sub_padding_count = binary::read::<u32>(file)?;
+            binary::skip(file, ((sub_padding_count * 48) + 36) as i64)?;
+        }
+
+        for k in 0..self.lods.len() {
+            let material_count = binary::read::<u16>(file)?;
+            for _ in 0..material_count {
+                let material = binary::read_string(file)?;
+                self.lods[k].materials.push(material);
+            }
+        }
+
+        Ok(())
+    }
+
+    fn load_v25(&mut self, file: &mut File) -> Result<()> {
+        binary::skip(file, 26)?;
+
+        for _ in 0..4 {
+            let distance = binary::read::<f32>(file)?;
+            let name = binary::read_string(file)?;
+
+            if name.len() > 0 {
+                self.lods.push(XModelLod {
+                    name,
+                    distance,
+                    materials: Vec::new(),
+                })
+            }
+        }
+
+        binary::skip(file, 4)?;
+
+        let padding_count = binary::read::<u32>(file)?;
+        for _ in 0..padding_count {
+            let sub_padding_count = binary::read::<u32>(file)?;
+            binary::skip(file, ((sub_padding_count * 48) + 36) as i64)?;
+        }
+
+        for k in 0..self.lods.len() {
+            let material_count = binary::read::<u16>(file)?;
+            for _ in 0..material_count {
+                let material = binary::read_string(file)?;
+                self.lods[k].materials.push(material);
+            }
+        }
+
+        Ok(())
+    }
 }
