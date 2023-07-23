@@ -6,6 +6,6 @@
     ],
     "rust-analyzer.linkedProjects": [
         ".\\Cargo.toml",
-        ".\\Cargo.toml"
+        ".\\valid_enum\\Cargo.toml"
     ]
 }

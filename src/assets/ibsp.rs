@@ -6,10 +6,10 @@ use std::{
     str,
 };
 
+use valid_enum::ValidEnum;
 use super::{Color, Triangle, Vec3, UV};
 use crate::utils::{binary, error::Error, Result};
 
-#[repr(C)]
 #[derive(Debug)]
 pub struct Ibsp {
     pub name: String,
@@ -18,28 +18,27 @@ pub struct Ibsp {
     pub surfaces: Vec<IbspSurface>,
 }
 
-#[repr(C)]
+
 #[derive(Debug)]
 pub struct IbspHeader {
     magic: [u8; 4],
     version: i32,
 }
 
-#[repr(C)]
+
 #[derive(Clone, Copy)]
 struct IbspLump {
     length: u32,
     offset: u32,
 }
 
-#[repr(C)]
+
 #[derive(Clone, Copy, Debug)]
 pub struct IbspMaterial {
     pub name: [u8; 64],
     flag: u64,
 }
 
-#[repr(C)]
 struct IbspTriangleSoup {
     material_idx: u16,
     draw_order: u16,
@@ -49,7 +48,7 @@ struct IbspTriangleSoup {
     triangles_offset: u32,
 }
 
-#[repr(C)]
+
 #[derive(Clone, Copy, Debug)]
 pub struct IbspVertex {
     pub position: Vec3,
@@ -58,7 +57,7 @@ pub struct IbspVertex {
     pub uv: UV,
 }
 
-#[repr(C)]
+
 #[derive(Debug)]
 pub struct IbspEntity {
     pub name: String,
@@ -67,7 +66,6 @@ pub struct IbspEntity {
     pub scale: Vec3,
 }
 
-#[repr(C)]
 #[derive(Debug)]
 pub struct IbspSurface {
     pub material: String,
@@ -75,7 +73,8 @@ pub struct IbspSurface {
     pub triangles: Vec<Triangle>,
 }
 
-#[repr(i32)]
+#[derive(ValidEnum)]
+#[valid_enum(i32)]
 enum IbspVersion {
     V59 = 0x3B,
     V4 = 0x4,
@@ -99,10 +98,7 @@ enum IbspLumpIndexV4 {
 
 impl Ibsp {
     pub fn load(file_path: String) -> Result<Ibsp> {
-        let mut file = match File::open(&file_path) {
-            Ok(f) => f,
-            Err(error) => return Err(Error::new(error.to_string())),
-        };
+        let mut file = File::open(&file_path)?;
 
         let header = Self::read_header(&mut file)?;
         let lumps = Self::read_lumps(&mut file)?;
@@ -129,19 +125,27 @@ impl Ibsp {
                 str::from_utf8(&magic).unwrap()
             )));
         }
+
         let version = binary::read::<i32>(file)?;
-        if version != IbspVersion::V59 as i32 && version != IbspVersion::V4 as i32 {
-            return Err(Error::new(format!("invalid IBSP version {}", version)));
+        match IbspVersion::valid(version) {
+            Some(_) => (),
+            None => return Err(Error::new(format!("invalid IBSP version {}", version))),
         }
 
-        Ok(IbspHeader { magic: magic.try_into().unwrap(), version })
+        Ok(IbspHeader {
+            magic: magic.try_into().unwrap(),
+            version,
+        })
     }
 
     fn read_lumps(file: &mut File) -> Result<Vec<IbspLump>> {
         let mut lumps: Vec<IbspLump> = Vec::new();
         for _ in 0..39 {
             let lump_data = binary::read_vec::<u32>(file, 2)?;
-            lumps.push(IbspLump { length: lump_data[0], offset: lump_data[1] });
+            lumps.push(IbspLump {
+                length: lump_data[0],
+                offset: lump_data[1],
+            });
         }
 
         Ok(lumps)
@@ -166,7 +170,10 @@ impl Ibsp {
         for _ in (0..materials_lump.length).step_by(material_size) {
             let name = binary::read_vec::<u8>(file, 64)?;
             let flag = binary::read::<u64>(file)?;
-            materials.push(IbspMaterial { name: name.try_into().unwrap(), flag })
+            materials.push(IbspMaterial {
+                name: name.try_into().unwrap(),
+                flag,
+            })
         }
 
         Ok(materials)
@@ -331,17 +338,17 @@ impl Ibsp {
         lumps: &Vec<IbspLump>,
     ) -> Result<Vec<IbspEntity>> {
         let mut entities: Vec<IbspEntity> = Vec::new();
-        
+
         let mut entities_lump_idx = IbspLumpIndexV59::Entities as usize;
         if version == IbspVersion::V4 as i32 {
             entities_lump_idx = IbspLumpIndexV4::Entities as usize;
         }
-        
+
         let entities_lump = lumps[entities_lump_idx];
-        
+
         file.seek(SeekFrom::Start(entities_lump.offset as u64))?;
         let entities_data = binary::read_vec(file, entities_lump.length as usize)?;
-        
+
         let mut entities_string = String::from_utf8(entities_data)?;
         entities_string = entities_string.trim_matches(char::from(0)).to_string();
         entities_string = format!("[{}]", entities_string);
@@ -349,15 +356,14 @@ impl Ibsp {
         entities_string = entities_string.replace("\"\n\"", "\",\n\"");
         entities_string = entities_string.replace("\" \"", "\":\"");
         entities_string = entities_string.replace("\\", "/");
-        
+
         let re = regex::Regex::new(r"^xmodel\/(.*)").unwrap();
-        
+
         let entities_json = serde_json::from_str::<Vec<serde_json::Value>>(&entities_string)?;
         for entity in entities_json.iter() {
             let Some(name) = entity.get("model").unwrap_or(&serde_json::json!("")).as_str().and_then(|model| re.captures(model)).and_then(|caps| caps.get(1)).and_then(|m| Some(m.as_str())).and_then(|name| Some(name.to_string())) else {
                 continue
             };
-
 
             let angles = Self::parse_transform(
                 entity
@@ -418,11 +424,16 @@ impl Ibsp {
         None
     }
 
-    fn load_surfaces(triangle_soups: Vec<IbspTriangleSoup>, materials: &Vec<IbspMaterial>, vertices: Vec<IbspVertex>, triangles: Vec<Triangle>) -> Vec<IbspSurface> {
+    fn load_surfaces(
+        triangle_soups: Vec<IbspTriangleSoup>,
+        materials: &Vec<IbspMaterial>,
+        vertices: Vec<IbspVertex>,
+        triangles: Vec<Triangle>,
+    ) -> Vec<IbspSurface> {
         let mut surfaces: Vec<IbspSurface> = Vec::new();
-        
+
         for ts in triangle_soups.iter() {
-            let surface_material =  materials[ts.material_idx as usize].get_name();
+            let surface_material = materials[ts.material_idx as usize].get_name();
             let mut surface_triangles: Vec<Triangle> = Vec::new();
             let mut surface_vertices: HashMap<u16, IbspVertex> = HashMap::new();
 
@@ -436,22 +447,28 @@ impl Ibsp {
                 let vert_idx_3 = (ts.vertices_offset + tri[2] as u32) as u16;
 
                 surface_triangles.push([vert_idx_1, vert_idx_2, vert_idx_3]);
-                
+
                 surface_vertices.insert(vert_idx_1, vertices[vert_idx_1 as usize]);
                 surface_vertices.insert(vert_idx_2, vertices[vert_idx_2 as usize]);
                 surface_vertices.insert(vert_idx_3, vertices[vert_idx_3 as usize]);
             }
 
-            surfaces.push(IbspSurface { material: surface_material, vertices: surface_vertices, triangles: surface_triangles })
+            surfaces.push(IbspSurface {
+                material: surface_material,
+                vertices: surface_vertices,
+                triangles: surface_triangles,
+            })
         }
 
         surfaces
     }
-
 }
 
 impl IbspMaterial {
     pub fn get_name(&self) -> String {
-        str::from_utf8(&self.name).unwrap().trim_matches(char::from(0)).to_string()
+        str::from_utf8(&self.name)
+            .unwrap()
+            .trim_matches(char::from(0))
+            .to_string()
     }
 }
