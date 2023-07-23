@@ -68,7 +68,7 @@ pub fn valid_enum_derive(input: TokenStream) -> TokenStream {
 
             let generated = quote! {
                 impl #enum_name {
-                    fn valid(version: #attr_type) -> Option<#enum_name> {
+                    pub fn valid(version: #attr_type) -> Option<#enum_name> {
                         match version {
                             #(#match_arms)*
                             _ => None
