@@ -172,7 +172,7 @@ impl BinBytes for f64 {
     }
 }
 
-pub fn read_nullstr(f: &mut File) -> Result<String> {
+pub fn read_string(f: &mut File) -> Result<String> {
     let mut buffer = [0u8; SIZE_BYTE];
     let mut nullstr: String = String::new();
     loop {
