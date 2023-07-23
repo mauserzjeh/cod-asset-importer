@@ -1,8 +1,6 @@
-use std::{fs::File, os::windows::prelude::AsHandle};
-
+use crate::utils::{binary, error::Error, path as path_utils, Result};
+use std::{fs::File, path::PathBuf};
 use valid_enum::ValidEnum;
-
-use crate::utils::{binary, error::Error, Result};
 
 pub struct XModel {
     name: String,
@@ -16,12 +14,14 @@ pub struct XModelLod {
     materials: Vec<String>,
 }
 
-enum XModelType {
-    Rigid,
-    Animated,
-    Viewmodel,
-    Playerbody,
-    Viewhands,
+#[derive(ValidEnum)]
+#[valid_enum(u8)]
+pub enum XModelType {
+    Rigid = 48,
+    Animated = 49,
+    Viewmodel = 50,
+    Playerbody = 51,
+    Viewhands = 52,
 }
 
 #[derive(ValidEnum)]
@@ -33,13 +33,12 @@ pub enum XModelVersion {
 }
 
 impl XModel {
-    pub fn load(file_path: String) -> Result<XModel> {
+    pub fn load(file_path: PathBuf) -> Result<XModel> {
         let mut file = File::open(&file_path)?;
-
+        let name = path_utils::file_name_without_ext(file_path);
         let version = binary::read::<u16>(&mut file)?;
-
         let mut xmodel = XModel {
-            name: file_path,
+            name,
             version,
             lods: Vec::new(),
         };

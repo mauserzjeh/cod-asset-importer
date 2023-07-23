@@ -1,14 +1,18 @@
+use crate::utils::{
+    binary,
+    error::Error,
+    math::{Color, Triangle, Vec3, UV},
+    path as path_utils, Result,
+};
 use std::{
     collections::HashMap,
     fs::File,
     io::{Seek, SeekFrom},
     mem::size_of,
+    path::PathBuf,
     str,
 };
-
 use valid_enum::ValidEnum;
-use super::{Color, Triangle, Vec3, UV};
-use crate::utils::{binary, error::Error, Result};
 
 #[derive(Debug)]
 pub struct Ibsp {
@@ -18,20 +22,17 @@ pub struct Ibsp {
     pub surfaces: Vec<IbspSurface>,
 }
 
-
 #[derive(Debug)]
 pub struct IbspHeader {
     magic: [u8; 4],
     version: i32,
 }
 
-
 #[derive(Clone, Copy)]
 struct IbspLump {
     length: u32,
     offset: u32,
 }
-
 
 #[derive(Clone, Copy, Debug)]
 pub struct IbspMaterial {
@@ -48,7 +49,6 @@ struct IbspTriangleSoup {
     triangles_offset: u32,
 }
 
-
 #[derive(Clone, Copy, Debug)]
 pub struct IbspVertex {
     pub position: Vec3,
@@ -56,7 +56,6 @@ pub struct IbspVertex {
     pub color: Color,
     pub uv: UV,
 }
-
 
 #[derive(Debug)]
 pub struct IbspEntity {
@@ -97,9 +96,9 @@ enum IbspLumpIndexV4 {
 }
 
 impl Ibsp {
-    pub fn load(file_path: String) -> Result<Ibsp> {
+    pub fn load(file_path: PathBuf) -> Result<Ibsp> {
         let mut file = File::open(&file_path)?;
-
+        let name = path_utils::file_name_without_ext(file_path);
         let header = Self::read_header(&mut file)?;
         let lumps = Self::read_lumps(&mut file)?;
         let materials = Self::read_materials(&mut file, header.version, &lumps)?;
@@ -110,7 +109,7 @@ impl Ibsp {
         let surfaces = Self::load_surfaces(triangle_soups, &materials, vertices, triangles);
 
         Ok(Ibsp {
-            name: file_path,
+            name,
             materials,
             entities,
             surfaces,
