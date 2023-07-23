@@ -26,16 +26,16 @@ pub fn valid_enum_derive(input: TokenStream) -> TokenStream {
     let input = parse_macro_input!(input as DeriveInput);
     let enum_name = &input.ident;
 
-    // Extract the `repr` attribute if it exists
-    let repr_attr = input
+    // Extract the `valid_enum` attribute if it exists
+    let valid_enum_attr = input
         .attrs
         .iter()
         .find(|attr| attr.path().is_ident("valid_enum"));
 
-    let attr_type = match repr_attr {
-        Some(repr_attr) => {
+    let attr_type = match valid_enum_attr {
+        Some(valid_enum_attr) => {
             // Parse the args of the macro
-            let args: Ident = repr_attr.parse_args().unwrap();
+            let args: Ident = valid_enum_attr.parse_args().unwrap();
 
             args
         }
