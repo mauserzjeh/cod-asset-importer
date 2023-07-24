@@ -239,31 +239,24 @@ impl Ibsp {
 
         file.seek(SeekFrom::Start(vertices_lump.offset as u64))?;
         for _ in (0..vertices_lump.length).step_by(vertex_size) {
-            let px = binary::read::<f32>(file)?;
-            let py = binary::read::<f32>(file)?;
-            let pz = binary::read::<f32>(file)?;
-
-            let u = binary::read::<f32>(file)?;
-            let v = binary::read::<f32>(file)?;
+            let p = binary::read_vec::<f32>(file, 3)?;
+            let uv = binary::read_vec::<f32>(file, 2)?;
 
             binary::skip(file, 8)?;
 
-            let nx = binary::read::<f32>(file)?;
-            let ny = binary::read::<f32>(file)?;
-            let nz = binary::read::<f32>(file)?;
-
+            let n = binary::read_vec::<f32>(file, 2)?;
             let color = binary::read_vec::<u8>(file, 4)?;
 
             vertices.push(IbspVertex {
-                position: [px, py, pz],
-                normal: [nx, ny, nz],
+                position: [p[0], p[1], p[2]],
+                normal: [n[0], n[1], n[2]],
                 color: [
                     color[0] as f32 / 255.0,
                     color[1] as f32 / 255.0,
                     color[2] as f32 / 255.0,
                     color[3] as f32 / 255.0,
                 ],
-                uv: [u, v],
+                uv: [uv[0], uv[1]],
             })
         }
 
@@ -276,31 +269,23 @@ impl Ibsp {
 
         file.seek(SeekFrom::Start(vertices_lump.offset as u64))?;
         for _ in (0..vertices_lump.length).step_by(vertex_size) {
-            let px = binary::read::<f32>(file)?;
-            let py = binary::read::<f32>(file)?;
-            let pz = binary::read::<f32>(file)?;
-
-            let nx = binary::read::<f32>(file)?;
-            let ny = binary::read::<f32>(file)?;
-            let nz = binary::read::<f32>(file)?;
-
+            let p = binary::read_vec::<f32>(file, 3)?;
+            let n = binary::read_vec::<f32>(file, 3)?;
             let color = binary::read_vec::<u8>(file, 4)?;
-
-            let u = binary::read::<f32>(file)?;
-            let v = binary::read::<f32>(file)?;
+            let uv = binary::read_vec::<f32>(file, 2)?;
 
             binary::skip(file, 32)?;
 
             vertices.push(IbspVertex {
-                position: [px, py, pz],
-                normal: [nx, ny, nz],
+                position: [p[0], p[1], p[2]],
+                normal: [n[0], n[1], n[2]],
                 color: [
                     color[0] as f32 / 255.0,
                     color[1] as f32 / 255.0,
                     color[2] as f32 / 255.0,
                     color[3] as f32 / 255.0,
                 ],
-                uv: [u, v],
+                uv: [uv[0], uv[1]],
             })
         }
 
@@ -346,7 +331,7 @@ impl Ibsp {
         let entities_lump = lumps[entities_lump_idx];
 
         file.seek(SeekFrom::Start(entities_lump.offset as u64))?;
-        let entities_data = binary::read_vec(file, entities_lump.length as usize)?;
+        let entities_data = binary::read_vec::<u8>(file, entities_lump.length as usize)?;
 
         let mut entities_string = String::from_utf8(entities_data)?;
         entities_string = entities_string.trim_matches(char::from(0)).to_string();
