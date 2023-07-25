@@ -5,7 +5,7 @@ use syn::{parse_macro_input, Data, DeriveInput, Error, Ident, Result};
 fn check_primitive_type(attr_type: &Ident) -> Result<()> {
     let allowed_types = &[
         "i8", "i16", "i32", "i64", "i128", "isize", "u8", "u16", "u32", "u64", "u128", "usize",
-        "f32", "f64", "char",
+        "f32", "f64",
     ];
     let attr_type_str = attr_type.to_string();
     if allowed_types.contains(&attr_type_str.as_str()) {
