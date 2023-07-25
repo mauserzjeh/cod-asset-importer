@@ -2,30 +2,31 @@ use super::xmodel::{XModelType, XModelVersion};
 use crate::utils::{
     binary,
     error::Error,
-    math::{vec3_add, vec3_div, vec3_rotate, Quat, Vec3},
+    math::{vec3_add, vec3_div, vec3_rotate, Quat, Vec3, vec3_from_vec},
     path as path_utils, Result,
 };
 use std::{fs::File, path::PathBuf};
 
+#[derive(Clone)]
 pub struct XModelPart {
     name: String,
     version: u16,
     model_type: u8,
-    bones: Vec<XModelPartBone>,
+    pub bones: Vec<XModelPartBone>,
 }
 
 #[derive(Clone)]
 pub struct XModelPartBone {
     name: String,
     parent: i8,
-    local_transform: XModelPartBoneTransform,
-    world_transform: XModelPartBoneTransform,
+    pub local_transform: XModelPartBoneTransform,
+    pub world_transform: XModelPartBoneTransform,
 }
 
 #[derive(Clone, Copy)]
 pub struct XModelPartBoneTransform {
-    position: Vec3,
-    rotation: Quat,
+    pub position: Vec3,
+    pub rotation: Quat,
 }
 
 const ROTATION_DIVISOR: f32 = 32768.0;
@@ -219,10 +220,10 @@ impl XModelPart {
             let qx = rotation[0] as f32 / ROTATION_DIVISOR;
             let qy = rotation[1] as f32 / ROTATION_DIVISOR;
             let qz = rotation[2] as f32 / ROTATION_DIVISOR;
-            let qw = f32::sqrt(1f32 - (qx * qx) - (qy * qy) - (qz * qz));
+            let qw = f32::sqrt(1.0 - (qx * qx) - (qy * qy) - (qz * qz));
 
             let bone_transform = XModelPartBoneTransform {
-                position: [position[0], position[1], position[3]],
+                position: vec3_from_vec(position).unwrap(),
                 rotation: [qx, qy, qz, qw],
             };
 
@@ -286,10 +287,10 @@ impl XModelPart {
             let qx = rotation[0] as f32 / ROTATION_DIVISOR;
             let qy = rotation[1] as f32 / ROTATION_DIVISOR;
             let qz = rotation[2] as f32 / ROTATION_DIVISOR;
-            let qw = f32::sqrt(1f32 - (qx * qx) - (qy * qy) - (qz * qz));
+            let qw = f32::sqrt(1.0 - (qx * qx) - (qy * qy) - (qz * qz));
 
             let bone_transform = XModelPartBoneTransform {
-                position: [position[0], position[1], position[3]],
+                position: vec3_from_vec(position).unwrap(),
                 rotation: [qx, qy, qz, qw],
             };
 
@@ -351,10 +352,10 @@ impl XModelPart {
             let qx = rotation[0] as f32 / ROTATION_DIVISOR;
             let qy = rotation[1] as f32 / ROTATION_DIVISOR;
             let qz = rotation[2] as f32 / ROTATION_DIVISOR;
-            let qw = f32::sqrt(1f32 - (qx * qx) - (qy * qy) - (qz * qz));
+            let qw = f32::sqrt(1.0 - (qx * qx) - (qy * qy) - (qz * qz));
 
             let bone_transform = XModelPartBoneTransform {
-                position: [position[0], position[1], position[3]],
+                position: vec3_from_vec(position).unwrap(),
                 rotation: [qx, qy, qz, qw],
             };
 

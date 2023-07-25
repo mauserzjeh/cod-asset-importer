@@ -1,7 +1,7 @@
 use crate::utils::{
     binary,
     error::Error,
-    math::{Color, Triangle, Vec3, UV},
+    math::{color_from_vec, uv_from_vec, vec3_from_vec, Color, Triangle, Vec3, UV, triangle_from_vec},
     path as path_utils, Result,
 };
 use std::{
@@ -248,15 +248,10 @@ impl Ibsp {
             let color = binary::read_vec::<u8>(file, 4)?;
 
             vertices.push(IbspVertex {
-                position: [p[0], p[1], p[2]],
-                normal: [n[0], n[1], n[2]],
-                color: [
-                    color[0] as f32 / 255.0,
-                    color[1] as f32 / 255.0,
-                    color[2] as f32 / 255.0,
-                    color[3] as f32 / 255.0,
-                ],
-                uv: [uv[0], uv[1]],
+                position: vec3_from_vec(p).unwrap(),
+                normal: vec3_from_vec(n).unwrap(),
+                color: color_from_vec(color).unwrap(),
+                uv: uv_from_vec(uv).unwrap(),
             })
         }
 
@@ -277,15 +272,10 @@ impl Ibsp {
             binary::skip(file, 32)?;
 
             vertices.push(IbspVertex {
-                position: [p[0], p[1], p[2]],
-                normal: [n[0], n[1], n[2]],
-                color: [
-                    color[0] as f32 / 255.0,
-                    color[1] as f32 / 255.0,
-                    color[2] as f32 / 255.0,
-                    color[3] as f32 / 255.0,
-                ],
-                uv: [uv[0], uv[1]],
+                position: vec3_from_vec(p).unwrap(),
+                normal: vec3_from_vec(n).unwrap(),
+                color: color_from_vec(color).unwrap(),
+                uv: uv_from_vec(uv).unwrap(),
             })
         }
 
@@ -309,8 +299,8 @@ impl Ibsp {
 
         file.seek(SeekFrom::Start(triangles_lump.offset as u64))?;
         for _ in (0..triangles_lump.length).step_by(triangle_size) {
-            let idxs = binary::read_vec::<u16>(file, 3)?;
-            triangles.push([idxs[0], idxs[1], idxs[2]])
+            let triangle = binary::read_vec::<u16>(file, 3)?;
+            triangles.push(triangle_from_vec(triangle).unwrap())
         }
 
         Ok(triangles)
