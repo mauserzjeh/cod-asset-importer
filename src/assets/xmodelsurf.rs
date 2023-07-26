@@ -4,8 +4,8 @@ use crate::utils::{
     binary,
     error::Error,
     math::{
-        color_from_vec, uv_from_vec, vec3_add, vec3_from_vec, vec3_rotate, Color, Triangle, Vec3,
-        UV,
+        color_from_vec, triangle_from_vec, uv_from_vec, vec3_add, vec3_from_vec, vec3_rotate,
+        Color, Triangle, Vec3, UV,
     },
     path::file_name_without_ext,
     Result,
@@ -192,13 +192,104 @@ impl XModelSurf {
                 }
             }
 
-            self.surfaces.push(XModelSurfSurface { vertices, triangles });
+            self.surfaces.push(XModelSurfSurface {
+                vertices,
+                triangles,
+            });
         }
 
         Ok(())
     }
 
     fn load_v20(&mut self, file: &mut File, xmodel_part: Option<XModelPart>) -> Result<()> {
+        let surface_count = binary::read::<u16>(file)?;
+
+        for _ in 0..surface_count {
+            binary::skip(file, 1)?;
+
+            let vertex_count = binary::read::<u16>(file)?;
+            let triangle_count = binary::read::<u16>(file)?;
+            let mut default_bone_idx = binary::read::<u16>(file)?;
+
+            if default_bone_idx as i32 == RIGGED {
+                binary::skip(file, 2)?;
+                default_bone_idx = 0;
+            }
+
+            let mut vertices: Vec<XModelSurfVertex> = Vec::new();
+            for _ in 0..vertex_count {
+                let normal = binary::read_vec::<f32>(file, 3)?;
+                let mut normal = vec3_from_vec(normal).unwrap();
+
+                let color = binary::read_vec::<u8>(file, 4)?;
+                let mut uv = binary::read_vec::<f32>(file, 2)?;
+                uv[1] = 1.0 - uv[1];
+
+                binary::skip(file, 24)?;
+
+                let mut weight_count = 0;
+                let mut vertex_bone_idx = default_bone_idx;
+
+                if default_bone_idx as i32 == RIGGED {
+                    weight_count = binary::read::<u16>(file)?;
+                    vertex_bone_idx = binary::read::<u16>(file)?;
+                }
+
+                let position = binary::read_vec::<f32>(file, 3)?;
+                let mut position = vec3_from_vec(position).unwrap();
+
+                let mut vertex_weights: Vec<XModelSurfWeight> = vec![XModelSurfWeight {
+                    bone: vertex_bone_idx,
+                    influence: 1.0,
+                }];
+
+                if weight_count > 0 {
+                    binary::skip(file, 1)?;
+
+                    for _ in 0..weight_count {
+                        let weight_bone_idx = binary::read::<u16>(file)?;
+                        binary::skip(file, 12)?;
+                        let weight_influence = binary::read::<u16>(file)?;
+                        let weight_influence = weight_influence as f32 / RIGGED as f32;
+
+                        vertex_weights[0].influence -= weight_influence;
+                        vertex_weights.push(XModelSurfWeight {
+                            bone: weight_bone_idx,
+                            influence: weight_influence,
+                        });
+                    }
+                }
+
+                if let Some(xmodel_part) = xmodel_part.to_owned() {
+                    let xmodel_part_bone = xmodel_part.bones[vertex_bone_idx as usize].to_owned();
+
+                    position = vec3_rotate(position, xmodel_part_bone.world_transform.rotation);
+                    position = vec3_add(position, xmodel_part_bone.world_transform.position);
+                    normal = vec3_rotate(normal, xmodel_part_bone.world_transform.rotation);
+                }
+
+                vertices.push(XModelSurfVertex {
+                    normal,
+                    color: color_from_vec(color).unwrap(),
+                    uv: uv_from_vec(uv).unwrap(),
+                    bone: vertex_bone_idx,
+                    position,
+                    weights: vertex_weights,
+                });
+            }
+
+            let mut triangles: Vec<Triangle> = Vec::new();
+            for _ in 0..triangle_count {
+                let triangle = binary::read_vec::<u16>(file, 3)?;
+                triangles.push(triangle_from_vec(triangle).unwrap());
+            }
+
+            self.surfaces.push(XModelSurfSurface {
+                vertices,
+                triangles,
+            });
+        }
+
         Ok(())
     }
 
