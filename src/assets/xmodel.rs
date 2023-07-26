@@ -1,4 +1,4 @@
-use crate::utils::{binary, error::Error, path as path_utils, Result};
+use crate::utils::{binary, error::Error, path::file_name_without_ext, Result};
 use std::{fs::File, path::PathBuf};
 use valid_enum::ValidEnum;
 
@@ -35,7 +35,7 @@ pub enum XModelVersion {
 impl XModel {
     pub fn load(file_path: PathBuf) -> Result<XModel> {
         let mut file = File::open(&file_path)?;
-        let name = path_utils::file_name_without_ext(file_path);
+        let name = file_name_without_ext(file_path);
         let version = binary::read::<u16>(&mut file)?;
         let mut xmodel = XModel {
             name,

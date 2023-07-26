@@ -2,8 +2,9 @@ use super::xmodel::{XModelType, XModelVersion};
 use crate::utils::{
     binary,
     error::Error,
-    math::{vec3_add, vec3_div, vec3_rotate, Quat, Vec3, vec3_from_vec},
-    path as path_utils, Result,
+    math::{vec3_add, vec3_div, vec3_from_vec, vec3_rotate, Quat, Vec3},
+    path::file_name_without_ext,
+    Result,
 };
 use std::{fs::File, path::PathBuf};
 
@@ -157,7 +158,7 @@ impl XModelPart {
 
     pub fn load(file_path: PathBuf) -> Result<XModelPart> {
         let mut file = File::open(&file_path)?;
-        let name = path_utils::file_name_without_ext(file_path);
+        let name = file_name_without_ext(file_path);
         let version = binary::read::<u16>(&mut file)?;
         let model_type = match name.chars().last() {
             Some(model_type) => model_type as u8,

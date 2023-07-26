@@ -1,8 +1,11 @@
 use crate::utils::{
     binary,
     error::Error,
-    math::{color_from_vec, uv_from_vec, vec3_from_vec, Color, Triangle, Vec3, UV, triangle_from_vec},
-    path as path_utils, Result,
+    math::{
+        color_from_vec, triangle_from_vec, uv_from_vec, vec3_from_vec, Color, Triangle, Vec3, UV,
+    },
+    path::file_name_without_ext,
+    Result,
 };
 use std::{
     collections::HashMap,
@@ -98,7 +101,7 @@ enum IbspLumpIndexV4 {
 impl Ibsp {
     pub fn load(file_path: PathBuf) -> Result<Ibsp> {
         let mut file = File::open(&file_path)?;
-        let name = path_utils::file_name_without_ext(file_path);
+        let name = file_name_without_ext(file_path);
         let header = Self::read_header(&mut file)?;
         let lumps = Self::read_lumps(&mut file)?;
         let materials = Self::read_materials(&mut file, header.version, &lumps)?;
