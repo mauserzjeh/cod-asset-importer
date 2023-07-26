@@ -4,33 +4,33 @@ pub type Quat = [f32; 4]; // x, y, z, w
 pub type Color = [f32; 4]; // r, g, b, a
 pub type Triangle = [u16; 3]; // v1, v2, v3
 
-pub fn vec3_from_vec(v: Vec::<f32>) -> Option<Vec3> {
+pub fn vec3_from_vec(v: Vec<f32>) -> Option<Vec3> {
     if v.len() != 3 {
-        return None
+        return None;
     }
 
     Some([v[0], v[1], v[2]])
 }
 
-pub fn uv_from_vec(v: Vec::<f32>) -> Option<UV> {
+pub fn uv_from_vec(v: Vec<f32>) -> Option<UV> {
     if v.len() != 2 {
-        return None
+        return None;
     }
 
-    Some([v[0], v[1]])
+    Some([v[0], 1.0 - v[1]])
 }
 
-pub fn quat_from_vec(v: Vec::<f32>) -> Option<Quat> {
+pub fn quat_from_vec(v: Vec<f32>) -> Option<Quat> {
     if v.len() != 4 {
-        return None
+        return None;
     }
 
     Some([v[0], v[1], v[2], v[3]])
 }
 
-pub fn color_from_vec(v: Vec::<u8>) -> Option<Color> {
+pub fn color_from_vec(v: Vec<u8>) -> Option<Color> {
     if v.len() != 4 {
-        return None
+        return None;
     }
 
     Some([
@@ -41,9 +41,9 @@ pub fn color_from_vec(v: Vec::<u8>) -> Option<Color> {
     ])
 }
 
-pub fn triangle_from_vec(v: Vec::<u16>) -> Option<Triangle> {
-    if v.len() != 4 {
-        return None
+pub fn triangle_from_vec(v: Vec<u16>) -> Option<Triangle> {
+    if v.len() != 3 {
+        return None;
     }
 
     Some([v[0], v[1], v[2]])
