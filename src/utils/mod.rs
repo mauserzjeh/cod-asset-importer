@@ -1,6 +1,7 @@
 use std::result;
 
 pub mod binary;
+pub mod decode;
 pub mod error;
 pub mod log;
 pub mod math;
