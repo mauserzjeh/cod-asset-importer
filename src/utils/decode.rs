@@ -145,10 +145,10 @@ pub fn decode_dxt3(input: Vec<u8>, width: u16, height: u16) -> Vec<u8> {
             for i in 0..16 {
                 let idx = i * 4;
                 let (r, g, b, a) = unpack_rgba(colors[(bitcode & 0x3) as usize] | alphas[i]);
-                buffer[idx+0] = r as u8;
-                buffer[idx+1] = g as u8;
-                buffer[idx+2] = b as u8;
-                buffer[idx+3] = a as u8;
+                buffer[idx + 0] = r as u8;
+                buffer[idx + 1] = g as u8;
+                buffer[idx + 2] = b as u8;
+                buffer[idx + 3] = a as u8;
 
                 bitcode >>= 2;
             }
@@ -179,16 +179,104 @@ pub fn decode_dxt3(input: Vec<u8>, width: u16, height: u16) -> Vec<u8> {
     output
 }
 pub fn decode_dxt5(input: Vec<u8>, width: u16, height: u16) -> Vec<u8> {
-    let offset: u32 = 0;
+    let mut offset: usize = 0;
     let block_count_x = (width + 3) / 4;
     let block_count_y = (width + 3) / 4;
     let length_last = (width + 3) % 4 + 1;
     let mut buffer = vec![0u8; 64];
     let mut colors = vec![0u32; 4];
-    let mut alphas = vec![0u32; 16];
+    let mut alphas = vec![0u32; 8];
     let mut output = vec![0u8; (width * height * 4) as usize];
 
-    todo!();
+    for y in 0..block_count_y {
+        for x in 0..block_count_x {
+            alphas[0] = input[offset + 0] as u32;
+            alphas[1] = input[offset + 1] as u32;
+
+            if alphas[0] > alphas[1] {
+                alphas[2] = (alphas[0] * 6 + alphas[1]) / 7;
+                alphas[3] = (alphas[0] * 5 + alphas[1] * 2) / 7;
+                alphas[4] = (alphas[0] * 4 + alphas[1] * 3) / 7;
+                alphas[5] = (alphas[0] * 3 + alphas[1] * 4) / 7;
+                alphas[6] = (alphas[0] * 2 + alphas[1] * 5) / 7;
+                alphas[7] = (alphas[0] + alphas[1] * 6) / 7;
+            } else {
+                alphas[2] = (alphas[0] * 4 + alphas[1]) / 5;
+                alphas[3] = (alphas[0] * 3 + alphas[1] * 2) / 5;
+                alphas[4] = (alphas[0] * 2 + alphas[1] * 3) / 5;
+                alphas[5] = (alphas[0] + alphas[1] * 4) / 5;
+                alphas[7] = 255;
+            }
+
+            for i in 0..8 {
+                alphas[i] <<= 24;
+            }
+
+            let c0 = (input[offset + 8] | input[offset + 9] << 8) as u32;
+            let c1 = (input[offset + 10] | input[offset + 11] << 8) as u32;
+
+            let (r0, g0, b0) = unpack_565(c0);
+            let (r1, g1, b1) = unpack_565(c1);
+
+            colors[0] = pack_rgba(r0, g0, b0, 0);
+            colors[1] = pack_rgba(r1, g1, b1, 0);
+            colors[2] = pack_rgba(
+                c2(r0, r1, c0, c1),
+                c2(g0, g1, c0, c1),
+                c2(b0, b1, c0, c1),
+                0,
+            );
+            colors[3] = pack_rgba(c3(r0, r1), c3(g0, g1), c3(b0, b1), 0);
+
+            let mut bitcode_a = (input[offset]
+                | input[offset + 1] << 8
+                | input[offset + 2] << 16
+                | input[offset + 3] << 24
+                | input[offset + 4] << 32
+                | input[offset + 5] << 40
+                | input[offset + 6] << 48
+                | input[offset + 7] << 56) as u32;
+            let mut bitcode_c = (input[offset + 12]
+                | input[offset + 13] << 8
+                | input[offset + 14] << 16
+                | input[offset + 15] << 24) as u32;
+
+            for i in 0..16 {
+                let idx = i * 4;
+                let (r, g, b, a) = unpack_rgba(
+                    alphas[(bitcode_a & 0x08) as usize] | colors[(bitcode_c & 0x03) as usize],
+                );
+                buffer[idx + 0] = r as u8;
+                buffer[idx + 1] = g as u8;
+                buffer[idx + 2] = b as u8;
+                buffer[idx + 3] = a as u8;
+
+                bitcode_a >>= 3;
+                bitcode_c >>= 2;
+            }
+
+            let mut length = length_last * 4;
+            if x < block_count_x - 1 {
+                length = 4 * 4;
+            }
+
+            let mut i = 0;
+            let mut j = y * 4;
+            while i < 4 && j < height {
+                let bidx = (i * 4 * 4) as usize;
+                let oidx = ((j * width + x * 4) * 4) as usize;
+
+                for k in 0..length as usize {
+                    output[oidx + k] = buffer[bidx + k];
+                }
+
+                i += 1;
+                j += 1;
+            }
+
+            offset += 16;
+        }
+    }
 
     output
 }
