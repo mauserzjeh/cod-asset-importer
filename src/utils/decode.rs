@@ -45,8 +45,8 @@ pub fn decode_dxt1(input: Vec<u8>, width: u16, height: u16) -> Vec<u8> {
 
     for y in 0..block_count_y {
         for x in 0..block_count_x {
-            let c0 = (input[offset + 0] | input[offset + 1] << 8) as u32;
-            let c1 = (input[offset + 2] | input[offset + 3] << 8) as u32;
+            let c0 = (input[offset + 0] as u32) | (input[offset + 1] as u32) << 8;
+            let c1 = (input[offset + 2] as u32) | (input[offset + 3] as u32) << 8;
 
             let (r0, g0, b0) = unpack_565(c0 as u32);
             let (r1, g1, b1) = unpack_565(c1 as u32);
@@ -61,10 +61,10 @@ pub fn decode_dxt1(input: Vec<u8>, width: u16, height: u16) -> Vec<u8> {
             );
             colors[3] = pack_rgba(c3(r0, r1), c3(g0, g1), c3(b0, b1), 255);
 
-            let mut bitcode = (input[offset + 4]
-                | input[offset + 5] << 8
-                | input[offset + 6] << 16
-                | input[offset + 7] << 24) as u32;
+            let mut bitcode = (input[offset + 4] as u32)
+                | (input[offset + 5] as u32) << 8
+                | (input[offset + 6] as u32) << 16
+                | (input[offset + 7] as u32) << 24;
 
             for i in 0..16 {
                 let idx = i * 4;
@@ -115,15 +115,16 @@ pub fn decode_dxt3(input: Vec<u8>, width: u16, height: u16) -> Vec<u8> {
     for y in 0..block_count_y {
         for x in 00..block_count_x {
             for i in 0..4 {
-                let alpha = (input[offset + i * 2] | input[offset + i * 2 + 1] << 8) as u32;
+                let alpha =
+                    (input[offset + i * 2] as u32) | (input[offset + i * 2 + 1] as u32) << 8;
                 alphas[i * 4 + 0] = (((alpha >> 0) & 0xF) * 0x11) << 24;
                 alphas[i * 4 + 1] = (((alpha >> 4) & 0xF) * 0x11) << 24;
                 alphas[i * 4 + 2] = (((alpha >> 8) & 0xF) * 0x11) << 24;
                 alphas[i * 4 + 3] = (((alpha >> 12) & 0xF) * 0x11) << 24;
             }
 
-            let c0 = (input[offset + 8] | input[offset + 9] << 8) as u32;
-            let c1 = (input[offset + 10] | input[offset + 11] << 8) as u32;
+            let c0 = (input[offset + 8] as u32) | (input[offset + 9] as u32) << 8;
+            let c1 = (input[offset + 10] as u32) | (input[offset + 11] as u32) << 8;
 
             let (r0, g0, b0) = unpack_565(c0);
             let (r1, g1, b1) = unpack_565(c1);
@@ -138,10 +139,10 @@ pub fn decode_dxt3(input: Vec<u8>, width: u16, height: u16) -> Vec<u8> {
             );
             colors[3] = pack_rgba(c3(r0, r1), c3(g0, g1), c3(b0, b1), 0);
 
-            let mut bitcode = (input[offset + 12]
-                | input[offset + 13] << 8
-                | input[offset + 14] << 16
-                | input[offset + 15] << 24) as u32;
+            let mut bitcode = (input[offset + 12] as u32)
+                | (input[offset + 13] as u32) << 8
+                | (input[offset + 14] as u32) << 16
+                | (input[offset + 15] as u32) << 24;
             for i in 0..16 {
                 let idx = i * 4;
                 let (r, g, b, a) = unpack_rgba(colors[(bitcode & 0x3) as usize] | alphas[i]);
@@ -212,8 +213,8 @@ pub fn decode_dxt5(input: Vec<u8>, width: u16, height: u16) -> Vec<u8> {
                 alphas[i] <<= 24;
             }
 
-            let c0 = (input[offset + 8] | input[offset + 9] << 8) as u32;
-            let c1 = (input[offset + 10] | input[offset + 11] << 8) as u32;
+            let c0 = (input[offset + 8] as u32) | (input[offset + 9] as u32) << 8;
+            let c1 = (input[offset + 10] as u32) | (input[offset + 11] as u32) << 8;
 
             let (r0, g0, b0) = unpack_565(c0);
             let (r1, g1, b1) = unpack_565(c1);
@@ -228,18 +229,18 @@ pub fn decode_dxt5(input: Vec<u8>, width: u16, height: u16) -> Vec<u8> {
             );
             colors[3] = pack_rgba(c3(r0, r1), c3(g0, g1), c3(b0, b1), 0);
 
-            let mut bitcode_a = (input[offset]
-                | input[offset + 1] << 8
-                | input[offset + 2] << 16
-                | input[offset + 3] << 24
-                | input[offset + 4] << 32
-                | input[offset + 5] << 40
-                | input[offset + 6] << 48
-                | input[offset + 7] << 56) as u32;
-            let mut bitcode_c = (input[offset + 12]
-                | input[offset + 13] << 8
-                | input[offset + 14] << 16
-                | input[offset + 15] << 24) as u32;
+            let mut bitcode_a = (input[offset] as u64)
+                | (input[offset + 1] as u64) << 8
+                | (input[offset + 2] as u64) << 16
+                | (input[offset + 3] as u64) << 24
+                | (input[offset + 4] as u64) << 32
+                | (input[offset + 5] as u64) << 40
+                | (input[offset + 6] as u64) << 48
+                | (input[offset + 7] as u64) << 56;
+            let mut bitcode_c = (input[offset + 12] as u32)
+                | (input[offset + 13] as u32) << 8
+                | (input[offset + 14] as u32) << 16
+                | (input[offset + 15] as u32) << 24;
 
             for i in 0..16 {
                 let idx = i * 4;
