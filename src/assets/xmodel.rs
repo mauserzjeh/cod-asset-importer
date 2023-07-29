@@ -3,15 +3,16 @@ use std::{fs::File, path::PathBuf};
 use valid_enum::ValidEnum;
 
 pub struct XModel {
-    name: String,
-    version: u16,
-    lods: Vec<XModelLod>,
+    pub name: String,
+    pub version: u16,
+    pub lods: Vec<XModelLod>,
 }
 
+#[derive(Debug)]
 pub struct XModelLod {
-    name: String,
-    distance: f32,
-    materials: Vec<String>,
+    pub name: String,
+    pub distance: f32,
+    pub materials: Vec<String>,
 }
 
 #[derive(ValidEnum)]

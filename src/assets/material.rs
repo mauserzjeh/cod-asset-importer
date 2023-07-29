@@ -9,14 +9,15 @@ use super::xmodel::XModelVersion;
 
 pub struct Material {
     techset: String,
-    name: String,
-    textures: Vec<MaterialTexture>,
+    pub name: String,
+    pub textures: Vec<MaterialTexture>,
 }
 
-struct MaterialTexture {
-    texture_type: String,
+#[derive(Debug)]
+pub struct MaterialTexture {
+    pub texture_type: String,
     flags: u32,
-    name: String,
+    pub name: String,
 }
 
 const TEXTURE_TYPE_COLORMAP: &str = "colorMap";

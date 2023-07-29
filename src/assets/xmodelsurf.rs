@@ -1,6 +1,6 @@
 use super::xmodel::XModelVersion;
 use super::xmodelpart::XModelPart;
-use crate::utils::{
+use crate::{utils::{
     binary,
     error::Error,
     math::{
@@ -9,32 +9,32 @@ use crate::utils::{
     },
     path::file_name_without_ext,
     Result,
-};
+}, debug_log};
 use std::{fs::File, path::PathBuf};
 
 pub struct XModelSurf {
-    name: String,
-    version: u16,
-    surfaces: Vec<XModelSurfSurface>,
+    pub name: String,
+    pub version: u16,
+    pub surfaces: Vec<XModelSurfSurface>,
 }
 
 pub struct XModelSurfVertex {
-    normal: Vec3,
-    color: Color,
-    uv: UV,
-    bone: u16,
-    position: Vec3,
-    weights: Vec<XModelSurfWeight>,
+    pub normal: Vec3,
+    pub color: Color,
+    pub uv: UV,
+    pub bone: u16,
+    pub position: Vec3,
+    pub weights: Vec<XModelSurfWeight>,
 }
 
 pub struct XModelSurfWeight {
-    bone: u16,
-    influence: f32,
+    pub bone: u16,
+    pub influence: f32,
 }
 
 pub struct XModelSurfSurface {
-    vertices: Vec<XModelSurfVertex>,
-    triangles: Vec<Triangle>,
+    pub vertices: Vec<XModelSurfVertex>,
+    pub triangles: Vec<Triangle>,
 }
 
 const RIGGED: i32 = 65535;

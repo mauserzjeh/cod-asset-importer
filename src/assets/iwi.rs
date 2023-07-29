@@ -10,9 +10,9 @@ use std::{
 use valid_enum::ValidEnum;
 
 pub struct IWi {
-    width: u16,
-    height: u16,
-    data: Vec<u8>,
+    pub width: u16,
+    pub height: u16,
+    pub data: Vec<u8>,
 }
 
 struct IWiHeader {
@@ -79,7 +79,7 @@ impl IWi {
     }
 
     fn read_header(file: &mut File) -> Result<IWiHeader> {
-        let magic = binary::read_vec::<u8>(file, 4)?;
+        let magic = binary::read_vec::<u8>(file, 3)?;
         if magic != [b'I', b'W', b'i'] {
             return Err(Error::new(format!(
                 "invalid magic: {}",

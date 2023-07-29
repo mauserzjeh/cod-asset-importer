@@ -10,16 +10,16 @@ use std::{fs::File, path::PathBuf};
 
 #[derive(Clone)]
 pub struct XModelPart {
-    name: String,
-    version: u16,
-    model_type: u8,
+    pub name: String,
+    pub version: u16,
+    pub model_type: u8,
     pub bones: Vec<XModelPartBone>,
 }
 
 #[derive(Clone)]
 pub struct XModelPartBone {
-    name: String,
-    parent: i8,
+    pub name: String,
+    pub parent: i8,
     pub local_transform: XModelPartBoneTransform,
     pub world_transform: XModelPartBoneTransform,
 }

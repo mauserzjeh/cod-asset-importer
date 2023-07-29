@@ -1,5 +1,6 @@
 use std::{fmt, io, string};
 
+#[derive(Debug)]
 pub struct Error {
     pub error: String,
 }

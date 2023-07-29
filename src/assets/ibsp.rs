@@ -39,7 +39,7 @@ struct IbspLump {
 
 #[derive(Clone, Copy, Debug)]
 pub struct IbspMaterial {
-    pub name: [u8; 64],
+    name: [u8; 64],
     flag: u64,
 }
 
