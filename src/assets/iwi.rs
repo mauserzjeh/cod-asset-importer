@@ -31,8 +31,8 @@ struct IWiInfo {
 
 #[derive(Clone, Copy)]
 struct IWiMipMap {
-    offset: i32,
-    size: i32,
+    offset: u32,
+    size: u32,
 }
 
 #[derive(ValidEnum)]
@@ -57,19 +57,20 @@ pub enum IWiFormat {
 impl IWi {
     pub fn load(file_path: PathBuf) -> Result<IWi> {
         let mut file = File::open(&file_path)?;
-        let header = Self::read_header(&mut file)?;
+        Self::read_header(&mut file)?;
         let info = Self::read_info(&mut file)?;
 
-        let offsets = binary::read_vec::<i32>(&mut file, 4)?;
+        let offsets = binary::read_vec::<u32>(&mut file, 4)?;
         let current_offset = binary::current_offset(&mut file)?;
         let file_size = file.seek(SeekFrom::End(0))?;
         let mipmap = Self::calculate_highest_mipmap(offsets, current_offset, file_size);
+        file.seek(SeekFrom::Start(mipmap.offset as u64))?;
         let raw_texture_data = binary::read_vec::<u8>(&mut file, mipmap.size as usize)?;
         if raw_texture_data.len() == 0 {
             return Err(Error::new(String::from("texture data length is 0")));
         }
 
-        let data = Self::decode_data(raw_texture_data, header.version, info)?;
+        let data = Self::decode_data(raw_texture_data, info)?;
 
         Ok(IWi {
             width: info.width,
@@ -115,7 +116,7 @@ impl IWi {
         })
     }
 
-    fn calculate_highest_mipmap(offsets: Vec<i32>, first: u64, size: u64) -> IWiMipMap {
+    fn calculate_highest_mipmap(offsets: Vec<u32>, first: u64, size: u64) -> IWiMipMap {
         let mut mipmaps: Vec<IWiMipMap> = Vec::new();
 
         let offsets_len = offsets.len();
@@ -123,12 +124,12 @@ impl IWi {
             if i == 0 {
                 mipmaps.push(IWiMipMap {
                     offset: offsets[i],
-                    size: size as i32 - offsets[i],
+                    size: (size as u32) - offsets[i],
                 });
             } else if i == (offsets_len - 1) {
                 mipmaps.push(IWiMipMap {
-                    offset: first as i32,
-                    size: offsets[i] - first as i32,
+                    offset: first as u32,
+                    size: offsets[i] - (first as u32),
                 });
             } else {
                 mipmaps.push(IWiMipMap {
@@ -148,11 +149,17 @@ impl IWi {
         return mipmaps[max_idx];
     }
 
-    fn decode_data(data: Vec<u8>, version: u8, info: IWiInfo) -> Result<Vec<u8>> {
+    fn decode_data(data: Vec<u8>, info: IWiInfo) -> Result<Vec<u8>> {
         match IWiFormat::valid(info.format) {
-            Some(IWiFormat::DXT1) => Ok(decode_dxt1(data, info.width, info.height)),
-            Some(IWiFormat::DXT3) => Ok(decode_dxt3(data, info.width, info.height)),
-            Some(IWiFormat::DXT5) => Ok(decode_dxt5(data, info.width, info.height)),
+            Some(IWiFormat::DXT1) => {
+                Ok(decode_dxt1(data, info.width as usize, info.height as usize))
+            }
+            Some(IWiFormat::DXT3) => {
+                Ok(decode_dxt3(data, info.width as usize, info.height as usize))
+            }
+            Some(IWiFormat::DXT5) => {
+                Ok(decode_dxt5(data, info.width as usize, info.height as usize))
+            }
             _ => Err(Error::new(format!(
                 "unsupported decode format {}",
                 info.format

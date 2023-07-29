@@ -15,9 +15,9 @@ enum Test {
 
 fn main() {
     // let test_type = Test::Ibsp;
-    // let test_type = Test::XModel; // TODO fix xmodelsurf -> index out of range
-    // let test_type = Test::IWi; // TODO fix -> failed to fill whole buffer
-    let test_type = Test::Material; // TODO fix -> failed to fill whole buffer
+    let test_type = Test::XModel; // TODO fix xmodelsurf -> index out of range
+    // let test_type = Test::IWi;
+    // let test_type = Test::Material;
     match test_type {
         Test::Ibsp => ibsp_test(),
         Test::XModel => xmodel_test(),

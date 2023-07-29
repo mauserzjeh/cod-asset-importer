@@ -34,14 +34,14 @@ fn c3(c0: u32, c1: u32) -> u32 {
     (c0 + 2 * c1) / 3
 }
 
-pub fn decode_dxt1(input: Vec<u8>, width: u16, height: u16) -> Vec<u8> {
+pub fn decode_dxt1(input: Vec<u8>, width: usize, height: usize) -> Vec<u8> {
     let mut offset: usize = 0;
     let block_count_x = (width + 3) / 4;
-    let block_count_y = (width + 3) / 4;
+    let block_count_y = (height + 3) / 4;
     let length_last = (width + 3) % 4 + 1;
     let mut buffer = vec![0u8; 64];
     let mut colors = vec![0u32; 4];
-    let mut output = vec![0u8; (width * height * 4) as usize];
+    let mut output = vec![0u8; width * height * 4];
 
     for y in 0..block_count_y {
         for x in 0..block_count_x {
@@ -77,10 +77,11 @@ pub fn decode_dxt1(input: Vec<u8>, width: u16, height: u16) -> Vec<u8> {
                 bitcode >>= 2;
             }
 
-            let mut length = length_last * 4;
-            if x < block_count_x - 1 {
-                length = 4 * 4;
-            }
+            let length = if x < block_count_x - 1 {
+                4 * 4
+            } else {
+                length_last * 4
+            };
 
             let mut i = 0;
             let mut j = y * 4;
@@ -102,15 +103,15 @@ pub fn decode_dxt1(input: Vec<u8>, width: u16, height: u16) -> Vec<u8> {
 
     output
 }
-pub fn decode_dxt3(input: Vec<u8>, width: u16, height: u16) -> Vec<u8> {
+pub fn decode_dxt3(input: Vec<u8>, width: usize, height: usize) -> Vec<u8> {
     let mut offset: usize = 0;
     let block_count_x = (width + 3) / 4;
-    let block_count_y = (width + 3) / 4;
+    let block_count_y = (height + 3) / 4;
     let length_last = (width + 3) % 4 + 1;
     let mut buffer = vec![0u8; 64];
     let mut colors = vec![0u32; 4];
     let mut alphas = vec![0u32; 16];
-    let mut output = vec![0u8; (width * height * 4) as usize];
+    let mut output = vec![0u8; width * height * 4];
 
     for y in 0..block_count_y {
         for x in 00..block_count_x {
@@ -154,10 +155,11 @@ pub fn decode_dxt3(input: Vec<u8>, width: u16, height: u16) -> Vec<u8> {
                 bitcode >>= 2;
             }
 
-            let mut length = length_last * 4;
-            if x < block_count_x - 1 {
-                length = 4 * 4;
-            }
+            let length = if x < block_count_x - 1 {
+                4 * 4
+            } else {
+                length_last * 4
+            };
 
             let mut i = 0;
             let mut j = y * 4;
@@ -179,15 +181,15 @@ pub fn decode_dxt3(input: Vec<u8>, width: u16, height: u16) -> Vec<u8> {
 
     output
 }
-pub fn decode_dxt5(input: Vec<u8>, width: u16, height: u16) -> Vec<u8> {
+pub fn decode_dxt5(input: Vec<u8>, width: usize, height: usize) -> Vec<u8> {
     let mut offset: usize = 0;
     let block_count_x = (width + 3) / 4;
-    let block_count_y = (width + 3) / 4;
+    let block_count_y = (height + 3) / 4;
     let length_last = (width + 3) % 4 + 1;
     let mut buffer = vec![0u8; 64];
     let mut colors = vec![0u32; 4];
     let mut alphas = vec![0u32; 8];
-    let mut output = vec![0u8; (width * height * 4) as usize];
+    let mut output = vec![0u8; width * height * 4];
 
     for y in 0..block_count_y {
         for x in 0..block_count_x {
@@ -256,10 +258,11 @@ pub fn decode_dxt5(input: Vec<u8>, width: u16, height: u16) -> Vec<u8> {
                 bitcode_c >>= 2;
             }
 
-            let mut length = length_last * 4;
-            if x < block_count_x - 1 {
-                length = 4 * 4;
-            }
+            let length = if x < block_count_x - 1 {
+                4 * 4
+            } else {
+                length_last * 4
+            };
 
             let mut i = 0;
             let mut j = y * 4;
