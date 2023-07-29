@@ -3,7 +3,6 @@ use cod_asset_importer::assets::{
     xmodelsurf::XModelSurf,
 };
 use cod_asset_importer::{error_log, info_log};
-use std::collections::HashMap;
 use std::path;
 use std::time;
 
