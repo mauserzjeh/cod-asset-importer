@@ -33,9 +33,9 @@ impl Material {
         let name_offset = binary::read::<u32>(&mut file)?;
 
         if version == XModelVersion::V20 as i32 {
-            binary::skip(&mut file, 44)?;
-        } else {
             binary::skip(&mut file, 48)?;
+        } else {
+            binary::skip(&mut file, 44)?;
         }
 
         let texture_count = binary::read::<u16>(&mut file)?;
