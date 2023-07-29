@@ -247,7 +247,7 @@ impl Ibsp {
 
             binary::skip(file, 8)?;
 
-            let n = binary::read_vec::<f32>(file, 2)?;
+            let n = binary::read_vec::<f32>(file, 3)?;
             let color = binary::read_vec::<u8>(file, 4)?;
 
             vertices.push(IbspVertex {

@@ -1,6 +1,6 @@
 use super::xmodel::XModelVersion;
 use super::xmodelpart::XModelPart;
-use crate::{utils::{
+use crate::utils::{
     binary,
     error::Error,
     math::{
@@ -9,7 +9,7 @@ use crate::{utils::{
     },
     path::file_name_without_ext,
     Result,
-}, debug_log};
+};
 use std::{fs::File, path::PathBuf};
 
 pub struct XModelSurf {
@@ -83,11 +83,13 @@ impl XModelSurf {
 
             binary::skip(file, 2)?;
 
-            let mut default_bone_idx = binary::read::<u16>(file)?;
-            if default_bone_idx as i32 == RIGGED {
+            let og_default_bone_idx = binary::read::<u16>(file)?;
+            let default_bone_idx = if og_default_bone_idx as i32 == RIGGED {
                 binary::skip(file, 4)?;
-                default_bone_idx = 0
-            }
+                0
+            } else {
+                og_default_bone_idx
+            };
 
             let mut triangles: Vec<Triangle> = Vec::new();
             loop {
@@ -111,7 +113,7 @@ impl XModelSurf {
                     }
 
                     let v = i + 1;
-                    if v > idx_count {
+                    if v >= idx_count {
                         break;
                     }
 
@@ -125,7 +127,7 @@ impl XModelSurf {
                     i = v + 1;
                 }
 
-                if triangles.len() > triangle_count as usize {
+                if triangles.len() >= triangle_count as usize {
                     break;
                 }
             }
@@ -140,7 +142,7 @@ impl XModelSurf {
                 let mut weight_count = 0;
                 let mut vertex_bone_idx = default_bone_idx;
 
-                if default_bone_idx as i32 == RIGGED {
+                if og_default_bone_idx as i32 == RIGGED {
                     weight_count = binary::read::<u16>(file)?;
                     vertex_bone_idx = binary::read::<u16>(file)?;
                 }
@@ -209,12 +211,13 @@ impl XModelSurf {
 
             let vertex_count = binary::read::<u16>(file)?;
             let triangle_count = binary::read::<u16>(file)?;
-            let mut default_bone_idx = binary::read::<u16>(file)?;
-
-            if default_bone_idx as i32 == RIGGED {
+            let og_default_bone_idx = binary::read::<u16>(file)?;
+            let default_bone_idx: u16 = if og_default_bone_idx as i32 == RIGGED {
                 binary::skip(file, 2)?;
-                default_bone_idx = 0;
-            }
+                0
+            } else {
+                og_default_bone_idx
+            };
 
             let mut vertices: Vec<XModelSurfVertex> = Vec::new();
             for _ in 0..vertex_count {
@@ -229,8 +232,8 @@ impl XModelSurf {
                 let mut weight_count = 0;
                 let mut vertex_bone_idx = default_bone_idx;
 
-                if default_bone_idx as i32 == RIGGED {
-                    weight_count = binary::read::<u16>(file)?;
+                if og_default_bone_idx as i32 == RIGGED {
+                    weight_count = binary::read::<u8>(file)?;
                     vertex_bone_idx = binary::read::<u16>(file)?;
                 }
 
@@ -307,8 +310,9 @@ impl XModelSurf {
                     if p == 0 {
                         break;
                     }
-                    binary::skip(file, 2)?;
                 }
+
+                binary::skip(file, 2)?;
             } else {
                 binary::skip(file, 4)?;
             }

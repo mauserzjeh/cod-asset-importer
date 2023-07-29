@@ -1,4 +1,4 @@
-use crate::utils::{binary, error::Error, path::file_name_without_ext, Result};
+use crate::utils::{binary, Result};
 use std::{
     fs::File,
     io::{Seek, SeekFrom},
@@ -28,8 +28,6 @@ const TEXTURE_TYPE_SPECULARMAP: &str = "specularMap";
 impl Material {
     pub fn load(file_path: PathBuf, version: i32) -> Result<Material> {
         let mut file = File::open(&file_path)?;
-        let name = file_name_without_ext(file_path);
-
         let name_offset = binary::read::<u32>(&mut file)?;
 
         if version == XModelVersion::V20 as i32 {

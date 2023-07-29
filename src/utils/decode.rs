@@ -247,7 +247,7 @@ pub fn decode_dxt5(input: Vec<u8>, width: usize, height: usize) -> Vec<u8> {
             for i in 0..16 {
                 let idx = i * 4;
                 let (r, g, b, a) = unpack_rgba(
-                    alphas[(bitcode_a & 0x08) as usize] | colors[(bitcode_c & 0x03) as usize],
+                    alphas[(bitcode_a & 0x07) as usize] | colors[(bitcode_c & 0x03) as usize],
                 );
                 buffer[idx + 0] = r as u8;
                 buffer[idx + 1] = g as u8;
