@@ -8,6 +8,10 @@ use crate::utils::{
 };
 use std::{fs::File, path::PathBuf};
 
+pub const ASSETPATH: &str = "xmodelparts";
+const ROTATION_DIVISOR: f32 = 32768.0;
+const INCH_TO_CM: f32 = 2.54;
+
 #[derive(Clone)]
 pub struct XModelPart {
     pub name: String,
@@ -29,9 +33,6 @@ pub struct XModelPartBoneTransform {
     pub position: Vec3,
     pub rotation: Quat,
 }
-
-const ROTATION_DIVISOR: f32 = 32768.0;
-const INCH_TO_CM: f32 = 2.54;
 
 impl XModelPart {
     fn viewhand_table_cod1(bone_name: &str) -> Option<Vec3> {

@@ -2,13 +2,15 @@ use crate::utils::{binary, error::Error, path::file_name_without_ext, Result};
 use std::{fs::File, path::PathBuf};
 use valid_enum::ValidEnum;
 
+pub const ASSETPATH: &str = "xmodel";
+
 pub struct XModel {
     pub name: String,
     pub version: u16,
     pub lods: Vec<XModelLod>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct XModelLod {
     pub name: String,
     pub distance: f32,
@@ -28,9 +30,9 @@ pub enum XModelType {
 #[derive(ValidEnum)]
 #[valid_enum(u16)]
 pub enum XModelVersion {
-    V14 = 0x0E,
-    V20 = 0x14,
-    V25 = 0x19,
+    V14 = 0x0E, // CoD1 & CoDUO
+    V20 = 0x14, // CoD2
+    V25 = 0x19, // CoD4
 }
 
 impl XModel {

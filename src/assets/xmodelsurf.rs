@@ -12,6 +12,9 @@ use crate::utils::{
 };
 use std::{fs::File, path::PathBuf};
 
+pub const ASSETPATH: &str = "xmodelsurfs";
+const RIGGED: i32 = 65535;
+
 pub struct XModelSurf {
     pub name: String,
     pub version: u16,
@@ -36,8 +39,6 @@ pub struct XModelSurfSurface {
     pub vertices: Vec<XModelSurfVertex>,
     pub triangles: Vec<Triangle>,
 }
-
-const RIGGED: i32 = 65535;
 
 impl XModelSurf {
     pub fn load(file_path: PathBuf, xmodel_part: Option<XModelPart>) -> Result<XModelSurf> {

@@ -7,6 +7,12 @@ use std::{
 
 use super::xmodel::XModelVersion;
 
+pub const ASSETPATH: &str = "materials";
+pub const TEXTURE_TYPE_COLORMAP: &str = "colorMap";
+pub const TEXTURE_TYPE_DETAILMAP: &str = "detailMap";
+pub const TEXTURE_TYPE_NORMALMAP: &str = "normalMap";
+pub const TEXTURE_TYPE_SPECULARMAP: &str = "specularMap";
+
 pub struct Material {
     techset: String,
     pub name: String,
@@ -19,11 +25,6 @@ pub struct MaterialTexture {
     flags: u32,
     pub name: String,
 }
-
-const TEXTURE_TYPE_COLORMAP: &str = "colorMap";
-const TEXTURE_TYPE_DETAILMAP: &str = "detailMap";
-const TEXTURE_TYPE_NORMALMAP: &str = "normalMap";
-const TEXTURE_TYPE_SPECULARMAP: &str = "specularMap";
 
 impl Material {
     pub fn load(file_path: PathBuf, version: i32) -> Result<Material> {

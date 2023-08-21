@@ -9,6 +9,8 @@ use std::{
 };
 use valid_enum::ValidEnum;
 
+pub const ASSETPATH: &str = "images";
+
 pub struct IWi {
     pub width: u16,
     pub height: u16,

@@ -1,4 +1,5 @@
 use std::{fmt, io, string};
+use pyo3::exceptions::PyBaseException;
 
 #[derive(Debug)]
 pub struct Error {
@@ -32,6 +33,12 @@ impl From<serde_json::Error> for Error {
         Error {
             error: error.to_string(),
         }
+    }
+}
+
+impl From<Error> for pyo3::PyErr {
+    fn from(error: Error) -> Self {
+        PyBaseException::new_err(error.to_string())
     }
 }
 

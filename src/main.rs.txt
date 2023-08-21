@@ -14,8 +14,8 @@ enum Test {
 }
 
 fn main() {
-    // let test_type = Test::Ibsp;
-    let test_type = Test::XModel;
+    let test_type = Test::Ibsp;
+    // let test_type = Test::XModel;
     // let test_type = Test::IWi;
     // let test_type = Test::Material;
     match test_type {
