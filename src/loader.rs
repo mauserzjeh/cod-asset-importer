@@ -1,4 +1,3 @@
-use super::loaded_assets::{LoadedMaterial, LoadedModel};
 use crate::{
     assets::{
         iwi::{self, IWi},
@@ -8,6 +7,7 @@ use crate::{
         xmodelsurf::{self, XModelSurf},
     },
     error_log,
+    loaded_assets::{LoadedMaterial, LoadedModel, LoadedTexture},
     utils::Result,
 };
 use pyo3::{exceptions::PyBaseException, prelude::*};
@@ -103,15 +103,15 @@ impl Loader {
         let material_file_path = asset_path.join(material::ASSETPATH).join(&material_name);
         let material = Material::load(material_file_path, version)?;
 
-        let mut loaded_textures: HashMap<String, IWi> = HashMap::new();
+        let mut loaded_textures: HashMap<String, LoadedTexture> = HashMap::new();
         for texture in material.textures {
             if loaded_textures.contains_key(&texture.name) {
                 continue;
             }
 
             let texture_file_path = asset_path.join(iwi::ASSETPATH).join(&texture.name);
-            let loaded_texture = match IWi::load(texture_file_path) {
-                Ok(iwi) => iwi,
+            let loaded_texture: LoadedTexture = match IWi::load(texture_file_path) {
+                Ok(iwi) => iwi.into(),
                 Err(error) => {
                     error_log!("{}", error);
                     continue;

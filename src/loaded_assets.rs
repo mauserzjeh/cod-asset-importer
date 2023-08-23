@@ -2,8 +2,8 @@ use crate::{
     assets::{
         iwi::IWi,
         xmodel::XModel,
-        xmodelpart::XModelPart,
-        xmodelsurf::{XModelSurf, XModelSurfSurface, XModelSurfVertex},
+        xmodelpart::{XModelPart, XModelPartBone},
+        xmodelsurf::{XModelSurf, XModelSurfSurface, XModelSurfVertex, XModelSurfWeight},
     },
     utils::math::Vec3,
 };
@@ -24,7 +24,14 @@ pub struct LoadedModel {
 #[pyclass(module = "cod_asset_importer")]
 pub struct LoadedMaterial {
     name: String,
-    textures: HashMap<String, IWi>,
+    textures: HashMap<String, LoadedTexture>,
+}
+
+#[pyclass(module = "cod_asset_importer")]
+pub struct LoadedTexture {
+    width: u16,
+    height: u16,
+    data: Vec<u8>,
 }
 
 #[pyclass(module = "cod_asset_importer")]
@@ -40,7 +47,21 @@ pub struct LoadedVertex {
     uv: [f32; 2],
     bone: u16,
     position: [f32; 3],
-    // weights TODO
+    weights: Vec<LoadedWeight>,
+}
+
+#[pyclass(module = "cod_asset_importer")]
+pub struct LoadedWeight {
+    bone: u16,
+    influence: f32,
+}
+
+#[pyclass(module = "cod_asset_importer")]
+pub struct LoadedBone {
+    name: String,
+    parent: i8,
+    position: [f32; 3],
+    rotation: [f32; 4],
 }
 
 #[pymethods]
@@ -70,7 +91,41 @@ impl LoadedModel {
         surfaces.into_iter().map(|s| s.into()).collect()
     }
 
-    // TODO bones / skeleton
+    fn bones(&mut self) -> Vec<LoadedBone> {
+        match mem::take(&mut self.xmodelpart) {
+            Some(xmodelpart) => {
+                let bones = xmodelpart.bones.into_iter().map(|b| b.into()).collect();
+                bones
+            }
+            None => Vec::<LoadedBone>::new(),
+        }
+    }
+}
+
+#[pymethods]
+impl LoadedMaterial {
+    fn name(&self) -> &str {
+        &self.name
+    }
+
+    fn textures(&mut self) -> HashMap<String, LoadedTexture> {
+        mem::take(&mut self.textures)
+    }
+}
+
+#[pymethods]
+impl LoadedTexture {
+    fn width(&self) -> u16 {
+        self.width
+    }
+
+    fn height(&self) -> u16 {
+        self.height
+    }
+
+    fn data(&mut self) -> Vec<u8> {
+        mem::take(&mut self.data)
+    }
 }
 
 #[pymethods]
@@ -104,6 +159,40 @@ impl LoadedVertex {
 
     fn position(&self) -> [f32; 3] {
         self.position
+    }
+
+    fn weights(&mut self) -> Vec<LoadedWeight> {
+        mem::take(&mut self.weights)
+    }
+}
+
+#[pymethods]
+impl LoadedWeight {
+    fn bone(&self) -> u16 {
+        self.bone
+    }
+
+    fn influence(&self) -> f32 {
+        self.influence
+    }
+}
+
+#[pymethods]
+impl LoadedBone {
+    fn name(&self) -> &str {
+        &self.name
+    }
+
+    fn parent(&self) -> i8 {
+        self.parent
+    }
+
+    fn position(&self) -> [f32; 3] {
+        self.position
+    }
+
+    fn rotation(&self) -> [f32; 4] {
+        self.rotation
     }
 }
 
@@ -142,8 +231,38 @@ impl LoadedModel {
 }
 
 impl LoadedMaterial {
-    pub fn new(name: String, textures: HashMap<String, IWi>) -> Self {
+    pub fn new(name: String, textures: HashMap<String, LoadedTexture>) -> Self {
         LoadedMaterial { name, textures }
+    }
+}
+
+impl From<IWi> for LoadedTexture {
+    fn from(iwi: IWi) -> Self {
+        Self {
+            width: iwi.width,
+            height: iwi.height,
+            data: iwi.data,
+        }
+    }
+}
+
+impl From<XModelPartBone> for LoadedBone {
+    fn from(xmodelpart_bone: XModelPartBone) -> Self {
+        Self {
+            name: xmodelpart_bone.name,
+            parent: xmodelpart_bone.parent,
+            position: xmodelpart_bone.local_transform.position,
+            rotation: xmodelpart_bone.local_transform.rotation,
+        }
+    }
+}
+
+impl From<XModelSurfWeight> for LoadedWeight {
+    fn from(xmodelsurf_weight: XModelSurfWeight) -> Self {
+        Self {
+            bone: xmodelsurf_weight.bone,
+            influence: xmodelsurf_weight.influence,
+        }
     }
 }
 
@@ -155,6 +274,11 @@ impl From<XModelSurfVertex> for LoadedVertex {
             uv: xmodelsurf_vertex.uv,
             bone: xmodelsurf_vertex.bone,
             position: xmodelsurf_vertex.position,
+            weights: xmodelsurf_vertex
+                .weights
+                .into_iter()
+                .map(|w| w.into())
+                .collect(),
         }
     }
 }
