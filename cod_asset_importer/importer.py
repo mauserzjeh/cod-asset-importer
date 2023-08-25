@@ -1,12 +1,16 @@
-import interface
-import log
+from .interface import (
+    debug_log,
+    LoadedModel,
+    LoadedIbsp,
+    LoadedMaterial
+)
 
 class Importer:
-    def xmodel(self, model: interface.LoadedModel) -> None:
-        log.debug_log(model.name())
+    def xmodel(self, model: LoadedModel) -> None:
+        debug_log(model.name())
     
-    def ibsp(self, ibsp: interface.LoadedIbsp) -> None: 
-        log.debug_log(ibsp.name())
+    def ibsp(self, ibsp: LoadedIbsp) -> None: 
+        debug_log(ibsp.name())
 
-    def material(self, material: interface.LoadedMaterial) -> None:
-        log.debug_log(material.name())
+    def material(self, material: LoadedMaterial) -> None:
+        debug_log(material.name())

@@ -1,5 +1,3 @@
-import bpy
-
 bl_info = {
     "name": "Call of Duty Asset Importer",
     "description": "Import Call of Duty assets",
