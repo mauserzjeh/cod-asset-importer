@@ -30,9 +30,12 @@ pub enum XModelType {
 #[derive(ValidEnum)]
 #[valid_enum(u16)]
 pub enum XModelVersion {
-    V14 = 0x0E, // CoD1 & CoDUO
-    V20 = 0x14, // CoD2
-    V25 = 0x19, // CoD4
+    // CoD1 & CoDUO
+    V14 = 0x0E, 
+    // CoD2
+    V20 = 0x14,
+    // CoD4
+    V25 = 0x19, 
 }
 
 impl XModel {

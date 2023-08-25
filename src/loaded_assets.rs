@@ -1,9 +1,9 @@
 use crate::{
     assets::{
+        ibsp::{IbspEntity, IbspSurface, IbspVertex},
         iwi::IWi,
-        xmodel::XModel,
-        xmodelpart::{XModelPart, XModelPartBone},
-        xmodelsurf::{XModelSurf, XModelSurfSurface, XModelSurfVertex, XModelSurfWeight},
+        xmodelpart::XModelPartBone,
+        xmodelsurf::{XModelSurfSurface, XModelSurfVertex, XModelSurfWeight},
     },
     utils::math::Vec3,
 };
@@ -11,19 +11,45 @@ use pyo3::prelude::*;
 use std::{collections::HashMap, mem};
 
 #[pyclass(module = "cod_asset_importer")]
+pub struct LoadedIbsp {
+    name: String,
+    pub version: i32,
+    pub materials: Vec<String>,
+    pub entities: Vec<LoadedIbspEntity>,
+    pub surfaces: Vec<LoadedIbspSurface>,
+}
+
+#[pyclass(module = "cod_asset_importer")]
+#[derive(Clone)]
+pub struct LoadedIbspEntity {
+    pub name: String,
+    pub angles: [f32; 3],
+    pub origin: [f32; 3],
+    pub scale: [f32; 3],
+}
+
+#[pyclass(module = "cod_asset_importer")]
+pub struct LoadedIbspSurface {
+    material: String,
+    vertices: HashMap<u16, LoadedVertex>,
+    triangles: Vec<[u16; 3]>,
+}
+
+#[pyclass(module = "cod_asset_importer")]
 pub struct LoadedModel {
-    xmodel: XModel,
-    xmodelpart: Option<XModelPart>,
-    xmodelsurf: XModelSurf,
-    materials: Vec<LoadedMaterial>,
+    name: String,
     angles: Vec3,
     origin: Vec3,
     scale: Vec3,
+    materials: Vec<LoadedMaterial>,
+    surfaces: Vec<LoadedSurface>,
+    bones: Vec<LoadedBone>,
 }
 
 #[pyclass(module = "cod_asset_importer")]
 pub struct LoadedMaterial {
     name: String,
+    version: i32,
     textures: HashMap<String, LoadedTexture>,
 }
 
@@ -67,7 +93,7 @@ pub struct LoadedBone {
 #[pymethods]
 impl LoadedModel {
     fn name(&self) -> &str {
-        &self.xmodel.name
+        &self.name
     }
 
     fn angles(&self) -> [f32; 3] {
@@ -87,18 +113,11 @@ impl LoadedModel {
     }
 
     fn surfaces(&mut self) -> Vec<LoadedSurface> {
-        let surfaces = mem::take(&mut self.xmodelsurf.surfaces);
-        surfaces.into_iter().map(|s| s.into()).collect()
+        mem::take(&mut self.surfaces)
     }
 
     fn bones(&mut self) -> Vec<LoadedBone> {
-        match mem::take(&mut self.xmodelpart) {
-            Some(xmodelpart) => {
-                let bones = xmodelpart.bones.into_iter().map(|b| b.into()).collect();
-                bones
-            }
-            None => Vec::<LoadedBone>::new(),
-        }
+        mem::take(&mut self.bones)
     }
 }
 
@@ -106,6 +125,10 @@ impl LoadedModel {
 impl LoadedMaterial {
     fn name(&self) -> &str {
         &self.name
+    }
+
+    fn version(&self) -> i32 {
+        self.version
     }
 
     fn textures(&mut self) -> HashMap<String, LoadedTexture> {
@@ -196,24 +219,95 @@ impl LoadedBone {
     }
 }
 
+#[pymethods]
+impl LoadedIbsp {
+    fn name(&self) -> &str {
+        &self.name
+    }
+
+    fn materials(&mut self) -> Vec<String> {
+        mem::take(&mut self.materials)
+    }
+
+    fn entities(&mut self) -> Vec<LoadedIbspEntity> {
+        mem::take(&mut self.entities)
+    }
+
+    fn surfaces(&mut self) -> Vec<LoadedIbspSurface> {
+        mem::take(&mut self.surfaces)
+    }
+}
+
+#[pymethods]
+impl LoadedIbspEntity {
+    fn name(&self) -> &str {
+        &self.name
+    }
+
+    fn angles(&self) -> [f32; 3] {
+        self.angles
+    }
+
+    fn origin(&self) -> [f32; 3] {
+        self.origin
+    }
+
+    fn scale(&self) -> [f32; 3] {
+        self.scale
+    }
+}
+
+#[pymethods]
+impl LoadedIbspSurface {
+    fn material(&self) -> &str {
+        &self.material
+    }
+
+    fn vertices(&mut self) -> HashMap<u16, LoadedVertex> {
+        mem::take(&mut self.vertices)
+    }
+
+    fn triangles(&mut self) -> Vec<[u16; 3]> {
+        mem::take(&mut self.triangles)
+    }
+}
+
+impl LoadedIbsp {
+    pub fn new(
+        name: String,
+        version: i32,
+        materials: Vec<String>,
+        entities: Vec<LoadedIbspEntity>,
+        surfaces: Vec<LoadedIbspSurface>,
+    ) -> Self {
+        LoadedIbsp {
+            name,
+            version,
+            materials,
+            entities,
+            surfaces,
+        }
+    }
+}
+
 impl LoadedModel {
     pub fn new(
-        xmodel: XModel,
-        xmodelpart: Option<XModelPart>,
-        xmodelsurf: XModelSurf,
-        materials: Vec<LoadedMaterial>,
+        name: String,
         angles: Vec3,
         origin: Vec3,
         scale: Vec3,
+        materials: Vec<LoadedMaterial>,
+        surfaces: Vec<LoadedSurface>,
+        bones: Vec<LoadedBone>,
     ) -> Self {
         LoadedModel {
-            xmodel,
-            xmodelpart,
-            xmodelsurf,
-            materials,
+            name,
             angles,
             origin,
             scale,
+            materials,
+            surfaces,
+            bones,
         }
     }
 
@@ -231,8 +325,8 @@ impl LoadedModel {
 }
 
 impl LoadedMaterial {
-    pub fn new(name: String, textures: HashMap<String, LoadedTexture>) -> Self {
-        LoadedMaterial { name, textures }
+    pub fn new(name: String, textures: HashMap<String, LoadedTexture>, version: i32) -> Self {
+        LoadedMaterial { name, textures, version }
     }
 }
 
@@ -283,6 +377,19 @@ impl From<XModelSurfVertex> for LoadedVertex {
     }
 }
 
+impl From<IbspVertex> for LoadedVertex {
+    fn from(ibsp_vertex: IbspVertex) -> Self {
+        Self {
+            normal: ibsp_vertex.normal,
+            color: ibsp_vertex.color,
+            uv: ibsp_vertex.uv,
+            bone: 0,
+            position: ibsp_vertex.position,
+            weights: Vec::new(),
+        }
+    }
+}
+
 impl From<XModelSurfSurface> for LoadedSurface {
     fn from(xmodelsurf_surface: XModelSurfSurface) -> Self {
         Self {
@@ -292,6 +399,31 @@ impl From<XModelSurfSurface> for LoadedSurface {
                 .map(|v| v.into())
                 .collect(),
             triangles: xmodelsurf_surface.triangles,
+        }
+    }
+}
+
+impl From<IbspEntity> for LoadedIbspEntity {
+    fn from(ibps_entity: IbspEntity) -> Self {
+        Self {
+            name: ibps_entity.name,
+            angles: ibps_entity.angles,
+            origin: ibps_entity.origin,
+            scale: ibps_entity.scale,
+        }
+    }
+}
+
+impl From<IbspSurface> for LoadedIbspSurface {
+    fn from(ibsp_surface: IbspSurface) -> Self {
+        Self {
+            material: ibsp_surface.material,
+            vertices: ibsp_surface
+                .vertices
+                .into_iter()
+                .map(|(k, v)| (k, v.into()))
+                .collect(),
+            triangles: ibsp_surface.triangles,
         }
     }
 }

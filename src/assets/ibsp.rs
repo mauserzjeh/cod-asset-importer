@@ -20,6 +20,7 @@ use valid_enum::ValidEnum;
 #[derive(Debug)]
 pub struct Ibsp {
     pub name: String,
+    pub version: i32,
     pub materials: Vec<IbspMaterial>,
     pub entities: Vec<IbspEntity>,
     pub surfaces: Vec<IbspSurface>,
@@ -77,8 +78,10 @@ pub struct IbspSurface {
 
 #[derive(ValidEnum)]
 #[valid_enum(i32)]
-enum IbspVersion {
+pub enum IbspVersion {
+    // CoD1 & CoDUO
     V59 = 0x3B,
+    // CoD2
     V4 = 0x4,
 }
 
@@ -113,6 +116,7 @@ impl Ibsp {
 
         Ok(Ibsp {
             name,
+            version: header.version,
             materials,
             entities,
             surfaces,
