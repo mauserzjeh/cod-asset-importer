@@ -1,4 +1,4 @@
-from .interface import (
+from .cod_asset_importer import (
     debug_log,
     LoadedModel,
     LoadedIbsp,
