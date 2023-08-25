@@ -1,9 +1,12 @@
 pub mod assets;
-pub mod utils;
-pub mod loader;
 pub mod loaded_assets;
+pub mod loader;
+pub mod utils;
 
-use loaded_assets::{LoadedIbsp, LoadedIbspEntity, LoadedIbspSurface, LoadedModel, LoadedMaterial, LoadedTexture, LoadedSurface, LoadedVertex, LoadedWeight, LoadedBone};
+use loaded_assets::{
+    LoadedBone, LoadedIbsp, LoadedIbspEntity, LoadedIbspSurface, LoadedMaterial, LoadedModel,
+    LoadedSurface, LoadedTexture, LoadedVertex, LoadedWeight,
+};
 use pyo3::prelude::*;
 
 #[pymodule]
