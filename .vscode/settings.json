@@ -5,7 +5,7 @@
         "D:\\PROGRAMS\\STEAM\\steamapps\\common\\Blender\\3.6\\scripts\\modules"
     ],
     "rust-analyzer.linkedProjects": [
-        ".\\Cargo.toml",
-        ".\\valid_enum\\Cargo.toml"
+        ".\\rust\\cod_asset_importer\\Cargo.toml",
+        ".\\rust\\valid_enum\\Cargo.toml"
     ]
 }
