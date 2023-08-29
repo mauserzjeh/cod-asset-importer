@@ -12,7 +12,7 @@ rust_extension = RustExtension(
 setup(
     name="cod-asset-importer",
     version=sic(version_str),
-    rust_extension=[rust_extension],
+    rust_extensions=[rust_extension],
     packages=find_packages(),
     zip_safe=False,
 )
