@@ -7,6 +7,11 @@ use loaded_assets::{
     LoadedBone, LoadedIbsp, LoadedIbspEntity, LoadedIbspSurface, LoadedMaterial, LoadedModel,
     LoadedSurface, LoadedTexture, LoadedVertex, LoadedWeight,
 };
+use assets::{
+    ibsp::IbspVersion,
+    xmodel::XModelType,
+    xmodel::XModelVersion,
+};
 use loader::Loader;
 use pyo3::prelude::*;
 
@@ -23,6 +28,9 @@ fn cod_asset_importer(_py: Python, m: &PyModule) -> PyResult<()> {
     m.add_class::<LoadedVertex>()?;
     m.add_class::<LoadedWeight>()?;
     m.add_class::<LoadedBone>()?;
+    m.add_class::<IbspVersion>()?;
+    m.add_class::<XModelType>()?;
+    m.add_class::<XModelVersion>()?;
 
     #[pyfn(m)]
     fn error_log(error: &str) {

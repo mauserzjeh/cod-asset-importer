@@ -38,6 +38,7 @@ pub struct LoadedIbspSurface {
 #[pyclass(module = "cod_asset_importer")]
 pub struct LoadedModel {
     name: String,
+    version: u16,
     angles: Vec3,
     origin: Vec3,
     scale: Vec3,
@@ -55,6 +56,7 @@ pub struct LoadedMaterial {
 
 #[pyclass(module = "cod_asset_importer")]
 pub struct LoadedTexture {
+    texture_type: String,
     width: u16,
     height: u16,
     data: Vec<u8>,
@@ -94,6 +96,10 @@ pub struct LoadedBone {
 impl LoadedModel {
     fn name(&self) -> &str {
         &self.name
+    }
+
+    fn version(&self) -> u16 {
+        self.version
     }
 
     fn angles(&self) -> [f32; 3] {
@@ -221,6 +227,10 @@ impl LoadedBone {
 
 #[pymethods]
 impl LoadedIbsp {
+    fn version(&self) -> i32 {
+        self.version
+    }
+
     fn name(&self) -> &str {
         &self.name
     }
@@ -293,6 +303,7 @@ impl LoadedIbsp {
 impl LoadedModel {
     pub fn new(
         name: String,
+        version: u16,
         angles: Vec3,
         origin: Vec3,
         scale: Vec3,
@@ -302,6 +313,7 @@ impl LoadedModel {
     ) -> Self {
         LoadedModel {
             name,
+            version,
             angles,
             origin,
             scale,
@@ -330,9 +342,16 @@ impl LoadedMaterial {
     }
 }
 
+impl LoadedTexture {
+    pub fn set_texture_type(&mut self, texture_type: String) {
+        self.texture_type = texture_type;
+    }
+}
+
 impl From<IWi> for LoadedTexture {
     fn from(iwi: IWi) -> Self {
         Self {
+            texture_type: "".to_string(),
             width: iwi.width,
             height: iwi.height,
             data: iwi.data,

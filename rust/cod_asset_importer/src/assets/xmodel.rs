@@ -1,4 +1,5 @@
 use crate::utils::{binary, error::Error, path::file_name_without_ext, Result};
+use pyo3::prelude::*;
 use std::{fs::File, path::PathBuf};
 use valid_enum::ValidEnum;
 
@@ -17,6 +18,7 @@ pub struct XModelLod {
     pub materials: Vec<String>,
 }
 
+#[pyclass(module= "cod_asset_importer", name="XMODEL_TYPES")]
 #[derive(ValidEnum)]
 #[valid_enum(u8)]
 pub enum XModelType {
@@ -27,15 +29,16 @@ pub enum XModelType {
     Viewhands = 52,
 }
 
+#[pyclass(module= "cod_asset_importer", name="XMODEL_VERSIONS")]
 #[derive(ValidEnum)]
 #[valid_enum(u16)]
 pub enum XModelVersion {
     // CoD1 & CoDUO
-    V14 = 0x0E, 
+    V14 = 0x0E,
     // CoD2
     V20 = 0x14,
     // CoD4
-    V25 = 0x19, 
+    V25 = 0x19,
 }
 
 impl XModel {

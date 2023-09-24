@@ -162,8 +162,8 @@ impl Loader {
         let xmodelsurf = XModelSurf::load(xmodelsurf_file_path, xmodelpart.clone())?;
 
         let mut loaded_materials: Vec<LoadedMaterial> = Vec::new();
-        if xmodel.version != xmodel::XModelVersion::V14 as u16 {
-            for mat in lod0.materials {
+        for mat in lod0.materials {
+            if xmodel.version != xmodel::XModelVersion::V14 as u16 {
                 let loaded_material =
                     match Self::load_material(asset_path.clone(), mat, xmodel.version as i32) {
                         Ok(material) => material,
@@ -174,11 +174,19 @@ impl Loader {
                     };
 
                 loaded_materials.push(loaded_material);
+                continue;
             }
+
+            loaded_materials.push(LoadedMaterial::new(
+                mat,
+                HashMap::new(),
+                xmodel.version as i32,
+            ))
         }
 
         Ok(LoadedModel::new(
             xmodel.name,
+            xmodel.version,
             [0f32; 3],
             [0f32; 3],
             [1f32; 3],
@@ -206,7 +214,7 @@ impl Loader {
             }
 
             let texture_file_path = asset_path.join(iwi::ASSETPATH).join(&texture.name);
-            let loaded_texture: LoadedTexture = match IWi::load(texture_file_path) {
+            let mut loaded_texture: LoadedTexture = match IWi::load(texture_file_path) {
                 Ok(iwi) => iwi.into(),
                 Err(error) => {
                     error_log!("{}", error);
@@ -214,6 +222,7 @@ impl Loader {
                 }
             };
 
+            loaded_texture.set_texture_type(texture.texture_type);
             loaded_textures.insert(texture.name, loaded_texture);
         }
 
