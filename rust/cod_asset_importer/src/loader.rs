@@ -107,7 +107,7 @@ impl Loader {
     ) -> PyResult<()> {
         let importer_ref = self.importer.as_ref(py);
 
-        let loaded_model =
+        let mut loaded_model =
             match Self::load_xmodel(PathBuf::from(asset_path), PathBuf::from(file_path)) {
                 Ok(loaded_model) => loaded_model,
                 Err(error) => {
@@ -115,6 +115,10 @@ impl Loader {
                     return Err(PyBaseException::new_err(error.to_string()));
                 }
             };
+
+        loaded_model.set_angles(angles);
+        loaded_model.set_origin(origin);
+        loaded_model.set_scale(scale);
 
         match importer_ref.call_method1("xmodel", (loaded_model,)) {
             Ok(_) => Ok(()),
