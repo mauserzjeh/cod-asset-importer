@@ -17,10 +17,6 @@ operators_list = (
     {"class": operators.ModelImporter, "text": "Call of Duty model", "function": None},
 )
 
-"""
-creates a menu function
-"""
-
 
 def menu_function(cls: object, text: str) -> callable:
     def menu_func(self, context):
@@ -29,21 +25,11 @@ def menu_function(cls: object, text: str) -> callable:
     return menu_func
 
 
-"""
-registers operators into blender
-"""
-
-
 def register():
     for operator in operators_list:
         bpy.utils.register_class(operator["class"])
         operator["function"] = menu_function(operator["class"], operator["text"])
         bpy.types.TOPBAR_MT_file_import.append(operator["function"])
-
-
-"""
-unregisters operators from blender
-"""
 
 
 def unregister():
