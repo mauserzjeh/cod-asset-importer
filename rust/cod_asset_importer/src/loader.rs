@@ -218,7 +218,8 @@ impl Loader {
                 continue;
             }
 
-            let texture_file_path = asset_path.join(iwi::ASSETPATH).join(&texture.name);
+            let mut texture_file_path = asset_path.join(iwi::ASSETPATH).join(&texture.name);
+            texture_file_path.set_extension("iwi");
             debug_log!("{}", texture_file_path.display());
             let mut loaded_texture: LoadedTexture = match IWi::load(texture_file_path) {
                 Ok(iwi) => iwi.into(),

@@ -144,6 +144,10 @@ impl LoadedMaterial {
 
 #[pymethods]
 impl LoadedTexture {
+    fn texture_type(&self) -> &str {
+        &self.texture_type
+    }
+
     fn width(&self) -> u16 {
         self.width
     }

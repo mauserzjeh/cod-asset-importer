@@ -26,7 +26,7 @@ class Importer:
     def xmodel(self, loaded_model: LoadedModel) -> None:
         model_name = loaded_model.name()
 
-        xmodel_null = bpy.data.object.new(model_name, None)
+        xmodel_null = bpy.data.objects.new(model_name, None)
         bpy.context.scene.collection.objects.link(xmodel_null)
 
         mesh_objects = []
@@ -37,13 +37,14 @@ class Importer:
 
         for i, surface in enumerate(loaded_model.surfaces()):
             mesh = bpy.data.meshes.new(model_name)
-            obj = bpy.data.meshes.new(model_name, mesh)
+            obj = bpy.data.objects.new(model_name, mesh)
 
-            active_material = materials[i]
-            if loaded_model.version() == XMODEL_VERSIONS.V14:
-                active_material = os.path.splitext(materials[i])[0]
+            # TODO
+            # active_material = materials[i]
+            # if loaded_model.version() == XMODEL_VERSIONS.V14:
+            #     active_material = os.path.splitext(materials[i])[0]
 
-            obj.active_material = active_material
+            # obj.active_material = active_material
 
             bpy.context.scene.collection.objects.link(obj)
             bpy.context.view_layer.objects.active = obj
@@ -82,6 +83,10 @@ class Importer:
                 triangle_normals.append(vertex3.normal())
                 surface_normals.append(triangle_normals)
 
+                debug_log(f"{vertex1.position()}")
+                debug_log(f"{vertex2.position()}")
+                debug_log(f"{vertex3.position()}")
+                debug_log("----")
                 v1 = bm.verts.new(vertex1.position())
                 v2 = bm.verts.new(vertex2.position())
                 v3 = bm.verts.new(vertex3.position())
@@ -128,64 +133,66 @@ class Importer:
             mesh_objects.append(obj)
 
         loaded_bones = loaded_model.bones()
-        if len(loaded_bones) > 0:
+        skeleton = None
+        # TODO 
+        # if len(loaded_bones) > 0:
 
-            armature = bpy.data.armatures.new(f"{model_name}_armature")
-            armature.display_type = 'STICK'
+        #     armature = bpy.data.armatures.new(f"{model_name}_armature")
+        #     armature.display_type = 'STICK'
 
-            skeleton = bpy.data.objects.new(f"{model_name}_skeleton", armature)
-            skeleton.parent = xmodel_null
-            skeleton.show_in_front = True
-            bpy.context.scene.collection.objects.link(skeleton)
-            bpy.context.view_layer.objects.active = skeleton
-            bpy.ops.object.mode_set(mode='EDIT')
+        #     skeleton = bpy.data.objects.new(f"{model_name}_skeleton", armature)
+        #     skeleton.parent = xmodel_null
+        #     skeleton.show_in_front = True
+        #     bpy.context.scene.collection.objects.link(skeleton)
+        #     bpy.context.view_layer.objects.active = skeleton
+        #     bpy.ops.object.mode_set(mode='EDIT')
 
-            bone_matrices = {}
+        #     bone_matrices = {}
 
-            for loaded_bone in loaded_bones:
-                bone_name = loaded_bone.name()
+        #     for loaded_bone in loaded_bones:
+        #         bone_name = loaded_bone.name()
 
-                new_bone = armature.edit_bones.new(bone_name)
-                new_bone.tail = (0, 0.05, 0)
+        #         new_bone = armature.edit_bones.new(bone_name)
+        #         new_bone.tail = (0, 0.05, 0)
 
-                matrix_rotation = mathutils.Quaternion(loaded_bone.rotation()).to_matrix().to_4x4()
-                matrix_transform = mathutils.Matrix.Translation(loaded_bone.position())
+        #         matrix_rotation = mathutils.Quaternion(loaded_bone.rotation()).to_matrix().to_4x4()
+        #         matrix_transform = mathutils.Matrix.Translation(loaded_bone.position())
 
-                matrix = matrix_transform @ matrix_rotation
-                bone_matrices[bone_name] = matrix
+        #         matrix = matrix_transform @ matrix_rotation
+        #         bone_matrices[bone_name] = matrix
 
-                bone_parent = bone.parent()
-                if bone_parent > -1:
-                    new_bone.parent = armature.edit_bones[bone_parent]
+        #         bone_parent = loaded_bone.parent()
+        #         if bone_parent > -1:
+        #             new_bone.parent = armature.edit_bones[bone_parent]
 
-            bpy.context.view_layer.objects.active = skeleton
-            bpy.ops.object.mode_set(mode='POSE')
+        #     bpy.context.view_layer.objects.active = skeleton
+        #     bpy.ops.object.mode_set(mode='POSE')
 
-            for bone in skeleton.pose.bones:
-                bone.matrix_basis.identity()
-                bone.matrix = bone_matrices[bone.name]
+        #     for bone in skeleton.pose.bones:
+        #         bone.matrix_basis.identity()
+        #         bone.matrix = bone_matrices[bone.name]
 
-            bpy.ops.pose.armature_apply()
-            bpy.context.view_layer.objects.active = skeleton
+        #     bpy.ops.pose.armature_apply()
+        #     bpy.context.view_layer.objects.active = skeleton
 
-            maxs = [0,0,0]
-            mins = [0,0,0]
+        #     maxs = [0,0,0]
+        #     mins = [0,0,0]
 
-            for bone in armature.bones:
-                for i in range(3):
-                    maxs[i] = max(maxs[i], bone.head_local[i])
-                    mins[i] = min(mins[i], bone.head_local[i])
+        #     for bone in armature.bones:
+        #         for i in range(3):
+        #             maxs[i] = max(maxs[i], bone.head_local[i])
+        #             mins[i] = min(mins[i], bone.head_local[i])
 
-            dimensions = []
-            for i in range(3):
-                dimensions.append(maxs[i] - mins[i])
+        #     dimensions = []
+        #     for i in range(3):
+        #         dimensions.append(maxs[i] - mins[i])
 
-            length = max(0.001, (dimensions[0] + dimensions[1] + dimensions[2]) / 600)
-            bpy.ops.object.mode_set(mode='EDIT')
-            for bone in [armature.edit_bones[lb.name()] for lb in loaded_bone]:
-                bone.tail = bone.head + (bone.tail - bone.head).normalized() * length
+        #     length = max(0.001, (dimensions[0] + dimensions[1] + dimensions[2]) / 600)
+        #     bpy.ops.object.mode_set(mode='EDIT')
+        #     for bone in [armature.edit_bones[lb.name()] for lb in loaded_bones]:
+        #         bone.tail = bone.head + (bone.tail - bone.head).normalized() * length
 
-            bpy.ops.object.mode_set(mode='OBJECT')
+        #     bpy.ops.object.mode_set(mode='OBJECT')
 
         for mesh_object in mesh_objects:
             if skeleton == None:
@@ -211,15 +218,16 @@ class Importer:
         debug_log(loaded_ibsp.name())
 
     def material(self, loaded_material: LoadedMaterial) -> None:
-        if loaded_material.version() == XMODEL_VERSIONS.V14:
-            self._import_material_v14(loaded_material)
-        else:
-            self._import_material_v20_v25(loaded_material)
+        pass # TODO
+        # if loaded_material.version() == XMODEL_VERSIONS.V14:
+        #     self._import_material_v14(loaded_material)
+        # else:
+        #     self._import_material_v20_v25(loaded_material)
 
-    def _import_material_v14(loaded_material: LoadedMaterial) -> None:
+    def _import_material_v14(self, loaded_material: LoadedMaterial) -> None:
         pass
 
-    def _import_material_v20_v25(loaded_material: LoadedMaterial) -> None:
+    def _import_material_v20_v25(self, loaded_material: LoadedMaterial) -> None:
         material_name = loaded_material.name()
 
         if bpy.data.materials.get(material_name):
@@ -279,13 +287,14 @@ class Importer:
         loaded_textures = loaded_material.textures()
         for i, t in enumerate(loaded_textures):
             loaded_texture = loaded_textures[t]
+            loaded_texture_type = loaded_texture.texture_type()
 
             texture_node = nodes.new(BLENDER_SHADERNODES.SHADERNODE_TEXIMAGE)
             texture_node.label = loaded_texture.texture_type()
             texture_node.location = (-700, -255 * i)
             texture_node.image = loaded_texture.data()
 
-            if t.type == TEXTURE_TYPES.COLORMAP:
+            if loaded_texture_type == TEXTURE_TYPES.COLORMAP:
                 links.new(
                     texture_node.outputs[BLENDER_SHADERNODES.OUTPUT_TEXIMAGE_COLOR],
                     principled_bsdf_node.inputs[
@@ -296,7 +305,7 @@ class Importer:
                     texture_node.outputs[BLENDER_SHADERNODES.OUTPUT_TEXIMAGE_ALPHA],
                     mix_shader_node.inputs[BLENDER_SHADERNODES.INPUT_MIXSHADER_FAC],
                 )
-            elif t.type == TEXTURE_TYPES.SPECULARMAP:
+            elif loaded_texture_type == TEXTURE_TYPES.SPECULARMAP:
                 links.new(
                     texture_node.outputs[BLENDER_SHADERNODES.OUTPUT_TEXIMAGE_COLOR],
                     principled_bsdf_node.inputs[
@@ -307,7 +316,7 @@ class Importer:
                     BLENDER_SHADERNODES.TEXIMAGE_COLORSPACE_LINEAR
                 )
                 texture_node.location = (-700, -255)
-            elif t.type == TEXTURE_TYPES.NORMALMAP:
+            elif loaded_texture_type == TEXTURE_TYPES.NORMALMAP:
                 texture_node.image.colorspace_settings.name = (
                     BLENDER_SHADERNODES.TEXIMAGE_COLORSPACE_LINEAR
                 )
