@@ -83,10 +83,6 @@ class Importer:
                 triangle_normals.append(vertex3.normal())
                 surface_normals.append(triangle_normals)
 
-                debug_log(f"{vertex1.position()}")
-                debug_log(f"{vertex2.position()}")
-                debug_log(f"{vertex3.position()}")
-                debug_log("----")
                 v1 = bm.verts.new(vertex1.position())
                 v2 = bm.verts.new(vertex2.position())
                 v3 = bm.verts.new(vertex3.position())

@@ -9,7 +9,7 @@ use crate::{
     },
     error_log,
     loaded_assets::{LoadedBone, LoadedIbsp, LoadedMaterial, LoadedModel, LoadedTexture},
-    utils::Result, debug_log,
+    utils::Result,
 };
 use pyo3::{exceptions::PyBaseException, prelude::*};
 use std::{collections::HashMap, path::PathBuf};
@@ -151,7 +151,6 @@ impl Loader {
             .join(xmodelpart::ASSETPATH)
             .join(lod0.name.clone());
 
-        debug_log!("{}", xmodelpart_file_path.display());
         let xmodelpart = match XModelPart::load(xmodelpart_file_path) {
             Ok(xmodelpart) => Some(xmodelpart),
             Err(error) => {
@@ -161,8 +160,6 @@ impl Loader {
         };
 
         let xmodelsurf_file_path = asset_path.join(xmodelsurf::ASSETPATH).join(lod0.name);
-        debug_log!("{}", xmodelsurf_file_path.display());
-
         let xmodelsurf = XModelSurf::load(xmodelsurf_file_path, xmodelpart.clone())?;
 
         let mut loaded_materials: Vec<LoadedMaterial> = Vec::new();
@@ -209,7 +206,6 @@ impl Loader {
         version: i32,
     ) -> Result<LoadedMaterial> {
         let material_file_path = asset_path.join(material::ASSETPATH).join(&material_name);
-        debug_log!("{}", material_file_path.display());
         let material = Material::load(material_file_path, version)?;
 
         let mut loaded_textures: HashMap<String, LoadedTexture> = HashMap::new();
@@ -220,7 +216,6 @@ impl Loader {
 
             let mut texture_file_path = asset_path.join(iwi::ASSETPATH).join(&texture.name);
             texture_file_path.set_extension("iwi");
-            debug_log!("{}", texture_file_path.display());
             let mut loaded_texture: LoadedTexture = match IWi::load(texture_file_path) {
                 Ok(iwi) => iwi.into(),
                 Err(error) => {

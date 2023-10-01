@@ -2,7 +2,7 @@
 macro_rules! error_log {
     ($($arg:tt)*) => {
         {
-            let error_message = format!("[ERROR] {}", format_args!($($arg)*));
+            let error_message = format!("[ERROR] {}:{} - {}", file!(), line!(), format_args!($($arg)*));
             println!("{}", error_message);
         }
     };
@@ -12,8 +12,8 @@ macro_rules! error_log {
 macro_rules! info_log {
     ($($arg:tt)*) => {
         {
-            let error_message = format!("[INFO] {}", format_args!($($arg)*));
-            println!("{}", error_message);
+            let info_message = format!("[INFO] {}:{} - {}", file!(), line!(), format_args!($($arg)*));
+            println!("{}", info_message);
         }
     };
 }
@@ -22,8 +22,8 @@ macro_rules! info_log {
 macro_rules! debug_log {
     ($($arg:tt)*) => {
         {
-            let error_message = format!("[DEBUG] {}", format_args!($($arg)*));
-            println!("{}", error_message);
+            let debug_message = format!("[DEBUG] {}:{} - {}", file!(), line!(), format_args!($($arg)*));
+            println!("{}", debug_message);
         }
     };
 }

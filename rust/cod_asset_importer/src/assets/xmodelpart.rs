@@ -2,7 +2,7 @@ use super::xmodel::{XModelType, XModelVersion};
 use crate::utils::{
     binary,
     error::Error,
-    math::{vec3_add, vec3_div, vec3_from_vec, vec3_rotate, Quat, Vec3},
+    math::{quat_multiply, vec3_add, vec3_div, vec3_from_vec, vec3_rotate, Quat, Vec3},
     path::file_name_without_ext,
     Result,
 };
@@ -205,11 +205,11 @@ impl XModelPart {
                 parent: -1,
                 local_transform: XModelPartBoneTransform {
                     position: [0.0, 0.0, 0.0],
-                    rotation: [0.0, 0.0, 0.0, 0.0],
+                    rotation: [1.0, 0.0, 0.0, 0.0],
                 },
                 world_transform: XModelPartBoneTransform {
                     position: [0.0, 0.0, 0.0],
-                    rotation: [0.0, 0.0, 0.0, 0.0],
+                    rotation: [1.0, 0.0, 0.0, 0.0],
                 },
             });
         }
@@ -217,16 +217,16 @@ impl XModelPart {
         for _ in 0..bone_count {
             let parent = binary::read::<i8>(file)?;
             let position = binary::read_vec::<f32>(file, 3)?;
-            let rotation = binary::read_vec::<u16>(file, 3)?;
+            let rotation = binary::read_vec::<i16>(file, 3)?;
 
-            let qx = rotation[0] as f32 / ROTATION_DIVISOR;
-            let qy = rotation[1] as f32 / ROTATION_DIVISOR;
-            let qz = rotation[2] as f32 / ROTATION_DIVISOR;
-            let qw = f32::sqrt(1.0 - (qx * qx) - (qy * qy) - (qz * qz));
+            let qx = (rotation[0] as f32) / ROTATION_DIVISOR;
+            let qy = (rotation[1] as f32) / ROTATION_DIVISOR;
+            let qz = (rotation[2] as f32) / ROTATION_DIVISOR;
+            let qw = f32::sqrt((1.0 - (qx * qx) - (qy * qy) - (qz * qz)).max(0.0));
 
             let bone_transform = XModelPartBoneTransform {
                 position: vec3_from_vec(position).unwrap(),
-                rotation: [qx, qy, qz, qw],
+                rotation: [qw, qx, qy, qz],
             };
 
             self.bones.push(XModelPartBone {
@@ -272,11 +272,11 @@ impl XModelPart {
                 parent: -1,
                 local_transform: XModelPartBoneTransform {
                     position: [0.0, 0.0, 0.0],
-                    rotation: [0.0, 0.0, 0.0, 0.0],
+                    rotation: [1.0, 0.0, 0.0, 0.0],
                 },
                 world_transform: XModelPartBoneTransform {
                     position: [0.0, 0.0, 0.0],
-                    rotation: [0.0, 0.0, 0.0, 0.0],
+                    rotation: [1.0, 0.0, 0.0, 0.0],
                 },
             });
         }
@@ -284,16 +284,16 @@ impl XModelPart {
         for _ in 0..bone_count {
             let parent = binary::read::<i8>(file)?;
             let position = binary::read_vec::<f32>(file, 3)?;
-            let rotation = binary::read_vec::<u16>(file, 3)?;
+            let rotation = binary::read_vec::<i16>(file, 3)?;
 
-            let qx = rotation[0] as f32 / ROTATION_DIVISOR;
-            let qy = rotation[1] as f32 / ROTATION_DIVISOR;
-            let qz = rotation[2] as f32 / ROTATION_DIVISOR;
-            let qw = f32::sqrt(1.0 - (qx * qx) - (qy * qy) - (qz * qz));
+            let qx = (rotation[0] as f32) / ROTATION_DIVISOR;
+            let qy = (rotation[1] as f32) / ROTATION_DIVISOR;
+            let qz = (rotation[2] as f32) / ROTATION_DIVISOR;
+            let qw = f32::sqrt((1.0 - (qx * qx) - (qy * qy) - (qz * qz)).max(0.0));
 
             let bone_transform = XModelPartBoneTransform {
                 position: vec3_from_vec(position).unwrap(),
-                rotation: [qx, qy, qz, qw],
+                rotation: [qw, qx, qy, qz],
             };
 
             self.bones.push(XModelPartBone {
@@ -337,11 +337,11 @@ impl XModelPart {
                 parent: -1,
                 local_transform: XModelPartBoneTransform {
                     position: [0.0, 0.0, 0.0],
-                    rotation: [0.0, 0.0, 0.0, 0.0],
+                    rotation: [1.0, 0.0, 0.0, 0.0],
                 },
                 world_transform: XModelPartBoneTransform {
                     position: [0.0, 0.0, 0.0],
-                    rotation: [0.0, 0.0, 0.0, 0.0],
+                    rotation: [1.0, 0.0, 0.0, 0.0],
                 },
             });
         }
@@ -349,16 +349,16 @@ impl XModelPart {
         for _ in 0..bone_count {
             let parent = binary::read::<i8>(file)?;
             let position = binary::read_vec::<f32>(file, 3)?;
-            let rotation = binary::read_vec::<u16>(file, 3)?;
+            let rotation = binary::read_vec::<i16>(file, 3)?;
 
-            let qx = rotation[0] as f32 / ROTATION_DIVISOR;
-            let qy = rotation[1] as f32 / ROTATION_DIVISOR;
-            let qz = rotation[2] as f32 / ROTATION_DIVISOR;
-            let qw = f32::sqrt(1.0 - (qx * qx) - (qy * qy) - (qz * qz));
+            let qx = (rotation[0] as f32) / ROTATION_DIVISOR;
+            let qy = (rotation[1] as f32) / ROTATION_DIVISOR;
+            let qz = (rotation[2] as f32) / ROTATION_DIVISOR;
+            let qw = f32::sqrt((1.0 - (qx * qx) - (qy * qy) - (qz * qz)).max(0.0));
 
             let bone_transform = XModelPartBoneTransform {
                 position: vec3_from_vec(position).unwrap(),
-                rotation: [qx, qy, qz, qw],
+                rotation: [qw, qx, qy, qz],
             };
 
             self.bones.push(XModelPartBone {
@@ -394,6 +394,10 @@ impl XModelPartBone {
                 self.local_transform.position,
                 parent.world_transform.rotation,
             ),
+        );
+        self.world_transform.rotation = quat_multiply(
+            parent.world_transform.rotation,
+            self.local_transform.rotation,
         );
     }
 }
