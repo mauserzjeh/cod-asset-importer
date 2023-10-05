@@ -130,65 +130,64 @@ class Importer:
 
         loaded_bones = loaded_model.bones()
         skeleton = None
-        # TODO 
-        # if len(loaded_bones) > 0:
+        if len(loaded_bones) > 0:
 
-        #     armature = bpy.data.armatures.new(f"{model_name}_armature")
-        #     armature.display_type = 'STICK'
+            armature = bpy.data.armatures.new(f"{model_name}_armature")
+            armature.display_type = 'STICK'
 
-        #     skeleton = bpy.data.objects.new(f"{model_name}_skeleton", armature)
-        #     skeleton.parent = xmodel_null
-        #     skeleton.show_in_front = True
-        #     bpy.context.scene.collection.objects.link(skeleton)
-        #     bpy.context.view_layer.objects.active = skeleton
-        #     bpy.ops.object.mode_set(mode='EDIT')
+            skeleton = bpy.data.objects.new(f"{model_name}_skeleton", armature)
+            skeleton.parent = xmodel_null
+            skeleton.show_in_front = True
+            bpy.context.scene.collection.objects.link(skeleton)
+            bpy.context.view_layer.objects.active = skeleton
+            bpy.ops.object.mode_set(mode='EDIT')
 
-        #     bone_matrices = {}
+            bone_matrices = {}
 
-        #     for loaded_bone in loaded_bones:
-        #         bone_name = loaded_bone.name()
+            for loaded_bone in loaded_bones:
+                bone_name = loaded_bone.name()
 
-        #         new_bone = armature.edit_bones.new(bone_name)
-        #         new_bone.tail = (0, 0.05, 0)
+                new_bone = armature.edit_bones.new(bone_name)
+                new_bone.tail = (0, 0.05, 0)
 
-        #         matrix_rotation = mathutils.Quaternion(loaded_bone.rotation()).to_matrix().to_4x4()
-        #         matrix_transform = mathutils.Matrix.Translation(loaded_bone.position())
+                matrix_rotation = mathutils.Quaternion(loaded_bone.rotation()).to_matrix().to_4x4()
+                matrix_transform = mathutils.Matrix.Translation(mathutils.Vector(loaded_bone.position()))
 
-        #         matrix = matrix_transform @ matrix_rotation
-        #         bone_matrices[bone_name] = matrix
+                matrix = matrix_transform @ matrix_rotation
+                bone_matrices[bone_name] = matrix
 
-        #         bone_parent = loaded_bone.parent()
-        #         if bone_parent > -1:
-        #             new_bone.parent = armature.edit_bones[bone_parent]
+                bone_parent = loaded_bone.parent()
+                if bone_parent > -1:
+                    new_bone.parent = armature.edit_bones[bone_parent]
 
-        #     bpy.context.view_layer.objects.active = skeleton
-        #     bpy.ops.object.mode_set(mode='POSE')
+            bpy.context.view_layer.objects.active = skeleton
+            bpy.ops.object.mode_set(mode='POSE')
 
-        #     for bone in skeleton.pose.bones:
-        #         bone.matrix_basis.identity()
-        #         bone.matrix = bone_matrices[bone.name]
+            for bone in skeleton.pose.bones:
+                bone.matrix_basis.identity()
+                bone.matrix = bone_matrices[bone.name]
 
-        #     bpy.ops.pose.armature_apply()
-        #     bpy.context.view_layer.objects.active = skeleton
+            bpy.ops.pose.armature_apply()
+            bpy.context.view_layer.objects.active = skeleton
 
-        #     maxs = [0,0,0]
-        #     mins = [0,0,0]
+            maxs = [0,0,0]
+            mins = [0,0,0]
 
-        #     for bone in armature.bones:
-        #         for i in range(3):
-        #             maxs[i] = max(maxs[i], bone.head_local[i])
-        #             mins[i] = min(mins[i], bone.head_local[i])
+            for bone in armature.bones:
+                for i in range(3):
+                    maxs[i] = max(maxs[i], bone.head_local[i])
+                    mins[i] = min(mins[i], bone.head_local[i])
 
-        #     dimensions = []
-        #     for i in range(3):
-        #         dimensions.append(maxs[i] - mins[i])
+            dimensions = []
+            for i in range(3):
+                dimensions.append(maxs[i] - mins[i])
 
-        #     length = max(0.001, (dimensions[0] + dimensions[1] + dimensions[2]) / 600)
-        #     bpy.ops.object.mode_set(mode='EDIT')
-        #     for bone in [armature.edit_bones[lb.name()] for lb in loaded_bones]:
-        #         bone.tail = bone.head + (bone.tail - bone.head).normalized() * length
+            length = max(0.001, (dimensions[0] + dimensions[1] + dimensions[2]) / 600)
+            bpy.ops.object.mode_set(mode='EDIT')
+            for bone in [armature.edit_bones[lb.name()] for lb in loaded_bones]:
+                bone.tail = bone.head + (bone.tail - bone.head).normalized() * length
 
-        #     bpy.ops.object.mode_set(mode='OBJECT')
+            bpy.ops.object.mode_set(mode='OBJECT')
 
         for mesh_object in mesh_objects:
             if skeleton == None:

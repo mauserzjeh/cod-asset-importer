@@ -79,6 +79,7 @@ pub struct LoadedVertex {
 }
 
 #[pyclass(module = "cod_asset_importer")]
+#[derive(Clone, Copy)]
 pub struct LoadedWeight {
     bone: u16,
     influence: f32,
@@ -194,8 +195,9 @@ impl LoadedVertex {
         self.position
     }
 
-    fn weights(&mut self) -> Vec<LoadedWeight> {
-        mem::take(&mut self.weights)
+    fn weights(&self) -> Vec<LoadedWeight> {
+        self.weights.clone() // TODO review if can we do weights without cloning
+        // mem::take(&mut self.weights)
     }
 }
 
