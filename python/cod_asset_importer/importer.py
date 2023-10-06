@@ -1,16 +1,16 @@
 import bmesh
 import bpy
 import mathutils
-import os
 import traceback
 from .cod_asset_importer import (
-    IBSP_VERSIONS,
+    # IBSP_VERSIONS,
     XMODEL_VERSIONS,
-    XMODEL_TYPES,
+    # XMODEL_TYPES,
     LoadedModel,
     LoadedIbsp,
     LoadedMaterial,
     Loader,
+    LoadedTexture,
     debug_log,
     error_log,
 )
@@ -60,7 +60,6 @@ class Importer:
 
             vertices = surface.vertices()
             for triangle in surface.triangles():
-                
                 vertex1 = vertices[triangle[0]]
                 vertex2 = vertices[triangle[2]]
                 vertex3 = vertices[triangle[1]]
@@ -90,15 +89,13 @@ class Importer:
                 bm.verts.ensure_lookup_table()
                 bm.verts.index_update()
 
-                verts_assoc = {
-                    v1: vertex1,
-                    v2: vertex2,
-                    v3: vertex3
-                }
+                verts_assoc = {v1: vertex1, v2: vertex2, v3: vertex3}
 
                 for bvert, svert in verts_assoc.items():
                     for weight in svert.weights():
-                        bm.verts[bvert.index][vertex_weight_layer][weight.bone()] = weight.influence()
+                        bm.verts[bvert.index][vertex_weight_layer][
+                            weight.bone()
+                        ] = weight.influence()
 
                 bm.faces.new((v1, v2, v3))
                 bm.faces.ensure_lookup_table()
@@ -108,8 +105,12 @@ class Importer:
             vertex_color_layer = bm.loops.layers.color.new()
             vertex_normal_buffer = []
 
-            for face, uv, color, normal in zip(bm.faces, surface_uvs, surface_vertex_colors, surface_normals):
-                for loop, uv_data, color_data, normal_data in zip(face.loops, uv, color, normal):
+            for face, uv, color, normal in zip(
+                bm.faces, surface_uvs, surface_vertex_colors, surface_normals
+            ):
+                for loop, uv_data, color_data, normal_data in zip(
+                    face.loops, uv, color, normal
+                ):
                     loop[uv_layer].uv = uv_data
                     loop[vertex_color_layer] = color_data
                     vertex_normal_buffer.append(normal_data)
@@ -117,13 +118,13 @@ class Importer:
             bm.to_mesh(mesh_data)
             bm.free()
 
-            # set normals        
+            # set normals
             mesh.create_normals_split()
             mesh.validate(clean_customdata=False)
             mesh.normals_split_custom_set(vertex_normal_buffer)
 
             polygon_count = len(mesh.polygons)
-            mesh.polygons.foreach_set('use_smooth', [True] * polygon_count)
+            mesh.polygons.foreach_set("use_smooth", [True] * polygon_count)
             mesh.use_auto_smooth = True
 
             mesh_objects.append(obj)
@@ -131,16 +132,15 @@ class Importer:
         loaded_bones = loaded_model.bones()
         skeleton = None
         if len(loaded_bones) > 0:
-
             armature = bpy.data.armatures.new(f"{model_name}_armature")
-            armature.display_type = 'STICK'
+            armature.display_type = "STICK"
 
             skeleton = bpy.data.objects.new(f"{model_name}_skeleton", armature)
             skeleton.parent = xmodel_null
             skeleton.show_in_front = True
             bpy.context.scene.collection.objects.link(skeleton)
             bpy.context.view_layer.objects.active = skeleton
-            bpy.ops.object.mode_set(mode='EDIT')
+            bpy.ops.object.mode_set(mode="EDIT")
 
             bone_matrices = {}
 
@@ -150,8 +150,12 @@ class Importer:
                 new_bone = armature.edit_bones.new(bone_name)
                 new_bone.tail = (0, 0.05, 0)
 
-                matrix_rotation = mathutils.Quaternion(loaded_bone.rotation()).to_matrix().to_4x4()
-                matrix_transform = mathutils.Matrix.Translation(mathutils.Vector(loaded_bone.position()))
+                matrix_rotation = (
+                    mathutils.Quaternion(loaded_bone.rotation()).to_matrix().to_4x4()
+                )
+                matrix_transform = mathutils.Matrix.Translation(
+                    mathutils.Vector(loaded_bone.position())
+                )
 
                 matrix = matrix_transform @ matrix_rotation
                 bone_matrices[bone_name] = matrix
@@ -161,7 +165,7 @@ class Importer:
                     new_bone.parent = armature.edit_bones[bone_parent]
 
             bpy.context.view_layer.objects.active = skeleton
-            bpy.ops.object.mode_set(mode='POSE')
+            bpy.ops.object.mode_set(mode="POSE")
 
             for bone in skeleton.pose.bones:
                 bone.matrix_basis.identity()
@@ -170,8 +174,8 @@ class Importer:
             bpy.ops.pose.armature_apply()
             bpy.context.view_layer.objects.active = skeleton
 
-            maxs = [0,0,0]
-            mins = [0,0,0]
+            maxs = [0, 0, 0]
+            mins = [0, 0, 0]
 
             for bone in armature.bones:
                 for i in range(3):
@@ -183,11 +187,11 @@ class Importer:
                 dimensions.append(maxs[i] - mins[i])
 
             length = max(0.001, (dimensions[0] + dimensions[1] + dimensions[2]) / 600)
-            bpy.ops.object.mode_set(mode='EDIT')
+            bpy.ops.object.mode_set(mode="EDIT")
             for bone in [armature.edit_bones[lb.name()] for lb in loaded_bones]:
                 bone.tail = bone.head + (bone.tail - bone.head).normalized() * length
 
-            bpy.ops.object.mode_set(mode='OBJECT')
+            bpy.ops.object.mode_set(mode="OBJECT")
 
         for mesh_object in mesh_objects:
             if skeleton == None:
@@ -198,26 +202,23 @@ class Importer:
                 mesh_object.vertex_groups.new(name=loaded_bone.name())
 
             mesh_object.parent = skeleton
-            modifier = mesh_object.modifiers.new('armature_rig', 'ARMATURE')
+            modifier = mesh_object.modifiers.new("armature_rig", "ARMATURE")
             modifier.object = skeleton
             modifier.use_bone_envelopes = False
             modifier.use_vertex_groups = True
 
         bpy.context.view_layer.update()
-        bpy.ops.object.mode_set(mode='OBJECT')
-        bpy.ops.object.select_all(action='DESELECT')
-
-                
+        bpy.ops.object.mode_set(mode="OBJECT")
+        bpy.ops.object.select_all(action="DESELECT")
 
     def ibsp(self, loaded_ibsp: LoadedIbsp) -> None:
         debug_log(loaded_ibsp.name())
 
     def material(self, loaded_material: LoadedMaterial) -> None:
-        pass # TODO
-        # if loaded_material.version() == XMODEL_VERSIONS.V14:
-        #     self._import_material_v14(loaded_material)
-        # else:
-        #     self._import_material_v20_v25(loaded_material)
+        if loaded_material.version() == XMODEL_VERSIONS.V14:
+            self._import_material_v14(loaded_material)
+        else:
+            self._import_material_v20_v25(loaded_material)
 
     def _import_material_v14(self, loaded_material: LoadedMaterial) -> None:
         pass
@@ -280,14 +281,17 @@ class Importer:
         )
 
         loaded_textures = loaded_material.textures()
-        for i, t in enumerate(loaded_textures):
-            loaded_texture = loaded_textures[t]
+        for i, loaded_texture in enumerate(loaded_textures):
+            texture_image = self._import_texture(loaded_texture=loaded_texture)
+            if texture_image == None:
+                continue
+
             loaded_texture_type = loaded_texture.texture_type()
 
             texture_node = nodes.new(BLENDER_SHADERNODES.SHADERNODE_TEXIMAGE)
-            texture_node.label = loaded_texture.texture_type()
+            texture_node.label = loaded_texture_type
             texture_node.location = (-700, -255 * i)
-            texture_node.image = loaded_texture.data()
+            texture_node.image = texture_image
 
             if loaded_texture_type == TEXTURE_TYPES.COLORMAP:
                 links.new(
@@ -430,6 +434,26 @@ class Importer:
                     texture_node.outputs[BLENDER_SHADERNODES.OUTPUT_TEXIMAGE_ALPHA],
                     combine_rgb_node.inputs[BLENDER_SHADERNODES.INPUT_COMBINERGB_R],
                 )
+
+    def _import_texture(
+        self, loaded_texture: LoadedTexture
+    ) -> bpy.types.Texture | None:
+        texture_name = loaded_texture.name()
+        texture_image = bpy.data.images.get(texture_name)
+        if texture_image != None:
+            return texture_image
+
+        texture_image = bpy.data.images.new(
+            name=texture_name,
+            width=loaded_texture.width(),
+            height=loaded_texture.height(),
+            alpha=True,
+        )
+        texture_image.pixels = loaded_texture.data()
+        texture_image.file_format = 'TARGA'
+        texture_image.pack()
+
+        return texture_image
 
 
 class TEXTURE_TYPES(metaclass=base_enum.BaseEnum):

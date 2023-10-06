@@ -51,11 +51,12 @@ pub struct LoadedModel {
 pub struct LoadedMaterial {
     name: String,
     version: i32,
-    textures: HashMap<String, LoadedTexture>,
+    textures: Vec<LoadedTexture>,
 }
 
 #[pyclass(module = "cod_asset_importer")]
 pub struct LoadedTexture {
+    name: String,
     texture_type: String,
     width: u16,
     height: u16,
@@ -138,13 +139,17 @@ impl LoadedMaterial {
         self.version
     }
 
-    fn textures(&mut self) -> HashMap<String, LoadedTexture> {
+    fn textures(&mut self) -> Vec<LoadedTexture> {
         mem::take(&mut self.textures)
     }
 }
 
 #[pymethods]
 impl LoadedTexture {
+    fn name(&self) -> &str {
+        &self.name
+    }
+
     fn texture_type(&self) -> &str {
         &self.texture_type
     }
@@ -343,7 +348,7 @@ impl LoadedModel {
 }
 
 impl LoadedMaterial {
-    pub fn new(name: String, textures: HashMap<String, LoadedTexture>, version: i32) -> Self {
+    pub fn new(name: String, textures: Vec<LoadedTexture>, version: i32) -> Self {
         LoadedMaterial { name, textures, version }
     }
 }
@@ -352,11 +357,15 @@ impl LoadedTexture {
     pub fn set_texture_type(&mut self, texture_type: String) {
         self.texture_type = texture_type;
     }
+    pub fn set_name(&mut self, name: String) {
+        self.name = name;
+    }
 }
 
 impl From<IWi> for LoadedTexture {
     fn from(iwi: IWi) -> Self {
         Self {
+            name: "".to_string(),
             texture_type: "".to_string(),
             width: iwi.width,
             height: iwi.height,

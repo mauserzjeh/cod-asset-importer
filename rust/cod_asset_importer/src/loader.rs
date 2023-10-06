@@ -178,11 +178,7 @@ impl Loader {
                 continue;
             }
 
-            loaded_materials.push(LoadedMaterial::new(
-                mat,
-                HashMap::new(),
-                xmodel.version as i32,
-            ))
+            loaded_materials.push(LoadedMaterial::new(mat, Vec::new(), xmodel.version as i32))
         }
 
         Ok(LoadedModel::new(
@@ -208,12 +204,8 @@ impl Loader {
         let material_file_path = asset_path.join(material::ASSETPATH).join(&material_name);
         let material = Material::load(material_file_path, version)?;
 
-        let mut loaded_textures: HashMap<String, LoadedTexture> = HashMap::new();
+        let mut loaded_textures: Vec<LoadedTexture> = Vec::new();
         for texture in material.textures {
-            if loaded_textures.contains_key(&texture.name) {
-                continue;
-            }
-
             let mut texture_file_path = asset_path.join(iwi::ASSETPATH).join(&texture.name);
             texture_file_path.set_extension("iwi");
             let mut loaded_texture: LoadedTexture = match IWi::load(texture_file_path) {
@@ -224,8 +216,9 @@ impl Loader {
                 }
             };
 
+            loaded_texture.set_name(texture.name);
             loaded_texture.set_texture_type(texture.texture_type);
-            loaded_textures.insert(texture.name, loaded_texture);
+            loaded_textures.push(loaded_texture);
         }
 
         Ok(LoadedMaterial::new(material_name, loaded_textures, version))
