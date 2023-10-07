@@ -1,6 +1,7 @@
 import bmesh
 import bpy
 import mathutils
+import os
 import traceback
 from .cod_asset_importer import (
     # IBSP_VERSIONS,
@@ -39,12 +40,11 @@ class Importer:
             mesh = bpy.data.meshes.new(model_name)
             obj = bpy.data.objects.new(model_name, mesh)
 
-            # TODO
-            # active_material = materials[i]
-            # if loaded_model.version() == XMODEL_VERSIONS.V14:
-            #     active_material = os.path.splitext(materials[i])[0]
+            active_material_name = materials[i].name()
+            if loaded_model.version() == XMODEL_VERSIONS.V14:
+                active_material_name = os.path.splitext(active_material_name)[0]
 
-            # obj.active_material = active_material
+            obj.active_material = bpy.data.materials.get(active_material_name)
 
             bpy.context.scene.collection.objects.link(obj)
             bpy.context.view_layer.objects.active = obj

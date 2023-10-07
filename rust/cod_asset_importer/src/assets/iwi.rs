@@ -14,7 +14,7 @@ pub const ASSETPATH: &str = "images";
 pub struct IWi {
     pub width: u16,
     pub height: u16,
-    pub data: Vec<u8>,
+    pub data: Vec<f32>,
 }
 
 struct IWiHeader {
@@ -151,7 +151,7 @@ impl IWi {
         return mipmaps[max_idx];
     }
 
-    fn decode_data(data: Vec<u8>, info: IWiInfo) -> Result<Vec<u8>> {
+    fn decode_data(data: Vec<u8>, info: IWiInfo) -> Result<Vec<f32>> {
         match IWiFormat::valid(info.format) {
             Some(IWiFormat::DXT1) => {
                 Ok(decode_dxt1(data, info.width as usize, info.height as usize))

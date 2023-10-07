@@ -34,14 +34,14 @@ fn c3(c0: u32, c1: u32) -> u32 {
     (c0 + 2 * c1) / 3
 }
 
-pub fn decode_dxt1(input: Vec<u8>, width: usize, height: usize) -> Vec<u8> {
+pub fn decode_dxt1(input: Vec<u8>, width: usize, height: usize) -> Vec<f32> {
     let mut offset: usize = 0;
     let block_count_x = (width + 3) / 4;
     let block_count_y = (height + 3) / 4;
     let length_last = (width + 3) % 4 + 1;
-    let mut buffer = vec![0u8; 64];
     let mut colors = vec![0u32; 4];
-    let mut output = vec![0u8; width * height * 4];
+    let mut buffer = vec![0f32; 64];
+    let mut output = vec![0f32; width * height * 4];
 
     for y in 0..block_count_y {
         for x in 0..block_count_x {
@@ -69,10 +69,10 @@ pub fn decode_dxt1(input: Vec<u8>, width: usize, height: usize) -> Vec<u8> {
             for i in 0..16 {
                 let idx = i * 4;
                 let (r, g, b, a) = unpack_rgba(colors[(bitcode & 0x3) as usize]);
-                buffer[idx + 0] = r as u8;
-                buffer[idx + 1] = g as u8;
-                buffer[idx + 2] = b as u8;
-                buffer[idx + 3] = a as u8;
+                buffer[idx + 0] = r as f32 / 255.0;
+                buffer[idx + 1] = g as f32 / 255.0;
+                buffer[idx + 2] = b as f32 / 255.0;
+                buffer[idx + 3] = a as f32 / 255.0;
 
                 bitcode >>= 2;
             }
@@ -103,15 +103,15 @@ pub fn decode_dxt1(input: Vec<u8>, width: usize, height: usize) -> Vec<u8> {
 
     output
 }
-pub fn decode_dxt3(input: Vec<u8>, width: usize, height: usize) -> Vec<u8> {
+pub fn decode_dxt3(input: Vec<u8>, width: usize, height: usize) -> Vec<f32> {
     let mut offset: usize = 0;
     let block_count_x = (width + 3) / 4;
     let block_count_y = (height + 3) / 4;
     let length_last = (width + 3) % 4 + 1;
-    let mut buffer = vec![0u8; 64];
     let mut colors = vec![0u32; 4];
     let mut alphas = vec![0u32; 16];
-    let mut output = vec![0u8; width * height * 4];
+    let mut buffer = vec![0f32; 64];
+    let mut output = vec![0f32; width * height * 4];
 
     for y in 0..block_count_y {
         for x in 00..block_count_x {
@@ -147,10 +147,10 @@ pub fn decode_dxt3(input: Vec<u8>, width: usize, height: usize) -> Vec<u8> {
             for i in 0..16 {
                 let idx = i * 4;
                 let (r, g, b, a) = unpack_rgba(colors[(bitcode & 0x3) as usize] | alphas[i]);
-                buffer[idx + 0] = r as u8;
-                buffer[idx + 1] = g as u8;
-                buffer[idx + 2] = b as u8;
-                buffer[idx + 3] = a as u8;
+                buffer[idx + 0] = r as f32 / 255.0;
+                buffer[idx + 1] = g as f32 / 255.0;
+                buffer[idx + 2] = b as f32 / 255.0;
+                buffer[idx + 3] = a as f32 / 255.0;
 
                 bitcode >>= 2;
             }
@@ -181,15 +181,15 @@ pub fn decode_dxt3(input: Vec<u8>, width: usize, height: usize) -> Vec<u8> {
 
     output
 }
-pub fn decode_dxt5(input: Vec<u8>, width: usize, height: usize) -> Vec<u8> {
+pub fn decode_dxt5(input: Vec<u8>, width: usize, height: usize) -> Vec<f32> {
     let mut offset: usize = 0;
     let block_count_x = (width + 3) / 4;
     let block_count_y = (height + 3) / 4;
     let length_last = (width + 3) % 4 + 1;
-    let mut buffer = vec![0u8; 64];
     let mut colors = vec![0u32; 4];
     let mut alphas = vec![0u32; 8];
-    let mut output = vec![0u8; width * height * 4];
+    let mut buffer = vec![0f32; 64];
+    let mut output = vec![0f32; width * height * 4];
 
     for y in 0..block_count_y {
         for x in 0..block_count_x {
@@ -249,10 +249,10 @@ pub fn decode_dxt5(input: Vec<u8>, width: usize, height: usize) -> Vec<u8> {
                 let (r, g, b, a) = unpack_rgba(
                     alphas[(bitcode_a & 0x07) as usize] | colors[(bitcode_c & 0x03) as usize],
                 );
-                buffer[idx + 0] = r as u8;
-                buffer[idx + 1] = g as u8;
-                buffer[idx + 2] = b as u8;
-                buffer[idx + 3] = a as u8;
+                buffer[idx + 0] = r as f32 / 255.0;
+                buffer[idx + 1] = g as f32 / 255.0;
+                buffer[idx + 2] = b as f32 / 255.0;
+                buffer[idx + 3] = a as f32 / 255.0;
 
                 bitcode_a >>= 3;
                 bitcode_c >>= 2;

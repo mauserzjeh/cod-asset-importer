@@ -17,7 +17,8 @@ pub fn uv_from_vec(v: Vec<f32>) -> Option<UV> {
         return None;
     }
 
-    Some([v[0], 1.0 - v[1]])
+    // Some([v[0], 1.0 - v[1]])
+    Some([v[0], v[1]])
 }
 
 pub fn quat_from_vec(v: Vec<f32>) -> Option<Quat> {

@@ -60,7 +60,7 @@ pub struct LoadedTexture {
     texture_type: String,
     width: u16,
     height: u16,
-    data: Vec<u8>,
+    data: Vec<f32>,
 }
 
 #[pyclass(module = "cod_asset_importer")]
@@ -162,7 +162,7 @@ impl LoadedTexture {
         self.height
     }
 
-    fn data(&mut self) -> Vec<u8> {
+    fn data(&mut self) -> Vec<f32> {
         mem::take(&mut self.data)
     }
 }

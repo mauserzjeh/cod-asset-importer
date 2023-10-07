@@ -12,7 +12,7 @@ use crate::{
     utils::Result,
 };
 use pyo3::{exceptions::PyBaseException, prelude::*};
-use std::{collections::HashMap, path::PathBuf};
+use std::path::PathBuf;
 
 #[pyclass(module = "cod_asset_importer")]
 pub struct Loader {
