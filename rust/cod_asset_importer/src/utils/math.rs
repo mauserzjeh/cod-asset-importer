@@ -12,13 +12,16 @@ pub fn vec3_from_vec(v: Vec<f32>) -> Option<Vec3> {
     Some([v[0], v[1], v[2]])
 }
 
-pub fn uv_from_vec(v: Vec<f32>) -> Option<UV> {
+pub fn uv_from_vec(v: Vec<f32>, flip_uv: bool) -> Option<UV> {
     if v.len() != 2 {
         return None;
     }
 
-    // Some([v[0], 1.0 - v[1]])
-    Some([v[0], v[1]])
+    if flip_uv {
+        Some([v[0], 1.0 - v[1]])
+    } else {
+        Some([v[0], v[1]])
+    }
 }
 
 pub fn quat_from_vec(v: Vec<f32>) -> Option<Quat> {

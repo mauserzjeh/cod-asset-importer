@@ -24,6 +24,9 @@ from . import (
 
 
 class Importer:
+    def __init__(self, asset_path: str) -> None:
+        self.asset_path = asset_path
+
     def xmodel(self, loaded_model: LoadedModel) -> None:
         model_name = loaded_model.name()
 
@@ -221,7 +224,105 @@ class Importer:
             self._import_material_v20_v25(loaded_material)
 
     def _import_material_v14(self, loaded_material: LoadedMaterial) -> None:
-        pass
+        material_name = loaded_material.name()
+
+        debug_log(f"{loaded_material.version} - {material_name}")
+
+        texture_file = os.path.join(self.asset_path, "skins", material_name)
+        material_name = os.path.splitext(material_name)[0]
+
+        if bpy.data.materials.get(material_name):
+            return
+
+        try:
+            texture_image = bpy.data.images.load(texture_file, check_existing=True)
+            material = bpy.data.materials.new(material_name)
+            material.use_nodes = True
+            material.blend_method = "HASHED"
+            material.shadow_method = "HASHED"
+
+            nodes = material.node_tree.nodes
+            links = material.node_tree.links
+
+            output_node = None
+            for node in nodes:
+                if node.type != "OUTPUT_MATERIAL":
+                    nodes.remove(node)
+                    continue
+
+                if node.type == "OUTPUT_MATERIAL" and output_node == None:
+                    output_node = node
+
+            if output_node == None:
+                output_node = nodes.new(BLENDER_SHADERNODES.SHADERNODE_OUTPUTMATERIAL)
+
+            output_node.location = (300, 0)
+
+            mix_shader_node = nodes.new(BLENDER_SHADERNODES.SHADERNODE_MIXSHADER)
+            mix_shader_node.location = (100, 0)
+            links.new(
+                mix_shader_node.outputs[BLENDER_SHADERNODES.OUTPUT_MIXSHADER_SHADER],
+                output_node.inputs[BLENDER_SHADERNODES.INPUT_OUTPUTMATERIAL_SURFACE],
+            )
+
+            transparent_bsdf_node = nodes.new(
+                BLENDER_SHADERNODES.SHADERNODE_BSDFTRANSPARENT
+            )
+            transparent_bsdf_node.location = (-200, 100)
+            links.new(
+                transparent_bsdf_node.outputs[
+                    BLENDER_SHADERNODES.OUTPUT_BSDFTRANSPARENT_BSDF
+                ],
+                mix_shader_node.inputs[BLENDER_SHADERNODES.INPUT_MIXSHADER_SHADER1],
+            )
+
+            principled_bsdf_node = nodes.new(
+                BLENDER_SHADERNODES.SHADERNODE_BSDFPRINCIPLED
+            )
+            principled_bsdf_node.location = (-200, 0)
+            principled_bsdf_node.width = 200
+            links.new(
+                principled_bsdf_node.outputs[
+                    BLENDER_SHADERNODES.OUTPUT_BSDFTRANSPARENT_BSDF
+                ],
+                mix_shader_node.inputs[BLENDER_SHADERNODES.INPUT_MIXSHADER_SHADER2],
+            )
+
+            texture_node = nodes.new(BLENDER_SHADERNODES.SHADERNODE_TEXIMAGE)
+            texture_node.label = "colorMap"
+            texture_node.location = (-700, 0)
+            texture_node.image = texture_image
+            links.new(
+                texture_node.outputs[BLENDER_SHADERNODES.OUTPUT_TEXIMAGE_COLOR],
+                principled_bsdf_node.inputs[
+                    BLENDER_SHADERNODES.INPUT_BSDFPRINCIPLED_BASECOLOR
+                ],
+            )
+
+            invert_node = nodes.new(BLENDER_SHADERNODES.SHADERNODE_INVERT)
+            invert_node.location = (-400, 0)
+
+            invert_fac_default_value = 0.0
+            transparent_textures = ["foliage_masked", "foliage_detail"]
+            for tt in transparent_textures:
+                if tt in material_name.lower():
+                    invert_fac_default_value = 1.0
+                    break
+
+            invert_node.inputs[
+                BLENDER_SHADERNODES.INPUT_INVERT_FAC
+            ].default_value = invert_fac_default_value
+
+            links.new(
+                invert_node.outputs[BLENDER_SHADERNODES.OUTPUT_INVERT_COLOR],
+                mix_shader_node.inputs[BLENDER_SHADERNODES.INPUT_MIXSHADER_FAC],
+            )
+            links.new(
+                texture_node.outputs[BLENDER_SHADERNODES.OUTPUT_TEXIMAGE_ALPHA],
+                invert_node.inputs[BLENDER_SHADERNODES.INPUT_INVERT_COLOR],
+            )
+        except:
+            return
 
     def _import_material_v20_v25(self, loaded_material: LoadedMaterial) -> None:
         material_name = loaded_material.name()
@@ -450,7 +551,7 @@ class Importer:
             alpha=True,
         )
         texture_image.pixels = loaded_texture.data()
-        texture_image.file_format = 'TARGA'
+        texture_image.file_format = "TARGA"
         texture_image.pack()
 
         return texture_image
@@ -464,7 +565,7 @@ class TEXTURE_TYPES(metaclass=base_enum.BaseEnum):
 
 
 def import_ibsp(asset_path: str, file_path: str) -> None:
-    importer = Importer()
+    importer = Importer(asset_path=asset_path)
     loader = Loader(importer=importer)
     try:
         loader.import_bsp(asset_path=asset_path, file_path=file_path)
@@ -473,7 +574,7 @@ def import_ibsp(asset_path: str, file_path: str) -> None:
 
 
 def import_xmodel(asset_path: str, file_path: str) -> bpy.types.Object | bool:
-    importer = Importer()
+    importer = Importer(asset_path=asset_path)
     loader = Loader(importer=importer)
     try:
         loader.import_xmodel(

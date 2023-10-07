@@ -260,7 +260,7 @@ impl Ibsp {
                 position: vec3_from_vec(p).unwrap(),
                 normal: vec3_from_vec(n).unwrap(),
                 color: color_from_vec(color).unwrap(),
-                uv: uv_from_vec(uv).unwrap(),
+                uv: uv_from_vec(uv, true).unwrap(),
             })
         }
 
@@ -284,7 +284,7 @@ impl Ibsp {
                 position: vec3_from_vec(p).unwrap(),
                 normal: vec3_from_vec(n).unwrap(),
                 color: color_from_vec(color).unwrap(),
-                uv: uv_from_vec(uv).unwrap(),
+                uv: uv_from_vec(uv, false).unwrap(),
             })
         }
 

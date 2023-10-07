@@ -168,7 +168,7 @@ impl XModelSurf {
                 vertices.push(XModelSurfVertex {
                     normal,
                     color: [1.0, 1.0, 1.0, 1.0],
-                    uv: uv_from_vec(uv).unwrap(),
+                    uv: uv_from_vec(uv, true).unwrap(),
                     bone: vertex_bone_idx,
                     position,
                     weights: vec![XModelSurfWeight {
@@ -274,7 +274,7 @@ impl XModelSurf {
                 vertices.push(XModelSurfVertex {
                     normal,
                     color: color_from_vec(color).unwrap(),
-                    uv: uv_from_vec(uv).unwrap(),
+                    uv: uv_from_vec(uv, false).unwrap(),
                     bone: vertex_bone_idx,
                     position,
                     weights: vertex_weights,
@@ -356,7 +356,7 @@ impl XModelSurf {
                 vertices.push(XModelSurfVertex {
                     normal: vec3_from_vec(normal).unwrap(),
                     color: color_from_vec(color).unwrap(),
-                    uv: uv_from_vec(uv).unwrap(),
+                    uv: uv_from_vec(uv, false).unwrap(),
                     bone: vertex_bone_idx,
                     position: vec3_from_vec(position).unwrap(),
                     weights: vertex_weights,
