@@ -2,9 +2,10 @@ import bmesh
 import bpy
 import mathutils
 import os
+import math
 import traceback
 from .cod_asset_importer import (
-    # IBSP_VERSIONS,
+    IBSP_VERSIONS,
     XMODEL_VERSIONS,
     # XMODEL_TYPES,
     LoadedModel,
@@ -26,6 +27,7 @@ from . import (
 class Importer:
     def __init__(self, asset_path: str) -> None:
         self.asset_path = asset_path
+        self.ibps_entities_null = None
 
     def xmodel(self, loaded_model: LoadedModel) -> None:
         model_name = loaded_model.name()
@@ -134,7 +136,7 @@ class Importer:
 
         loaded_bones = loaded_model.bones()
         skeleton = None
-        if len(loaded_bones) > 0:
+        if len(loaded_bones) > 1:
             armature = bpy.data.armatures.new(f"{model_name}_armature")
             armature.display_type = "STICK"
 
@@ -214,8 +216,118 @@ class Importer:
         bpy.ops.object.mode_set(mode="OBJECT")
         bpy.ops.object.select_all(action="DESELECT")
 
+        if self.ibps_entities_null != None:
+            xmodel_null.parent = self.ibps_entities_null
+            xmodel_null.location = loaded_model.origin()
+            xmodel_null.scale = loaded_model.scale()
+            angles = loaded_model.angles()
+            xmodel_null.rotation_euler = (
+                math.radians(angles[2]),
+                math.radians(angles[0]),
+                math.radians(angles[1]),
+            )
+
     def ibsp(self, loaded_ibsp: LoadedIbsp) -> None:
-        debug_log(loaded_ibsp.name())
+        ibsp_name = loaded_ibsp.name()
+
+        ibsp_null = bpy.data.objects.new(ibsp_name, None)
+        bpy.context.scene.collection.objects.link(ibsp_null)
+
+        ibsp_geometry_null = bpy.data.objects.new(f"{ibsp_name}_geometry", None)
+        bpy.context.scene.collection.objects.link(ibsp_geometry_null)
+        ibsp_geometry_null.parent = ibsp_null
+
+        ibsp_entities_null = bpy.data.objects.new(f"{ibsp_name}_entities", None)
+        bpy.context.scene.collection.objects.link(ibsp_entities_null)
+        ibsp_entities_null.parent = ibsp_null
+
+        self.ibps_entities_null = ibsp_entities_null
+
+        surfaces = loaded_ibsp.surfaces()
+        for surface in surfaces:
+            name = f"{ibsp_name}_geometry"
+
+            mesh = bpy.data.meshes.new(name)
+            obj = bpy.data.objects.new(name, mesh)
+            obj.parent = ibsp_geometry_null
+
+            active_material_name = surface.material()
+            if loaded_ibsp.version() == IBSP_VERSIONS.V59:
+                pass  # TODO?
+
+            obj.active_material = bpy.data.materials.get(active_material_name)
+
+            bpy.context.scene.collection.objects.link(obj)
+            bpy.context.view_layer.objects.active = obj
+            obj.select_set(True)
+
+            mesh_data = bpy.context.object.data
+            bm = bmesh.new()
+
+            surface_uvs = []
+            surface_vertex_colors = []
+            surface_normals = []
+
+            vertices = surface.vertices()
+            for triangle in surface.triangles():
+                vertex1 = vertices[triangle[0]]
+                vertex2 = vertices[triangle[2]]
+                vertex3 = vertices[triangle[1]]
+
+                v1 = bm.verts.new(vertex1.position())
+                v2 = bm.verts.new(vertex2.position())
+                v3 = bm.verts.new(vertex3.position())
+
+                triangle_uvs = []
+                triangle_uvs.append(vertex1.uv())
+                triangle_uvs.append(vertex2.uv())
+                triangle_uvs.append(vertex3.uv())
+                surface_uvs.append(triangle_uvs)
+
+                triangle_vertex_colors = []
+                triangle_vertex_colors.append(vertex1.color())
+                triangle_vertex_colors.append(vertex2.color())
+                triangle_vertex_colors.append(vertex3.color())
+                surface_vertex_colors.append(triangle_vertex_colors)
+
+                triangle_normals = []
+                triangle_normals.append(vertex1.normal())
+                triangle_normals.append(vertex2.normal())
+                triangle_normals.append(vertex3.normal())
+                surface_normals.append(triangle_normals)
+
+                bm.verts.ensure_lookup_table()
+                bm.verts.index_update()
+
+                bm.faces.new((v1, v2, v3))
+                bm.faces.ensure_lookup_table()
+                bm.faces.index_update()
+
+            uv_layer = bm.loops.layers.uv.new()
+            vertex_color_layer = bm.loops.layers.color.new()
+            vertex_normal_buffer = []
+
+            for face, uv, color, normal in zip(
+                bm.faces, surface_uvs, surface_vertex_colors, surface_normals
+            ):
+                for loop, uv_data, color_data, normal_data in zip(
+                    face.loops, uv, color, normal
+                ):
+                    loop[uv_layer].uv = uv_data
+                    loop[vertex_color_layer] = color_data
+                    vertex_normal_buffer.append(normal_data)
+
+            bm.to_mesh(mesh_data)
+            bm.free()
+
+            # set normals
+            mesh.create_normals_split()
+            mesh.validate(clean_customdata=False)
+            mesh.normals_split_custom_set(vertex_normal_buffer)
+
+            polygon_count = len(mesh.polygons)
+            mesh.polygons.foreach_set("use_smooth", [True] * polygon_count)
+            mesh.use_auto_smooth = True
 
     def material(self, loaded_material: LoadedMaterial) -> None:
         if loaded_material.version() == XMODEL_VERSIONS.V14:

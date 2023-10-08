@@ -387,6 +387,10 @@ impl Ibsp {
     }
 
     fn parse_transform(transform: &str) -> Option<Vec3> {
+        if transform == "" {
+            return None
+        }
+
         let t = transform.split(' ').collect::<Vec<&str>>();
         let l = t.len();
 

@@ -23,7 +23,7 @@ class MapImporter(bpy.types.Operator):
                 os.path.join(os.path.dirname(self.filepath), os.pardir, os.pardir)
             )
 
-        importer.import_ibsp(asset_path=assetpath, file_path=self.file_path)
+        importer.import_ibsp(asset_path=assetpath, file_path=self.filepath)
         return {"FINISHED"}
 
     def invoke(self, context, event):

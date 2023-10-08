@@ -238,14 +238,14 @@ impl LoadedBone {
 
 #[pymethods]
 impl LoadedIbsp {
-    fn version(&self) -> i32 {
-        self.version
-    }
-
     fn name(&self) -> &str {
         &self.name
     }
 
+    fn version(&self) -> i32 {
+        self.version
+    }
+    
     fn materials(&mut self) -> Vec<String> {
         mem::take(&mut self.materials)
     }
