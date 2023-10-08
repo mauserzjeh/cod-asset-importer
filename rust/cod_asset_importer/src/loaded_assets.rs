@@ -31,8 +31,8 @@ pub struct LoadedIbspEntity {
 #[pyclass(module = "cod_asset_importer")]
 pub struct LoadedIbspSurface {
     material: String,
-    vertices: HashMap<u16, LoadedVertex>,
-    triangles: Vec<[u16; 3]>,
+    vertices: HashMap<u32, LoadedVertex>,
+    triangles: Vec<[u32; 3]>,
 }
 
 #[pyclass(module = "cod_asset_importer")]
@@ -284,11 +284,11 @@ impl LoadedIbspSurface {
         &self.material
     }
 
-    fn vertices(&mut self) -> HashMap<u16, LoadedVertex> {
+    fn vertices(&mut self) -> HashMap<u32, LoadedVertex> {
         mem::take(&mut self.vertices)
     }
 
-    fn triangles(&mut self) -> Vec<[u16; 3]> {
+    fn triangles(&mut self) -> Vec<[u32; 3]> {
         mem::take(&mut self.triangles)
     }
 }

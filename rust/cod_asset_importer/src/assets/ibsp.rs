@@ -73,11 +73,11 @@ pub struct IbspEntity {
 #[derive(Debug)]
 pub struct IbspSurface {
     pub material: String,
-    pub vertices: HashMap<u16, IbspVertex>,
-    pub triangles: Vec<Triangle>,
+    pub vertices: HashMap<u32, IbspVertex>,
+    pub triangles: Vec<[u32; 3]>,
 }
 
-#[pyclass(module = "cod_asset_importer", name="IBSP_VERSIONS")]
+#[pyclass(module = "cod_asset_importer", name = "IBSP_VERSIONS")]
 #[derive(ValidEnum)]
 #[valid_enum(i32)]
 pub enum IbspVersion {
@@ -388,7 +388,7 @@ impl Ibsp {
 
     fn parse_transform(transform: &str) -> Option<Vec3> {
         if transform == "" {
-            return None
+            return None;
         }
 
         let t = transform.split(' ').collect::<Vec<&str>>();
@@ -421,17 +421,17 @@ impl Ibsp {
 
         for ts in triangle_soups.iter() {
             let surface_material = materials[ts.material_idx as usize].get_name();
-            let mut surface_triangles: Vec<Triangle> = Vec::new();
-            let mut surface_vertices: HashMap<u16, IbspVertex> = HashMap::new();
+            let mut surface_triangles: Vec<[u32; 3]> = Vec::new();
+            let mut surface_vertices: HashMap<u32, IbspVertex> = HashMap::new();
 
             let tri_count = ts.triangles_length / 3;
             for i in 0..tri_count {
                 let tri_idx = (ts.triangles_offset / 3 + i as u32) as usize;
                 let tri = triangles[tri_idx];
 
-                let vert_idx_1 = (ts.vertices_offset + tri[0] as u32) as u16;
-                let vert_idx_2 = (ts.vertices_offset + tri[1] as u32) as u16;
-                let vert_idx_3 = (ts.vertices_offset + tri[2] as u32) as u16;
+                let vert_idx_1 = ts.vertices_offset + (tri[0] as u32);
+                let vert_idx_2 = ts.vertices_offset + (tri[1] as u32);
+                let vert_idx_3 = ts.vertices_offset + (tri[2] as u32);
 
                 surface_triangles.push([vert_idx_1, vert_idx_2, vert_idx_3]);
 
