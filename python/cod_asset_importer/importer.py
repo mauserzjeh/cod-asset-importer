@@ -1,3 +1,4 @@
+import glob
 import bmesh
 import bpy
 import mathutils
@@ -31,6 +32,7 @@ class Importer:
 
     def xmodel(self, loaded_model: LoadedModel) -> None:
         model_name = loaded_model.name()
+        model_version = loaded_model.version()
 
         xmodel_null = bpy.data.objects.new(model_name, None)
         bpy.context.scene.collection.objects.link(xmodel_null)
@@ -39,14 +41,18 @@ class Importer:
 
         materials = loaded_model.materials()
         for material in materials:
-            self.material(material)
+            append_asset_path = ""
+            if model_version == XMODEL_VERSIONS.V14:
+                append_asset_path = "skins"
+
+            self.material(loaded_material=material, append_asset_path=append_asset_path)
 
         for i, surface in enumerate(loaded_model.surfaces()):
             mesh = bpy.data.meshes.new(model_name)
             obj = bpy.data.objects.new(model_name, mesh)
 
             active_material_name = materials[i].name()
-            if loaded_model.version() == XMODEL_VERSIONS.V14:
+            if model_version == XMODEL_VERSIONS.V14:
                 active_material_name = os.path.splitext(active_material_name)[0]
 
             obj.active_material = bpy.data.materials.get(active_material_name)
@@ -252,9 +258,6 @@ class Importer:
             obj.parent = ibsp_geometry_null
 
             active_material_name = surface.material()
-            if loaded_ibsp.version() == IBSP_VERSIONS.V59:
-                pass  # TODO?
-
             obj.active_material = bpy.data.materials.get(active_material_name)
 
             bpy.context.scene.collection.objects.link(obj)
@@ -329,23 +332,37 @@ class Importer:
             mesh.polygons.foreach_set("use_smooth", [True] * polygon_count)
             mesh.use_auto_smooth = True
 
-    def material(self, loaded_material: LoadedMaterial) -> None:
+    def material(
+        self,
+        loaded_material: LoadedMaterial,
+        has_ext: bool = True,
+        append_asset_path: str = "",
+    ) -> None:
         if loaded_material.version() == XMODEL_VERSIONS.V14:
-            self._import_material_v14(loaded_material)
+            self._import_material_v14(
+                loaded_material=loaded_material,
+                has_ext=has_ext,
+                append_asset_path=append_asset_path,
+            )
         else:
-            self._import_material_v20_v25(loaded_material)
+            self._import_material_v20_v25(loaded_material=loaded_material)
 
-    def _import_material_v14(self, loaded_material: LoadedMaterial) -> None:
+    def _import_material_v14(
+        self, loaded_material: LoadedMaterial, has_ext: bool, append_asset_path: str
+    ) -> None:
         material_name = loaded_material.name()
 
-        debug_log(f"{loaded_material.version} - {material_name}")
+        texture_file = os.path.join(self.asset_path, append_asset_path, os.path.join(*material_name.split('/')))
+        if not has_ext:
+            for tex in glob.iglob(texture_file + '.*'):
+                texture_file = tex
+                break
 
-        texture_file = os.path.join(self.asset_path, "skins", material_name)
         material_name = os.path.splitext(material_name)[0]
 
         if bpy.data.materials.get(material_name):
             return
-
+        
         try:
             texture_image = bpy.data.images.load(texture_file, check_existing=True)
             material = bpy.data.materials.new(material_name)

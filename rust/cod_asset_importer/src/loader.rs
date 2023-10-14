@@ -7,12 +7,12 @@ use crate::{
         xmodelpart::{self, XModelPart},
         xmodelsurf::{self, XModelSurf},
     },
-    error_log,
+    error_log, info_log,
     loaded_assets::{LoadedBone, LoadedIbsp, LoadedMaterial, LoadedModel, LoadedTexture},
     utils::Result,
 };
 use pyo3::{exceptions::PyBaseException, prelude::*};
-use std::path::PathBuf;
+use std::{path::PathBuf, time::Instant};
 
 #[pyclass(module = "cod_asset_importer")]
 pub struct Loader {
@@ -29,6 +29,7 @@ impl Loader {
 
     #[pyo3(signature = (asset_path, file_path))]
     fn import_bsp(&self, py: Python, asset_path: &str, file_path: &str) -> PyResult<()> {
+        let start = Instant::now();
         let importer_ref = self.importer.as_ref(py);
 
         let loaded_ibsp = match Self::load_ibsp(PathBuf::from(file_path)) {
@@ -39,6 +40,7 @@ impl Loader {
             }
         };
 
+        let ibsp_name = loaded_ibsp.name.clone();
         let materials = loaded_ibsp.materials.clone();
         let entities = loaded_ibsp.entities.clone();
 
@@ -48,9 +50,15 @@ impl Loader {
                 version = XModelVersion::V20;
             }
 
-            match Self::load_material(PathBuf::from(asset_path), material, version as i32) {
+            let loaded_material = if loaded_ibsp.version == IbspVersion::V59 as i32 {
+                Ok(LoadedMaterial::new(material, Vec::new(), version as i32))
+            } else {
+                Self::load_material(PathBuf::from(asset_path), material, version as i32)
+            };
+
+            match loaded_material {
                 Ok(loaded_material) => {
-                    match importer_ref.call_method1("material", (loaded_material,)) {
+                    match importer_ref.call_method1("material", (loaded_material, false)) {
                         Ok(_) => (),
                         Err(error) => {
                             error_log!("{}", error)
@@ -92,6 +100,7 @@ impl Loader {
             }
         }
 
+        info_log!("{} imported in {:?}", ibsp_name, start.elapsed());
         Ok(())
     }
 
@@ -105,6 +114,8 @@ impl Loader {
         origin: [f32; 3],
         scale: [f32; 3],
     ) -> PyResult<()> {
+        let start = Instant::now();
+
         let importer_ref = self.importer.as_ref(py);
 
         let mut loaded_model =
@@ -119,9 +130,13 @@ impl Loader {
         loaded_model.set_angles(angles);
         loaded_model.set_origin(origin);
         loaded_model.set_scale(scale);
+        let model_name = loaded_model.name.clone();
 
         match importer_ref.call_method1("xmodel", (loaded_model,)) {
-            Ok(_) => Ok(()),
+            Ok(_) => {
+                info_log!("{} imported in {:?}", model_name, start.elapsed());
+                Ok(())
+            }
             Err(error) => {
                 error_log!("{}", error);
                 Err(error)

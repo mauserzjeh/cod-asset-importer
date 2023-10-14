@@ -12,7 +12,7 @@ use std::{collections::HashMap, mem};
 
 #[pyclass(module = "cod_asset_importer")]
 pub struct LoadedIbsp {
-    name: String,
+    pub name: String,
     pub version: i32,
     pub materials: Vec<String>,
     pub entities: Vec<LoadedIbspEntity>,
@@ -37,7 +37,7 @@ pub struct LoadedIbspSurface {
 
 #[pyclass(module = "cod_asset_importer")]
 pub struct LoadedModel {
-    name: String,
+    pub name: String,
     version: u16,
     angles: Vec3,
     origin: Vec3,
