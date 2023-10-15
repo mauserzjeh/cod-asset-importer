@@ -14,6 +14,8 @@ class MapImporter(bpy.types.Operator):
     filename_ext = ".d3dbsp"
     filter_glob: bpy.props.StringProperty(default="*.d3dbsp;*.bsp", options={"HIDDEN"})
 
+    threads: bpy.props.IntProperty(default=1, min=1, max=20, name="Import threads")
+
     def execute(self, context: Context) -> Set[int] | Set[str]:
         assetpath = os.path.abspath(
             os.path.join(os.path.dirname(self.filepath), os.pardir)
@@ -23,7 +25,7 @@ class MapImporter(bpy.types.Operator):
                 os.path.join(os.path.dirname(self.filepath), os.pardir, os.pardir)
             )
 
-        importer.import_ibsp(asset_path=assetpath, file_path=self.filepath)
+        importer.import_ibsp(asset_path=assetpath, file_path=self.filepath, threads=self.threads)
         return {"FINISHED"}
 
     def invoke(self, context, event):

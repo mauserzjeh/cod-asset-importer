@@ -9,7 +9,9 @@ use crate::{
     },
     error_log, info_log,
     loaded_assets::{LoadedBone, LoadedIbsp, LoadedMaterial, LoadedModel, LoadedTexture},
+    thread_pool::ThreadPool,
     utils::Result,
+    wait_group::WaitGroup,
 };
 use pyo3::{exceptions::PyBaseException, prelude::*};
 use std::{path::PathBuf, time::Instant};
@@ -17,14 +19,15 @@ use std::{path::PathBuf, time::Instant};
 #[pyclass(module = "cod_asset_importer")]
 pub struct Loader {
     importer: PyObject,
+    threads: usize,
 }
 
 #[pymethods]
 impl Loader {
     #[new]
-    #[pyo3(signature = (importer))]
-    fn new(importer: PyObject) -> Self {
-        Loader { importer }
+    #[pyo3(signature = (importer, threads))]
+    fn new(importer: PyObject, threads: usize) -> Self {
+        Loader { importer, threads }
     }
 
     #[pyo3(signature = (asset_path, file_path))]
@@ -44,7 +47,12 @@ impl Loader {
         let materials = loaded_ibsp.materials.clone();
         let entities = loaded_ibsp.entities.clone();
 
+        // let pool = ThreadPool::new(self.threads);
+        // let wg = WaitGroup::new();
+
         for material in materials {
+            let material_name = material.clone();
+            let start_material = Instant::now();
             let mut version = XModelVersion::V14;
             if loaded_ibsp.version == IbspVersion::V4 as i32 {
                 version = XModelVersion::V20;
@@ -59,7 +67,14 @@ impl Loader {
             match loaded_material {
                 Ok(loaded_material) => {
                     match importer_ref.call_method1("material", (loaded_material, false)) {
-                        Ok(_) => (),
+                        Ok(_) => {
+                            info_log!(
+                                "{} imported in {:?}",
+                                material_name,
+                                start_material.elapsed()
+                            );
+                            ()
+                        }
                         Err(error) => {
                             error_log!("{}", error)
                         }
@@ -69,6 +84,13 @@ impl Loader {
                     error_log!("{}", error);
                 }
             }
+
+            // let wg = wg.clone();
+            // pool.execute(move || {
+            //     // should execute load/import in the pool
+
+            //     drop(wg);
+            // });
         }
 
         match importer_ref.call_method1("ibsp", (loaded_ibsp,)) {

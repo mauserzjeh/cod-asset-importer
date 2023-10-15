@@ -693,9 +693,9 @@ class TEXTURE_TYPES(metaclass=base_enum.BaseEnum):
     SPECULARMAP = "specularMap"
 
 
-def import_ibsp(asset_path: str, file_path: str) -> None:
+def import_ibsp(asset_path: str, file_path: str, threads: int) -> None:
     importer = Importer(asset_path=asset_path)
-    loader = Loader(importer=importer)
+    loader = Loader(importer=importer, threads=threads)
     try:
         loader.import_bsp(asset_path=asset_path, file_path=file_path)
     except:
@@ -704,7 +704,7 @@ def import_ibsp(asset_path: str, file_path: str) -> None:
 
 def import_xmodel(asset_path: str, file_path: str) -> bpy.types.Object | bool:
     importer = Importer(asset_path=asset_path)
-    loader = Loader(importer=importer)
+    loader = Loader(importer=importer, threads=1)
     try:
         loader.import_xmodel(
             asset_path=asset_path,
