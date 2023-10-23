@@ -1,5 +1,7 @@
-use std::{sync::{atomic::{AtomicUsize, Ordering}, Mutex, Condvar, Arc}};
-
+use std::sync::{
+    atomic::{AtomicUsize, Ordering},
+    Arc, Condvar, Mutex,
+};
 
 struct Wg {
     counter: AtomicUsize,

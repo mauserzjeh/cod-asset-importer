@@ -36,6 +36,7 @@ pub struct LoadedIbspSurface {
 }
 
 #[pyclass(module = "cod_asset_importer")]
+#[derive(Clone)]
 pub struct LoadedModel {
     pub name: String,
     version: u16,
@@ -48,6 +49,7 @@ pub struct LoadedModel {
 }
 
 #[pyclass(module = "cod_asset_importer")]
+#[derive(Clone)]
 pub struct LoadedMaterial {
     name: String,
     version: i32,
@@ -55,6 +57,7 @@ pub struct LoadedMaterial {
 }
 
 #[pyclass(module = "cod_asset_importer")]
+#[derive(Clone)]
 pub struct LoadedTexture {
     name: String,
     texture_type: String,
@@ -64,12 +67,14 @@ pub struct LoadedTexture {
 }
 
 #[pyclass(module = "cod_asset_importer")]
+#[derive(Clone)]
 pub struct LoadedSurface {
     vertices: Vec<LoadedVertex>,
     triangles: Vec<[u16; 3]>,
 }
 
 #[pyclass(module = "cod_asset_importer")]
+#[derive(Clone)]
 pub struct LoadedVertex {
     normal: [f32; 3],
     color: [f32; 4],
@@ -87,6 +92,7 @@ pub struct LoadedWeight {
 }
 
 #[pyclass(module = "cod_asset_importer")]
+#[derive(Clone)]
 pub struct LoadedBone {
     name: String,
     parent: i8,
@@ -202,7 +208,7 @@ impl LoadedVertex {
 
     fn weights(&self) -> Vec<LoadedWeight> {
         self.weights.clone() // TODO review if can we do weights without cloning
-        // mem::take(&mut self.weights)
+                             // mem::take(&mut self.weights)
     }
 }
 
@@ -245,7 +251,7 @@ impl LoadedIbsp {
     fn version(&self) -> i32 {
         self.version
     }
-    
+
     fn materials(&mut self) -> Vec<String> {
         mem::take(&mut self.materials)
     }
@@ -334,6 +340,19 @@ impl LoadedModel {
         }
     }
 
+    pub fn new_default() -> Self {
+        LoadedModel {
+            name: String::new(),
+            version: 0,
+            angles: [0f32; 3],
+            origin: [0f32; 3],
+            scale: [0f32; 3],
+            materials: Vec::new(),
+            surfaces: Vec::new(),
+            bones: Vec::new(),
+        }
+    }
+
     pub fn set_angles(&mut self, angles: Vec3) {
         self.angles = angles;
     }
@@ -349,7 +368,11 @@ impl LoadedModel {
 
 impl LoadedMaterial {
     pub fn new(name: String, textures: Vec<LoadedTexture>, version: i32) -> Self {
-        LoadedMaterial { name, textures, version }
+        LoadedMaterial {
+            name,
+            textures,
+            version,
+        }
     }
 }
 

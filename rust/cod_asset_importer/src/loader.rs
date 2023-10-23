@@ -7,14 +7,21 @@ use crate::{
         xmodelpart::{self, XModelPart},
         xmodelsurf::{self, XModelSurf},
     },
-    error_log, info_log,
+    debug_log, error_log, info_log,
     loaded_assets::{LoadedBone, LoadedIbsp, LoadedMaterial, LoadedModel, LoadedTexture},
     thread_pool::ThreadPool,
-    utils::Result,
+    utils::{error::Error, Result},
     wait_group::WaitGroup,
 };
 use pyo3::{exceptions::PyBaseException, prelude::*};
-use std::{path::PathBuf, time::Instant};
+use core::time;
+use std::{
+    collections::HashMap,
+    path::PathBuf,
+    sync::{mpsc::channel, Arc, Mutex},
+    time::Instant,
+    thread,
+};
 
 #[pyclass(module = "cod_asset_importer")]
 pub struct Loader {
@@ -46,9 +53,6 @@ impl Loader {
         let ibsp_name = loaded_ibsp.name.clone();
         let materials = loaded_ibsp.materials.clone();
         let entities = loaded_ibsp.entities.clone();
-
-        // let pool = ThreadPool::new(self.threads);
-        // let wg = WaitGroup::new();
 
         for material in materials {
             let material_name = material.clone();
@@ -84,13 +88,6 @@ impl Loader {
                     error_log!("{}", error);
                 }
             }
-
-            // let wg = wg.clone();
-            // pool.execute(move || {
-            //     // should execute load/import in the pool
-
-            //     drop(wg);
-            // });
         }
 
         match importer_ref.call_method1("ibsp", (loaded_ibsp,)) {
@@ -100,28 +97,72 @@ impl Loader {
             }
         }
 
+        let model_cache = ModelCache::new();
+        let (sender, receiver) = channel::<(LoadedModel, Instant)>();
+        let pool = ThreadPool::new(self.threads);
+
         for entity in entities {
-            match Self::import_xmodel(
-                &self,
-                py,
-                asset_path,
-                PathBuf::from(asset_path)
-                    .join(xmodel::ASSETPATH)
-                    .join(entity.name)
-                    .display()
-                    .to_string()
-                    .as_str(),
-                entity.angles,
-                entity.origin,
-                entity.scale,
-            ) {
-                Ok(_) => (),
+            // 1. get model from cache
+            // 2. if found check state
+            // 2.a if state == cached send it to channel
+            // 2.b if state == loading, use the waitgroup for waiting for the loading
+            // 2.c check cache state again if the model is loaded, create an error if not
+            // 3. if not found in cache
+            // 3.a set in cache as loading
+            // 3.b load model
+            // 3.c set in cache as cached
+
+            let mut cache = model_cache.clone();
+            let sender_clone = sender.clone();
+            let entity_name = entity.name.clone();
+            let entity_asset_path = PathBuf::from(asset_path);
+            let entity_path = PathBuf::from(asset_path)
+                .join(xmodel::ASSETPATH)
+                .join(entity.name);
+
+            pool.execute(move || {
+                let model_start = Instant::now();
+                let mut loaded_model = match Self::load_xmodel_cached(
+                    entity_asset_path.clone(),
+                    entity_path,
+                    entity_name,
+                    &mut cache,
+                ) {
+                    Ok(loaded_model) => loaded_model,
+                    Err(error) => {
+                        error_log!("{}", error);
+                        return;
+                    }
+                };
+
+                loaded_model.set_angles(entity.angles);
+                loaded_model.set_origin(entity.origin);
+                loaded_model.set_scale(entity.scale);
+
+                sender_clone.send((loaded_model, model_start)).unwrap();
+            });
+        }
+
+        debug_log!("looped all entities");
+
+        drop(sender);
+
+        for r in receiver {
+            let loaded_model = r.0;
+            let model_start = r.1;
+            let model_name = loaded_model.name.clone();
+            match importer_ref.call_method1("xmodel", (loaded_model,)) {
+                Ok(_) => {
+                    // info_log!("{} imported in {:?}", model_name, model_start.elapsed());
+                }
                 Err(error) => {
                     error_log!("{}", error);
                 }
             }
         }
 
+
+        debug_log!("looped all entities 2");
         info_log!("{} imported in {:?}", ibsp_name, start.elapsed());
         Ok(())
     }
@@ -233,6 +274,53 @@ impl Loader {
         ))
     }
 
+    fn load_xmodel_cached(
+        asset_path: PathBuf,
+        file_path: PathBuf,
+        model_name: String,
+        cache: &mut ModelCache,
+    ) -> Result<LoadedModel> {
+        match cache.get_model(&model_name) {
+            Some(cached_model) => match cached_model.status {
+                LoadedAssetStatus::Cached => Ok(cached_model.loaded_model),
+                LoadedAssetStatus::Loading(wg) => {
+                    debug_log!("waiting for model {}", model_name);
+                    let wg = wg.clone();
+                    wg.wait();
+
+
+                    let cached_model = cache.get_model(&model_name).unwrap();
+                    let LoadedAssetStatus::Cached = cached_model.status  else {
+                            panic!("model still not cached");
+                        };
+                    
+                    debug_log!("model {} cached on another thread", model_name);
+                    Ok(cached_model.loaded_model)
+                }
+            },
+            None => {
+                cache.set_model(
+                    &model_name,
+                    LoadedModel::new_default(),
+                    LoadedAssetStatus::Loading(WaitGroup::new()),
+                );
+
+                let loaded_model = match Self::load_xmodel(asset_path, file_path) {
+                    Ok(loaded_model) => loaded_model,
+                    Err(error) => {
+                        error_log!("{}", error);
+                        return Err(Error::new(error.to_string()));
+                    }
+                };
+
+                thread::sleep(time::Duration::from_secs(2));
+                cache.set_model(&model_name, loaded_model.clone(), LoadedAssetStatus::Cached);
+                debug_log!("model {} cached", model_name);
+                Ok(loaded_model)
+            }
+        }
+    }
+
     fn load_material(
         asset_path: PathBuf,
         material_name: String,
@@ -259,5 +347,55 @@ impl Loader {
         }
 
         Ok(LoadedMaterial::new(material_name, loaded_textures, version))
+    }
+}
+
+#[derive(Clone)]
+struct CachedModel {
+    loaded_model: LoadedModel,
+    status: LoadedAssetStatus,
+}
+
+#[derive(Clone)]
+enum LoadedAssetStatus {
+    Loading(WaitGroup),
+    Cached,
+}
+#[derive(Clone)]
+struct ModelCache {
+    loaded_models: Arc<Mutex<HashMap<String, CachedModel>>>,
+}
+
+impl ModelCache {
+    fn new() -> Self {
+        ModelCache {
+            loaded_models: Arc::new(Mutex::new(HashMap::new())),
+        }
+    }
+
+    fn set_model(
+        &mut self,
+        model_name: &str,
+        loaded_model: LoadedModel,
+        status: LoadedAssetStatus,
+    ) {
+        let mut loaded_models = self.loaded_models.lock().unwrap();
+        loaded_models.insert(
+            String::from(model_name),
+            CachedModel {
+                loaded_model,
+                status,
+            },
+        );
+    }
+
+    fn get_model(&self, loaded_model_name: &str) -> Option<CachedModel> {
+        let loaded_models = self.loaded_models.lock().unwrap();
+
+        if let Some(model) = loaded_models.get(loaded_model_name) {
+            Some(model.clone())
+        } else {
+            None
+        }
     }
 }

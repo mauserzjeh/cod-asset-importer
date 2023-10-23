@@ -7,5 +7,6 @@
     "rust-analyzer.linkedProjects": [
         ".\\rust\\cod_asset_importer\\Cargo.toml",
         ".\\rust\\valid_enum\\Cargo.toml"
-    ]
+    ],
+    "cmake.configureOnOpen": false
 }
