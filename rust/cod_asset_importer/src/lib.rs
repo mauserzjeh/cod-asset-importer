@@ -2,8 +2,6 @@ mod assets;
 mod loaded_assets;
 mod loader;
 mod utils;
-mod thread_pool;
-mod wait_group;
 
 use loaded_assets::{
     LoadedBone, LoadedIbsp, LoadedIbspEntity, LoadedIbspSurface, LoadedMaterial, LoadedModel,

@@ -9,18 +9,18 @@ use crate::{
     },
     debug_log, error_log, info_log,
     loaded_assets::{LoadedBone, LoadedIbsp, LoadedMaterial, LoadedModel, LoadedTexture},
-    thread_pool::ThreadPool,
     utils::{error::Error, Result},
-    wait_group::WaitGroup,
 };
-use pyo3::{exceptions::PyBaseException, prelude::*};
 use core::time;
+use crossbeam_utils::sync::WaitGroup;
+use pyo3::{exceptions::PyBaseException, prelude::*};
+use rayon::ThreadPoolBuilder;
 use std::{
     collections::HashMap,
     path::PathBuf,
     sync::{mpsc::channel, Arc, Mutex},
-    time::Instant,
     thread,
+    time::Instant,
 };
 
 #[pyclass(module = "cod_asset_importer")]
@@ -99,7 +99,10 @@ impl Loader {
 
         let model_cache = ModelCache::new();
         let (sender, receiver) = channel::<(LoadedModel, Instant)>();
-        let pool = ThreadPool::new(self.threads);
+        let pool = ThreadPoolBuilder::new()
+            .num_threads(self.threads)
+            .build()
+            .unwrap();
 
         for entity in entities {
             // 1. get model from cache
@@ -120,8 +123,9 @@ impl Loader {
                 .join(xmodel::ASSETPATH)
                 .join(entity.name);
 
-            pool.execute(move || {
-                let model_start = Instant::now();
+            let model_start = Instant::now();
+
+            pool.spawn(move || {
                 let mut loaded_model = match Self::load_xmodel_cached(
                     entity_asset_path.clone(),
                     entity_path,
@@ -160,7 +164,6 @@ impl Loader {
                 }
             }
         }
-
 
         debug_log!("looped all entities 2");
         info_log!("{} imported in {:?}", ibsp_name, start.elapsed());
@@ -288,21 +291,22 @@ impl Loader {
                     let wg = wg.clone();
                     wg.wait();
 
-
                     let cached_model = cache.get_model(&model_name).unwrap();
                     let LoadedAssetStatus::Cached = cached_model.status  else {
                             panic!("model still not cached");
                         };
-                    
+
                     debug_log!("model {} cached on another thread", model_name);
                     Ok(cached_model.loaded_model)
                 }
             },
             None => {
+                let wg = WaitGroup::new();
+
                 cache.set_model(
                     &model_name,
                     LoadedModel::new_default(),
-                    LoadedAssetStatus::Loading(WaitGroup::new()),
+                    LoadedAssetStatus::Loading(wg.clone()),
                 );
 
                 let loaded_model = match Self::load_xmodel(asset_path, file_path) {
@@ -313,6 +317,7 @@ impl Loader {
                     }
                 };
 
+                drop(wg);
                 thread::sleep(time::Duration::from_secs(2));
                 cache.set_model(&model_name, loaded_model.clone(), LoadedAssetStatus::Cached);
                 debug_log!("model {} cached", model_name);
