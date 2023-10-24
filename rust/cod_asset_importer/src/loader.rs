@@ -318,7 +318,7 @@ impl Loader {
                 };
 
                 drop(wg);
-                thread::sleep(time::Duration::from_secs(2));
+                thread::sleep(time::Duration::from_secs(2)); // just for debug purposes
                 cache.set_model(&model_name, loaded_model.clone(), LoadedAssetStatus::Cached);
                 debug_log!("model {} cached", model_name);
                 Ok(loaded_model)
