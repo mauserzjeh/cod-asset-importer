@@ -9,7 +9,7 @@ use crate::{
     },
     error_log, info_log,
     loaded_assets::{LoadedBone, LoadedIbsp, LoadedMaterial, LoadedModel, LoadedTexture},
-    utils::{error::Error, Result},
+    utils::{error::Error, Result}, debug_log,
 };
 use crossbeam_utils::sync::WaitGroup;
 use pyo3::{exceptions::PyBaseException, prelude::*};
@@ -298,7 +298,6 @@ impl Loader {
                 };
 
                 cache.set_model(&model_name, loaded_model.clone(), LoadedAssetStatus::Cached);
-                drop(wg);
                 Ok(loaded_model)
             }
         }
