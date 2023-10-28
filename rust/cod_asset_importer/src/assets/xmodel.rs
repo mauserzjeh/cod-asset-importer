@@ -18,7 +18,7 @@ pub struct XModelLod {
     pub materials: Vec<String>,
 }
 
-#[pyclass(module= "cod_asset_importer", name="XMODEL_TYPES")]
+#[pyclass(module = "cod_asset_importer", name = "XMODEL_TYPES")]
 #[derive(ValidEnum)]
 #[valid_enum(u8)]
 pub enum XModelType {
@@ -29,7 +29,7 @@ pub enum XModelType {
     Viewhands = 52,
 }
 
-#[pyclass(module= "cod_asset_importer", name="XMODEL_VERSIONS")]
+#[pyclass(module = "cod_asset_importer", name = "XMODEL_VERSIONS")]
 #[derive(ValidEnum)]
 #[valid_enum(u16)]
 pub enum XModelVersion {
@@ -55,17 +55,17 @@ impl XModel {
         match XModelVersion::valid(version) {
             Some(XModelVersion::V14) => {
                 xmodel.load_v14(&mut file)?;
-                return Ok(xmodel);
+                Ok(xmodel)
             }
             Some(XModelVersion::V20) => {
                 xmodel.load_v20(&mut file)?;
-                return Ok(xmodel);
+                Ok(xmodel)
             }
             Some(XModelVersion::V25) => {
                 xmodel.load_v25(&mut file)?;
-                return Ok(xmodel);
+                Ok(xmodel)
             }
-            None => return Err(Error::new(format!("invalid xmodel version {}", version))),
+            None => Err(Error::new(format!("invalid xmodel version {}", version))),
         }
     }
 
@@ -76,7 +76,7 @@ impl XModel {
             let distance = binary::read::<f32>(file)?;
             let name = binary::read_string(file)?;
 
-            if name.len() > 0 {
+            if !name.is_empty() {
                 self.lods.push(XModelLod {
                     name,
                     distance,
@@ -111,7 +111,7 @@ impl XModel {
             let distance = binary::read::<f32>(file)?;
             let name = binary::read_string(file)?;
 
-            if name.len() > 0 {
+            if !name.is_empty() {
                 self.lods.push(XModelLod {
                     name,
                     distance,
@@ -146,7 +146,7 @@ impl XModel {
             let distance = binary::read::<f32>(file)?;
             let name = binary::read_string(file)?;
 
-            if name.len() > 0 {
+            if !name.is_empty() {
                 self.lods.push(XModelLod {
                     name,
                     distance,

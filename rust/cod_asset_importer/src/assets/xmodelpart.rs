@@ -175,22 +175,20 @@ impl XModelPart {
         match XModelVersion::valid(version) {
             Some(XModelVersion::V14) => {
                 xmodel_part.load_v14(&mut file)?;
-                return Ok(xmodel_part);
+                Ok(xmodel_part)
             }
             Some(XModelVersion::V20) => {
                 xmodel_part.load_v20(&mut file)?;
-                return Ok(xmodel_part);
+                Ok(xmodel_part)
             }
             Some(XModelVersion::V25) => {
                 xmodel_part.load_v25(&mut file)?;
-                return Ok(xmodel_part);
+                Ok(xmodel_part)
             }
-            None => {
-                return Err(Error::new(format!(
-                    "invalid xmodelpart version {}",
-                    version
-                )))
-            }
+            None => Err(Error::new(format!(
+                "invalid xmodelpart version {}",
+                version
+            ))),
         }
     }
 

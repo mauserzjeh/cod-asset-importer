@@ -190,6 +190,6 @@ pub fn skip(f: &mut File, n: i64) -> Result<u64> {
 }
 
 pub fn current_offset(f: &mut File) -> Result<u64> {
-    let offset = f.seek(SeekFrom::Current(0))?;
+    let offset = f.stream_position()?;
     Ok(offset)
 }

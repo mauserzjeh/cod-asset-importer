@@ -3,14 +3,10 @@ mod loaded_assets;
 mod loader;
 mod utils;
 
+use assets::{ibsp::IbspVersion, xmodel::XModelType, xmodel::XModelVersion};
 use loaded_assets::{
     LoadedBone, LoadedIbsp, LoadedIbspEntity, LoadedIbspSurface, LoadedMaterial, LoadedModel,
     LoadedSurface, LoadedTexture, LoadedVertex, LoadedWeight,
-};
-use assets::{
-    ibsp::IbspVersion,
-    xmodel::XModelType,
-    xmodel::XModelVersion,
 };
 use loader::Loader;
 use pyo3::prelude::*;

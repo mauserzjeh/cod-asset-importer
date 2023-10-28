@@ -8,10 +8,6 @@ use std::{
 use super::xmodel::XModelVersion;
 
 pub const ASSETPATH: &str = "materials";
-pub const TEXTURE_TYPE_COLORMAP: &str = "colorMap";
-pub const TEXTURE_TYPE_DETAILMAP: &str = "detailMap";
-pub const TEXTURE_TYPE_NORMALMAP: &str = "normalMap";
-pub const TEXTURE_TYPE_SPECULARMAP: &str = "specularMap";
 
 pub struct Material {
     techset: String,

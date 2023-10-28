@@ -58,7 +58,7 @@ pub enum IWiFormat {
 
 impl IWi {
     pub fn load(file_path: PathBuf) -> Result<IWi> {
-        let mut file = File::open(&file_path)?;
+        let mut file = File::open(file_path)?;
         Self::read_header(&mut file)?;
         let info = Self::read_info(&mut file)?;
 
@@ -68,7 +68,7 @@ impl IWi {
         let mipmap = Self::calculate_highest_mipmap(offsets, current_offset, file_size);
         file.seek(SeekFrom::Start(mipmap.offset as u64))?;
         let raw_texture_data = binary::read_vec::<u8>(&mut file, mipmap.size as usize)?;
-        if raw_texture_data.len() == 0 {
+        if raw_texture_data.is_empty() {
             return Err(Error::new(String::from("texture data length is 0")));
         }
 
@@ -148,7 +148,7 @@ impl IWi {
             }
         }
 
-        return mipmaps[max_idx];
+        mipmaps[max_idx]
     }
 
     fn decode_data(data: Vec<u8>, info: IWiInfo) -> Result<Vec<f32>> {

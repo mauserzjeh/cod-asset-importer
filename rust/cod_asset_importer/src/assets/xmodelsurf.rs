@@ -54,22 +54,20 @@ impl XModelSurf {
         match XModelVersion::valid(version) {
             Some(XModelVersion::V14) => {
                 xmodel_surf.load_v14(&mut file, xmodel_part)?;
-                return Ok(xmodel_surf);
+                Ok(xmodel_surf)
             }
             Some(XModelVersion::V20) => {
                 xmodel_surf.load_v20(&mut file, xmodel_part)?;
-                return Ok(xmodel_surf);
+                Ok(xmodel_surf)
             }
             Some(XModelVersion::V25) => {
                 xmodel_surf.load_v25(&mut file)?;
-                return Ok(xmodel_surf);
+                Ok(xmodel_surf)
             }
-            None => {
-                return Err(Error::new(format!(
-                    "invalid xmodelsurf version {}",
-                    version
-                )))
-            }
+            None => Err(Error::new(format!(
+                "invalid xmodelsurf version {}",
+                version
+            ))),
         }
     }
 

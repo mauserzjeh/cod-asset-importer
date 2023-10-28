@@ -162,7 +162,7 @@ impl Ibsp {
     fn read_materials(
         file: &mut File,
         version: i32,
-        lumps: &Vec<IbspLump>,
+        lumps: &[IbspLump],
     ) -> Result<Vec<IbspMaterial>> {
         let mut materials: Vec<IbspMaterial> = Vec::new();
 
@@ -190,7 +190,7 @@ impl Ibsp {
     fn read_trianglesoups(
         file: &mut File,
         version: i32,
-        lumps: &Vec<IbspLump>,
+        lumps: &[IbspLump],
     ) -> Result<Vec<IbspTriangleSoup>> {
         let mut trianglesoups: Vec<IbspTriangleSoup> = Vec::new();
 
@@ -224,11 +224,7 @@ impl Ibsp {
         Ok(trianglesoups)
     }
 
-    fn read_vertices(
-        file: &mut File,
-        version: i32,
-        lumps: &Vec<IbspLump>,
-    ) -> Result<Vec<IbspVertex>> {
+    fn read_vertices(file: &mut File, version: i32, lumps: &[IbspLump]) -> Result<Vec<IbspVertex>> {
         if version == IbspVersion::V59 as i32 {
             let vertices_lump_idx = IbspLumpIndexV59::Vertices as usize;
             let vertices_lump = lumps[vertices_lump_idx];
@@ -291,11 +287,7 @@ impl Ibsp {
         Ok(vertices)
     }
 
-    fn read_triangles(
-        file: &mut File,
-        version: i32,
-        lumps: &Vec<IbspLump>,
-    ) -> Result<Vec<Triangle>> {
+    fn read_triangles(file: &mut File, version: i32, lumps: &[IbspLump]) -> Result<Vec<Triangle>> {
         let mut triangles: Vec<Triangle> = Vec::new();
 
         let mut triangles_lump_idx = IbspLumpIndexV59::Triangles as usize;
@@ -315,11 +307,7 @@ impl Ibsp {
         Ok(triangles)
     }
 
-    fn read_entities(
-        file: &mut File,
-        version: i32,
-        lumps: &Vec<IbspLump>,
-    ) -> Result<Vec<IbspEntity>> {
+    fn read_entities(file: &mut File, version: i32, lumps: &[IbspLump]) -> Result<Vec<IbspEntity>> {
         let mut entities: Vec<IbspEntity> = Vec::new();
 
         let mut entities_lump_idx = IbspLumpIndexV59::Entities as usize;
@@ -338,14 +326,22 @@ impl Ibsp {
         entities_string = entities_string.replace("}\n{\n", "},\n{\n");
         entities_string = entities_string.replace("\"\n\"", "\",\n\"");
         entities_string = entities_string.replace("\" \"", "\":\"");
-        entities_string = entities_string.replace("\\", "/");
+        entities_string = entities_string.replace('\\', "/");
 
         let re = regex::Regex::new(r"^xmodel\/(.*)").unwrap();
 
         let entities_json = serde_json::from_str::<Vec<serde_json::Value>>(&entities_string)?;
         for entity in entities_json.iter() {
-            let Some(name) = entity.get("model").unwrap_or(&serde_json::json!("")).as_str().and_then(|model| re.captures(model)).and_then(|caps| caps.get(1)).and_then(|m| Some(m.as_str())).and_then(|name| Some(name.to_string())) else {
-                continue
+            let def = serde_json::json!("");
+            let Some(name) = entity
+                .get("model")
+                .unwrap_or(&def)
+                .as_str()
+                .and_then(|model| re.captures(model))
+                .and_then(|caps| caps.get(1))
+                .map(|m| m.as_str())
+            else {
+                continue;
             };
 
             let angles = Self::parse_transform(
@@ -376,7 +372,7 @@ impl Ibsp {
             .unwrap_or([1f32; 3]);
 
             entities.push(IbspEntity {
-                name,
+                name: name.to_string(),
                 angles,
                 origin,
                 scale,
@@ -387,7 +383,7 @@ impl Ibsp {
     }
 
     fn parse_transform(transform: &str) -> Option<Vec3> {
-        if transform == "" {
+        if transform.is_empty() {
             return None;
         }
 
@@ -413,7 +409,7 @@ impl Ibsp {
 
     fn load_surfaces(
         triangle_soups: Vec<IbspTriangleSoup>,
-        materials: &Vec<IbspMaterial>,
+        materials: &[IbspMaterial],
         vertices: Vec<IbspVertex>,
         triangles: Vec<Triangle>,
     ) -> Vec<IbspSurface> {

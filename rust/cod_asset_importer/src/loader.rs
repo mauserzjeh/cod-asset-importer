@@ -7,11 +7,10 @@ use crate::{
         xmodelpart::{self, XModelPart},
         xmodelsurf::{self, XModelSurf},
     },
-    debug_log, error_log, info_log,
+    error_log, info_log,
     loaded_assets::{LoadedBone, LoadedIbsp, LoadedMaterial, LoadedModel, LoadedTexture},
     utils::{error::Error, Result},
 };
-use core::time;
 use crossbeam_utils::sync::WaitGroup;
 use pyo3::{exceptions::PyBaseException, prelude::*};
 use rayon::ThreadPoolBuilder;
@@ -19,7 +18,6 @@ use std::{
     collections::HashMap,
     path::PathBuf,
     sync::{mpsc::channel, Arc, Mutex},
-    thread,
     time::Instant,
 };
 
@@ -73,11 +71,10 @@ impl Loader {
                     match importer_ref.call_method1("material", (loaded_material, false)) {
                         Ok(_) => {
                             info_log!(
-                                "{} imported in {:?}",
+                                "[MATERIAL] {} [{:?}]",
                                 material_name,
                                 start_material.elapsed()
                             );
-                            ()
                         }
                         Err(error) => {
                             error_log!("{}", error)
@@ -105,16 +102,6 @@ impl Loader {
             .unwrap();
 
         for entity in entities {
-            // 1. get model from cache
-            // 2. if found check state
-            // 2.a if state == cached send it to channel
-            // 2.b if state == loading, use the waitgroup for waiting for the loading
-            // 2.c check cache state again if the model is loaded, create an error if not
-            // 3. if not found in cache
-            // 3.a set in cache as loading
-            // 3.b load model
-            // 3.c set in cache as cached
-
             let mut cache = model_cache.clone();
             let sender_clone = sender.clone();
             let entity_name = entity.name.clone();
@@ -123,9 +110,8 @@ impl Loader {
                 .join(xmodel::ASSETPATH)
                 .join(entity.name);
 
-            let model_start = Instant::now();
-
             pool.spawn(move || {
+                let model_start = Instant::now();
                 let mut loaded_model = match Self::load_xmodel_cached(
                     entity_asset_path.clone(),
                     entity_path,
@@ -147,8 +133,6 @@ impl Loader {
             });
         }
 
-        debug_log!("looped all entities");
-
         drop(sender);
 
         for r in receiver {
@@ -157,7 +141,7 @@ impl Loader {
             let model_name = loaded_model.name.clone();
             match importer_ref.call_method1("xmodel", (loaded_model,)) {
                 Ok(_) => {
-                    // info_log!("{} imported in {:?}", model_name, model_start.elapsed());
+                    info_log!("[MODEL] {} [{:?}]", model_name, model_start.elapsed());
                 }
                 Err(error) => {
                     error_log!("{}", error);
@@ -165,8 +149,7 @@ impl Loader {
             }
         }
 
-        debug_log!("looped all entities 2");
-        info_log!("{} imported in {:?}", ibsp_name, start.elapsed());
+        info_log!("[MAP] {} [{:?}]", ibsp_name, start.elapsed());
         Ok(())
     }
 
@@ -200,7 +183,7 @@ impl Loader {
 
         match importer_ref.call_method1("xmodel", (loaded_model,)) {
             Ok(_) => {
-                info_log!("{} imported in {:?}", model_name, start.elapsed());
+                info_log!("[MODEL] {} [{:?}]", model_name, start.elapsed());
                 Ok(())
             }
             Err(error) => {
@@ -287,18 +270,13 @@ impl Loader {
             Some(cached_model) => match cached_model.status {
                 LoadedAssetStatus::Cached => Ok(cached_model.loaded_model),
                 LoadedAssetStatus::Loading(wg) => {
-                    debug_log!("waiting for model {}", model_name);
-                    let wg = wg.clone();
                     wg.wait();
 
-                    debug_log!("model {} waited", model_name);
-                    
                     let cached_model = cache.get_model(&model_name).unwrap();
-                    let LoadedAssetStatus::Cached = cached_model.status  else {
-                            panic!("model still not cached");
-                        };
+                    let LoadedAssetStatus::Cached = cached_model.status else {
+                        panic!("model {} still not cached", model_name);
+                    };
 
-                    debug_log!("model {} cached on another thread", model_name);
                     Ok(cached_model.loaded_model)
                 }
             },
@@ -319,10 +297,8 @@ impl Loader {
                     }
                 };
 
-                drop(wg);
-                thread::sleep(time::Duration::from_secs(2)); // just for debug purposes
                 cache.set_model(&model_name, loaded_model.clone(), LoadedAssetStatus::Cached);
-                debug_log!("model {} cached", model_name);
+                drop(wg);
                 Ok(loaded_model)
             }
         }
@@ -398,11 +374,6 @@ impl ModelCache {
 
     fn get_model(&self, loaded_model_name: &str) -> Option<CachedModel> {
         let loaded_models = self.loaded_models.lock().unwrap();
-
-        if let Some(model) = loaded_models.get(loaded_model_name) {
-            Some(model.clone())
-        } else {
-            None
-        }
+        loaded_models.get(loaded_model_name).cloned()
     }
 }

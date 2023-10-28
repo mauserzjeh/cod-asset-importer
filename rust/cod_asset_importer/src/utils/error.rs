@@ -1,5 +1,5 @@
-use std::{fmt, io, string};
 use pyo3::exceptions::PyBaseException;
+use std::{fmt, io, string};
 
 #[derive(Debug)]
 pub struct Error {

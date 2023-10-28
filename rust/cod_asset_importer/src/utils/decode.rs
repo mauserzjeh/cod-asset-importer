@@ -39,17 +39,17 @@ pub fn decode_dxt1(input: Vec<u8>, width: usize, height: usize) -> Vec<f32> {
     let block_count_x = (width + 3) / 4;
     let block_count_y = (height + 3) / 4;
     let length_last = (width + 3) % 4 + 1;
-    let mut colors = vec![0u32; 4];
-    let mut buffer = vec![0f32; 64];
+    let mut colors = [0u32; 4];
+    let mut buffer = [0f32; 64];
     let mut output = vec![0f32; width * height * 4];
 
     for y in 0..block_count_y {
         for x in 0..block_count_x {
-            let c0 = (input[offset + 0] as u32) | (input[offset + 1] as u32) << 8;
+            let c0 = (input[offset] as u32) | (input[offset + 1] as u32) << 8;
             let c1 = (input[offset + 2] as u32) | (input[offset + 3] as u32) << 8;
 
-            let (r0, g0, b0) = unpack_565(c0 as u32);
-            let (r1, g1, b1) = unpack_565(c1 as u32);
+            let (r0, g0, b0) = unpack_565(c0);
+            let (r1, g1, b1) = unpack_565(c1);
 
             colors[0] = pack_rgba(r0, g0, b0, 255);
             colors[1] = pack_rgba(r1, g1, b1, 255);
@@ -69,7 +69,7 @@ pub fn decode_dxt1(input: Vec<u8>, width: usize, height: usize) -> Vec<f32> {
             for i in 0..16 {
                 let idx = i * 4;
                 let (r, g, b, a) = unpack_rgba(colors[(bitcode & 0x3) as usize]);
-                buffer[idx + 0] = r as f32 / 255.0;
+                buffer[idx] = r as f32 / 255.0;
                 buffer[idx + 1] = g as f32 / 255.0;
                 buffer[idx + 2] = b as f32 / 255.0;
                 buffer[idx + 3] = a as f32 / 255.0;
@@ -87,11 +87,9 @@ pub fn decode_dxt1(input: Vec<u8>, width: usize, height: usize) -> Vec<f32> {
             let mut j = y * 4;
             while i < 4 && j < height {
                 let bidx = (i * 4 * 4) as usize;
-                let oidx = ((j * width + x * 4) * 4) as usize;
+                let oidx = (j * width + x * 4) * 4;
 
-                for k in 0..length as usize {
-                    output[oidx + k] = buffer[bidx + k];
-                }
+                output[oidx..(length + oidx)].copy_from_slice(&buffer[bidx..(length + bidx)]);
 
                 i += 1;
                 j += 1;
@@ -108,9 +106,9 @@ pub fn decode_dxt3(input: Vec<u8>, width: usize, height: usize) -> Vec<f32> {
     let block_count_x = (width + 3) / 4;
     let block_count_y = (height + 3) / 4;
     let length_last = (width + 3) % 4 + 1;
-    let mut colors = vec![0u32; 4];
-    let mut alphas = vec![0u32; 16];
-    let mut buffer = vec![0f32; 64];
+    let mut colors = [0u32; 4];
+    let mut alphas = [0u32; 16];
+    let mut buffer = [0f32; 64];
     let mut output = vec![0f32; width * height * 4];
 
     for y in 0..block_count_y {
@@ -118,7 +116,7 @@ pub fn decode_dxt3(input: Vec<u8>, width: usize, height: usize) -> Vec<f32> {
             for i in 0..4 {
                 let alpha =
                     (input[offset + i * 2] as u32) | (input[offset + i * 2 + 1] as u32) << 8;
-                alphas[i * 4 + 0] = (((alpha >> 0) & 0xF) * 0x11) << 24;
+                alphas[i * 4] = (((alpha) & 0xF) * 0x11) << 24;
                 alphas[i * 4 + 1] = (((alpha >> 4) & 0xF) * 0x11) << 24;
                 alphas[i * 4 + 2] = (((alpha >> 8) & 0xF) * 0x11) << 24;
                 alphas[i * 4 + 3] = (((alpha >> 12) & 0xF) * 0x11) << 24;
@@ -147,7 +145,7 @@ pub fn decode_dxt3(input: Vec<u8>, width: usize, height: usize) -> Vec<f32> {
             for i in 0..16 {
                 let idx = i * 4;
                 let (r, g, b, a) = unpack_rgba(colors[(bitcode & 0x3) as usize] | alphas[i]);
-                buffer[idx + 0] = r as f32 / 255.0;
+                buffer[idx] = r as f32 / 255.0;
                 buffer[idx + 1] = g as f32 / 255.0;
                 buffer[idx + 2] = b as f32 / 255.0;
                 buffer[idx + 3] = a as f32 / 255.0;
@@ -165,11 +163,9 @@ pub fn decode_dxt3(input: Vec<u8>, width: usize, height: usize) -> Vec<f32> {
             let mut j = y * 4;
             while i < 4 && j < height {
                 let bidx = (i * 4 * 4) as usize;
-                let oidx = ((j * width + x * 4) * 4) as usize;
+                let oidx = (j * width + x * 4) * 4;
 
-                for k in 0..length as usize {
-                    output[oidx + k] = buffer[bidx + k];
-                }
+                output[oidx..(length + oidx)].copy_from_slice(&buffer[bidx..(length + bidx)]);
 
                 i += 1;
                 j += 1;
@@ -186,14 +182,14 @@ pub fn decode_dxt5(input: Vec<u8>, width: usize, height: usize) -> Vec<f32> {
     let block_count_x = (width + 3) / 4;
     let block_count_y = (height + 3) / 4;
     let length_last = (width + 3) % 4 + 1;
-    let mut colors = vec![0u32; 4];
-    let mut alphas = vec![0u32; 8];
-    let mut buffer = vec![0f32; 64];
+    let mut colors = [0u32; 4];
+    let mut alphas = [0u32; 8];
+    let mut buffer = [0f32; 64];
     let mut output = vec![0f32; width * height * 4];
 
     for y in 0..block_count_y {
         for x in 0..block_count_x {
-            alphas[0] = input[offset + 0] as u32;
+            alphas[0] = input[offset] as u32;
             alphas[1] = input[offset + 1] as u32;
 
             if alphas[0] > alphas[1] {
@@ -249,7 +245,7 @@ pub fn decode_dxt5(input: Vec<u8>, width: usize, height: usize) -> Vec<f32> {
                 let (r, g, b, a) = unpack_rgba(
                     alphas[(bitcode_a & 0x07) as usize] | colors[(bitcode_c & 0x03) as usize],
                 );
-                buffer[idx + 0] = r as f32 / 255.0;
+                buffer[idx] = r as f32 / 255.0;
                 buffer[idx + 1] = g as f32 / 255.0;
                 buffer[idx + 2] = b as f32 / 255.0;
                 buffer[idx + 3] = a as f32 / 255.0;
@@ -268,11 +264,9 @@ pub fn decode_dxt5(input: Vec<u8>, width: usize, height: usize) -> Vec<f32> {
             let mut j = y * 4;
             while i < 4 && j < height {
                 let bidx = (i * 4 * 4) as usize;
-                let oidx = ((j * width + x * 4) * 4) as usize;
+                let oidx = (j * width + x * 4) * 4;
 
-                for k in 0..length as usize {
-                    output[oidx + k] = buffer[bidx + k];
-                }
+                output[oidx..(length + oidx)].copy_from_slice(&buffer[bidx..(length + bidx)]);
 
                 i += 1;
                 j += 1;
