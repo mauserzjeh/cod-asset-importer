@@ -291,6 +291,8 @@ impl Loader {
                     let wg = wg.clone();
                     wg.wait();
 
+                    debug_log!("model {} waited", model_name);
+                    
                     let cached_model = cache.get_model(&model_name).unwrap();
                     let LoadedAssetStatus::Cached = cached_model.status  else {
                             panic!("model still not cached");
