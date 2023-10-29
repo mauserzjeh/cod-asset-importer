@@ -9,7 +9,7 @@ use crate::{
     },
     error_log, info_log,
     loaded_assets::{LoadedBone, LoadedIbsp, LoadedMaterial, LoadedModel, LoadedTexture},
-    utils::{error::Error, Result}, debug_log,
+    utils::{error::Error, Result},
 };
 use crossbeam_utils::sync::WaitGroup;
 use pyo3::{exceptions::PyBaseException, prelude::*};
@@ -18,7 +18,7 @@ use std::{
     collections::HashMap,
     path::PathBuf,
     sync::{mpsc::channel, Arc, Mutex},
-    time::Instant,
+    time::{Duration, Instant},
 };
 
 #[pyclass(module = "cod_asset_importer")]
@@ -95,7 +95,7 @@ impl Loader {
         }
 
         let model_cache = ModelCache::new();
-        let (sender, receiver) = channel::<(LoadedModel, Instant)>();
+        let (sender, receiver) = channel::<(LoadedModel, Duration)>();
         let pool = ThreadPoolBuilder::new()
             .num_threads(self.threads)
             .build()
@@ -111,7 +111,7 @@ impl Loader {
                 .join(entity.name);
 
             pool.spawn(move || {
-                let model_start = Instant::now();
+                let load_start = Instant::now();
                 let mut loaded_model = match Self::load_xmodel_cached(
                     entity_asset_path.clone(),
                     entity_path,
@@ -129,19 +129,22 @@ impl Loader {
                 loaded_model.set_origin(entity.origin);
                 loaded_model.set_scale(entity.scale);
 
-                sender_clone.send((loaded_model, model_start)).unwrap();
+                let load_duration = load_start.elapsed();
+                sender_clone.send((loaded_model, load_duration)).unwrap();
             });
         }
 
         drop(sender);
 
         for r in receiver {
+            let import_start = Instant::now();
             let loaded_model = r.0;
-            let model_start = r.1;
+            let load_duration = r.1;
             let model_name = loaded_model.name.clone();
             match importer_ref.call_method1("xmodel", (loaded_model,)) {
                 Ok(_) => {
-                    info_log!("[MODEL] {} [{:?}]", model_name, model_start.elapsed());
+                    let model_duration = load_duration + import_start.elapsed();
+                    info_log!("[MODEL] {} [{:?}]", model_name, model_duration);
                 }
                 Err(error) => {
                     error_log!("{}", error);
@@ -267,27 +270,23 @@ impl Loader {
         cache: &mut ModelCache,
     ) -> Result<LoadedModel> {
         match cache.get_model(&model_name) {
-            Some(cached_model) => match cached_model.status {
-                LoadedAssetStatus::Cached => Ok(cached_model.loaded_model),
-                LoadedAssetStatus::Loading(wg) => {
+            Some(cached_model) => match cached_model {
+                CachedModel::Cached(model) => Ok(model),
+                CachedModel::Loading(wg) => {
                     wg.wait();
 
                     let cached_model = cache.get_model(&model_name).unwrap();
-                    let LoadedAssetStatus::Cached = cached_model.status else {
+                    let CachedModel::Cached(model) = cached_model else {
                         panic!("model {} still not cached", model_name);
                     };
 
-                    Ok(cached_model.loaded_model)
+                    Ok(model)
                 }
             },
             None => {
                 let wg = WaitGroup::new();
 
-                cache.set_model(
-                    &model_name,
-                    LoadedModel::new_default(),
-                    LoadedAssetStatus::Loading(wg.clone()),
-                );
+                cache.set_model(&model_name, CachedModel::Loading(wg.clone()));
 
                 let loaded_model = match Self::load_xmodel(asset_path, file_path) {
                     Ok(loaded_model) => loaded_model,
@@ -297,7 +296,7 @@ impl Loader {
                     }
                 };
 
-                cache.set_model(&model_name, loaded_model.clone(), LoadedAssetStatus::Cached);
+                cache.set_model(&model_name, CachedModel::Cached(loaded_model.clone()));
                 Ok(loaded_model)
             }
         }
@@ -333,15 +332,9 @@ impl Loader {
 }
 
 #[derive(Clone)]
-struct CachedModel {
-    loaded_model: LoadedModel,
-    status: LoadedAssetStatus,
-}
-
-#[derive(Clone)]
-enum LoadedAssetStatus {
+enum CachedModel {
     Loading(WaitGroup),
-    Cached,
+    Cached(LoadedModel),
 }
 #[derive(Clone)]
 struct ModelCache {
@@ -355,20 +348,9 @@ impl ModelCache {
         }
     }
 
-    fn set_model(
-        &mut self,
-        model_name: &str,
-        loaded_model: LoadedModel,
-        status: LoadedAssetStatus,
-    ) {
+    fn set_model(&mut self, model_name: &str, cached_model: CachedModel) {
         let mut loaded_models = self.loaded_models.lock().unwrap();
-        loaded_models.insert(
-            String::from(model_name),
-            CachedModel {
-                loaded_model,
-                status,
-            },
-        );
+        loaded_models.insert(String::from(model_name), cached_model);
     }
 
     fn get_model(&self, loaded_model_name: &str) -> Option<CachedModel> {
