@@ -318,6 +318,7 @@ impl LoadedIbsp {
 }
 
 impl LoadedModel {
+    #[allow(clippy::too_many_arguments)]
     pub fn new(
         name: String,
         version: u16,
@@ -337,19 +338,6 @@ impl LoadedModel {
             materials,
             surfaces,
             bones,
-        }
-    }
-
-    pub fn new_default() -> Self {
-        LoadedModel {
-            name: String::new(),
-            version: 0,
-            angles: [0f32; 3],
-            origin: [0f32; 3],
-            scale: [0f32; 3],
-            materials: Vec::new(),
-            surfaces: Vec::new(),
-            bones: Vec::new(),
         }
     }
 
