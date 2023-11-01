@@ -45,6 +45,7 @@ pub struct IbspMaterial {
     flag: u64,
 }
 
+#[derive(Debug)]
 struct IbspTriangleSoup {
     material_idx: u16,
     draw_order: u16,
@@ -73,7 +74,7 @@ pub struct IbspEntity {
 #[derive(Debug)]
 pub struct IbspSurface {
     pub material: String,
-    pub vertices: HashMap<u32, IbspVertex>,
+    pub vertices: Vec<IbspVertex>,
     pub triangles: Vec<[u32; 3]>,
 }
 
@@ -417,8 +418,8 @@ impl Ibsp {
 
         for ts in triangle_soups.iter() {
             let surface_material = materials[ts.material_idx as usize].get_name();
-            let mut surface_triangles: Vec<[u32; 3]> = Vec::new();
-            let mut surface_vertices: HashMap<u32, IbspVertex> = HashMap::new();
+            let mut original_triangles: Vec<[u32; 3]> = Vec::new();
+            let mut vertex_mapping: HashMap<u32, IbspVertex> = HashMap::new();
 
             let tri_count = ts.triangles_length / 3;
             for i in 0..tri_count {
@@ -429,12 +430,14 @@ impl Ibsp {
                 let vert_idx_2 = ts.vertices_offset + (tri[1] as u32);
                 let vert_idx_3 = ts.vertices_offset + (tri[2] as u32);
 
-                surface_triangles.push([vert_idx_1, vert_idx_2, vert_idx_3]);
-
-                surface_vertices.insert(vert_idx_1, vertices[vert_idx_1 as usize]);
-                surface_vertices.insert(vert_idx_2, vertices[vert_idx_2 as usize]);
-                surface_vertices.insert(vert_idx_3, vertices[vert_idx_3 as usize]);
+                original_triangles.push([vert_idx_1, vert_idx_2, vert_idx_3]);
+                vertex_mapping.insert(vert_idx_1, vertices[vert_idx_1 as usize]);
+                vertex_mapping.insert(vert_idx_2, vertices[vert_idx_2 as usize]);
+                vertex_mapping.insert(vert_idx_3, vertices[vert_idx_3 as usize]);
             }
+
+            let (surface_triangles, surface_vertices) =
+                Self::transform_surface_data(original_triangles, vertex_mapping);
 
             surfaces.push(IbspSurface {
                 material: surface_material,
@@ -444,6 +447,29 @@ impl Ibsp {
         }
 
         surfaces
+    }
+
+    fn transform_surface_data(
+        triangles: Vec<[u32; 3]>,
+        vertex_mapping: HashMap<u32, IbspVertex>,
+    ) -> (Vec<[u32; 3]>, Vec<IbspVertex>) {
+        let mut vs: Vec<IbspVertex> = Vec::new();
+        let mut ts: Vec<[u32; 3]> = Vec::new();
+        let mut m: HashMap<u32, u32> = HashMap::new();
+
+        for triangle in triangles {
+            let mut t = [0u32; 3];
+            for (idx, vertex_id) in triangle.iter().enumerate() {
+                if !m.contains_key(vertex_id) {
+                    m.insert(*vertex_id, vs.len() as u32);
+                    vs.push(*vertex_mapping.get(vertex_id).unwrap());
+                }
+                t[idx] = *m.get(vertex_id).unwrap();
+            }
+            ts.push(t);
+        }
+
+        (ts, vs)
     }
 }
 
