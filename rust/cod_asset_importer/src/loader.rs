@@ -94,63 +94,63 @@ impl Loader {
             }
         }
 
-        let model_cache = ModelCache::new();
-        let (sender, receiver) = channel::<(LoadedModel, Duration)>();
-        let pool = ThreadPoolBuilder::new()
-            .num_threads(self.threads)
-            .build()
-            .unwrap();
+        // let model_cache = ModelCache::new();
+        // let (sender, receiver) = channel::<(LoadedModel, Duration)>();
+        // let pool = ThreadPoolBuilder::new()
+        //     .num_threads(self.threads)
+        //     .build()
+        //     .unwrap();
 
-        for entity in entities {
-            let mut cache = model_cache.clone();
-            let sender_clone = sender.clone();
-            let entity_name = entity.name.clone();
-            let entity_asset_path = PathBuf::from(asset_path);
-            let entity_path = PathBuf::from(asset_path)
-                .join(xmodel::ASSETPATH)
-                .join(entity.name);
+        // for entity in entities {
+        //     let mut cache = model_cache.clone();
+        //     let sender_clone = sender.clone();
+        //     let entity_name = entity.name.clone();
+        //     let entity_asset_path = PathBuf::from(asset_path);
+        //     let entity_path = PathBuf::from(asset_path)
+        //         .join(xmodel::ASSETPATH)
+        //         .join(entity.name);
 
-            pool.spawn(move || {
-                let load_start = Instant::now();
-                let mut loaded_model = match Self::load_xmodel_cached(
-                    entity_asset_path.clone(),
-                    entity_path,
-                    entity_name,
-                    &mut cache,
-                ) {
-                    Ok(loaded_model) => loaded_model,
-                    Err(error) => {
-                        error_log!("{}", error);
-                        return;
-                    }
-                };
+        //     pool.spawn(move || {
+        //         let load_start = Instant::now();
+        //         let mut loaded_model = match Self::load_xmodel_cached(
+        //             entity_asset_path.clone(),
+        //             entity_path,
+        //             entity_name,
+        //             &mut cache,
+        //         ) {
+        //             Ok(loaded_model) => loaded_model,
+        //             Err(error) => {
+        //                 error_log!("{}", error);
+        //                 return;
+        //             }
+        //         };
 
-                loaded_model.set_angles(entity.angles);
-                loaded_model.set_origin(entity.origin);
-                loaded_model.set_scale(entity.scale);
+        //         loaded_model.set_angles(entity.angles);
+        //         loaded_model.set_origin(entity.origin);
+        //         loaded_model.set_scale(entity.scale);
 
-                let load_duration = load_start.elapsed();
-                sender_clone.send((loaded_model, load_duration)).unwrap();
-            });
-        }
+        //         let load_duration = load_start.elapsed();
+        //         sender_clone.send((loaded_model, load_duration)).unwrap();
+        //     });
+        // }
 
-        drop(sender);
+        // drop(sender);
 
-        for r in receiver {
-            let import_start = Instant::now();
-            let loaded_model = r.0;
-            let load_duration = r.1;
-            let model_name = loaded_model.name.clone();
-            match importer_ref.call_method1("xmodel", (loaded_model,)) {
-                Ok(_) => {
-                    let model_duration = load_duration + import_start.elapsed();
-                    info_log!("[MODEL] {} [{:?}]", model_name, model_duration);
-                }
-                Err(error) => {
-                    error_log!("{}", error);
-                }
-            }
-        }
+        // for r in receiver {
+        //     let import_start = Instant::now();
+        //     let loaded_model = r.0;
+        //     let load_duration = r.1;
+        //     let model_name = loaded_model.name.clone();
+        //     match importer_ref.call_method1("xmodel", (loaded_model,)) {
+        //         Ok(_) => {
+        //             let model_duration = load_duration + import_start.elapsed();
+        //             info_log!("[MODEL] {} [{:?}]", model_name, model_duration);
+        //         }
+        //         Err(error) => {
+        //             error_log!("{}", error);
+        //         }
+        //     }
+        // }
 
         info_log!("[MAP] {} [{:?}]", ibsp_name, start.elapsed());
         Ok(())

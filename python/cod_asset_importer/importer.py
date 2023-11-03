@@ -254,83 +254,39 @@ class Importer:
             name = f"{ibsp_name}_geometry"
 
             mesh = bpy.data.meshes.new(name)
+            vertices = surface.vertex_positions()
+            mesh.vertices.add(len(vertices) // 3)
+            mesh.loops.add(surface.loops_len())
+            polygons_len = surface.polygons_len()
+            mesh.polygons.add(polygons_len)
+            mesh.vertices.foreach_set("co", vertices)
+            mesh.polygons.foreach_set("loop_total", surface.polygon_loop_totals())
+            mesh.polygons.foreach_set("loop_start", surface.polygon_loop_starts())
+            mesh.polygons.foreach_set("vertices", surface.polygon_vertices())
+            mesh.polygons.foreach_set("use_smooth", [True] * polygons_len)
+            mesh.use_auto_smooth = True
+            # mesh.create_normals_split()
+            
+            # TODO this makes blender crash
+            # mesh.normals_split_custom_set_from_vertices(surface.vertex_normals()) 
+            mesh.update(calc_edges=True)
+            mesh.validate()
+
+            uv_layer = mesh.uv_layers.new()
+            uv_layer.data.foreach_set("uv", surface.loop_uvs())
+
+            # TODO this is not working
+            # vertex_color_layer = mesh.color_attributes.new(name="VertexColor", type="FLOAT_COLOR", domain="POINT")
+            # vertex_color_layer.data.foreach_set("color", surface.loop_colors())
+
             obj = bpy.data.objects.new(name, mesh)
             obj.parent = ibsp_geometry_null
 
+            # material
             active_material_name = surface.material()
             obj.active_material = bpy.data.materials.get(active_material_name)
 
             bpy.context.scene.collection.objects.link(obj)
-            bpy.context.view_layer.objects.active = obj
-            obj.select_set(True)
-
-            mesh_data = bpy.context.object.data
-            bm = bmesh.new()
-
-            surface_uvs = []
-            surface_vertex_colors = []
-            surface_normals = []
-
-            vertices = surface.vertices()
-            for triangle in surface.triangles():
-                vertex1 = vertices[triangle[0]]
-                vertex2 = vertices[triangle[2]]
-                vertex3 = vertices[triangle[1]]
-
-                v1 = bm.verts.new(vertex1.position())
-                v2 = bm.verts.new(vertex2.position())
-                v3 = bm.verts.new(vertex3.position())
-
-                triangle_uvs = []
-                triangle_uvs.append(vertex1.uv())
-                triangle_uvs.append(vertex2.uv())
-                triangle_uvs.append(vertex3.uv())
-                surface_uvs.append(triangle_uvs)
-
-                triangle_vertex_colors = []
-                triangle_vertex_colors.append(vertex1.color())
-                triangle_vertex_colors.append(vertex2.color())
-                triangle_vertex_colors.append(vertex3.color())
-                surface_vertex_colors.append(triangle_vertex_colors)
-
-                triangle_normals = []
-                triangle_normals.append(vertex1.normal())
-                triangle_normals.append(vertex2.normal())
-                triangle_normals.append(vertex3.normal())
-                surface_normals.append(triangle_normals)
-
-                bm.verts.ensure_lookup_table()
-                bm.verts.index_update()
-
-                bm.faces.new((v1, v2, v3))
-                bm.faces.ensure_lookup_table()
-                bm.faces.index_update()
-
-            uv_layer = bm.loops.layers.uv.new()
-            vertex_color_layer = bm.loops.layers.color.new()
-            vertex_normal_buffer = []
-
-            for face, uv, color, normal in zip(
-                bm.faces, surface_uvs, surface_vertex_colors, surface_normals
-            ):
-                for loop, uv_data, color_data, normal_data in zip(
-                    face.loops, uv, color, normal
-                ):
-                    loop[uv_layer].uv = uv_data
-                    loop[vertex_color_layer] = color_data
-                    vertex_normal_buffer.append(normal_data)
-
-            bm.to_mesh(mesh_data)
-            bm.free()
-
-            # set normals
-            mesh.create_normals_split()
-            mesh.validate(clean_customdata=False)
-            mesh.normals_split_custom_set(vertex_normal_buffer)
-
-            polygon_count = len(mesh.polygons)
-            mesh.polygons.foreach_set("use_smooth", [True] * polygon_count)
-            mesh.use_auto_smooth = True
 
     def material(
         self,
@@ -352,9 +308,11 @@ class Importer:
     ) -> None:
         material_name = loaded_material.name()
 
-        texture_file = os.path.join(self.asset_path, append_asset_path, os.path.join(*material_name.split('/')))
+        texture_file = os.path.join(
+            self.asset_path, append_asset_path, os.path.join(*material_name.split("/"))
+        )
         if not has_ext:
-            for tex in glob.iglob(texture_file + '.*'):
+            for tex in glob.iglob(texture_file + ".*"):
                 texture_file = tex
                 break
 
@@ -362,7 +320,7 @@ class Importer:
 
         if bpy.data.materials.get(material_name):
             return
-        
+
         try:
             texture_image = bpy.data.images.load(texture_file, check_existing=True)
             material = bpy.data.materials.new(material_name)

@@ -8,7 +8,7 @@ use crate::{
     utils::math::Vec3,
 };
 use pyo3::prelude::*;
-use std::{collections::HashMap, mem};
+use std::{iter, mem};
 
 #[pyclass(module = "cod_asset_importer")]
 pub struct LoadedIbsp {
@@ -31,8 +31,15 @@ pub struct LoadedIbspEntity {
 #[pyclass(module = "cod_asset_importer")]
 pub struct LoadedIbspSurface {
     material: String,
-    vertices: Vec<LoadedVertex>,
-    triangles: Vec<[u32; 3]>,
+    vertex_positions: Vec<f32>,
+    vertex_normals: Vec<[f32; 3]>,
+    loop_uvs: Vec<f32>,
+    loop_colors: Vec<f32>,
+    loops_len: usize,
+    polygons_len: usize,
+    polygon_loop_starts: Vec<usize>,
+    polygon_loop_totals: Vec<usize>,
+    polygon_vertices: Vec<u32>,
 }
 
 #[pyclass(module = "cod_asset_importer")]
@@ -290,12 +297,40 @@ impl LoadedIbspSurface {
         &self.material
     }
 
-    fn vertices(&mut self) -> Vec<LoadedVertex> {
-        mem::take(&mut self.vertices)
+    fn vertex_positions(&mut self) -> Vec<f32> {
+        mem::take(&mut self.vertex_positions)
     }
 
-    fn triangles(&mut self) -> Vec<[u32; 3]> {
-        mem::take(&mut self.triangles)
+    fn vertex_normals(&mut self) -> Vec<[f32; 3]> {
+        mem::take(&mut self.vertex_normals)
+    }
+
+    fn loop_uvs(&mut self) -> Vec<f32> {
+        mem::take(&mut self.loop_uvs)
+    }
+
+    fn loop_colors(&mut self) -> Vec<f32> {
+        mem::take(&mut self.loop_colors)
+    }
+
+    fn loops_len(&self) -> usize {
+        self.loops_len
+    }
+
+    fn polygons_len(&self) -> usize {
+        self.polygons_len
+    }
+
+    fn polygon_loop_starts(&mut self) -> Vec<usize> {
+        mem::take(&mut self.polygon_loop_starts)
+    }
+
+    fn polygon_loop_totals(&mut self) -> Vec<usize> {
+        mem::take(&mut self.polygon_loop_totals)
+    }
+
+    fn polygon_vertices(&mut self) -> Vec<u32> {
+        mem::take(&mut self.polygon_vertices)
     }
 }
 
@@ -461,14 +496,64 @@ impl From<IbspEntity> for LoadedIbspEntity {
 
 impl From<IbspSurface> for LoadedIbspSurface {
     fn from(ibsp_surface: IbspSurface) -> Self {
+        let vertex_positions: Vec<f32> = ibsp_surface
+            .vertices
+            .iter()
+            .flat_map(|v| v.position)
+            .collect();
+
+        // TODO
+        // let vertex_normals: Vec<[f32; 3]> = ibsp_surface
+        //     .triangles
+        //     .iter()
+        //     .flat_map(|t| t.iter().map(|&i| ibsp_surface.vertices[i as usize].normal))
+        //     .collect();
+
+        let vertex_normals: Vec<[f32; 3]> =
+            ibsp_surface.vertices.iter().map(|v| v.normal).collect();
+
+        let loop_uvs: Vec<f32> = ibsp_surface
+            .triangles
+            .iter()
+            .flat_map(|t| t.iter().flat_map(|&i| ibsp_surface.vertices[i as usize].uv))
+            .collect();
+
+        let loop_colors: Vec<f32> = ibsp_surface
+            .triangles
+            .iter()
+            .flat_map(|t| {
+                t.iter()
+                    .flat_map(|&i| ibsp_surface.vertices[i as usize].color)
+            })
+            .collect();
+
+        let polygons_len = ibsp_surface.triangles.len();
+
+        let loops_len = polygons_len * 3;
+
+        let polygon_loop_starts: Vec<usize> =
+            (0..ibsp_surface.triangles.len()).map(|i| i * 3).collect();
+
+        let polygon_loop_totals: Vec<usize> = iter::repeat(3).take(polygons_len).collect();
+
+        let polygon_vertices: Vec<u32> = ibsp_surface
+            .triangles
+            .iter()
+            .flat_map(|t| t.iter())
+            .copied()
+            .collect();
+
         Self {
             material: ibsp_surface.material,
-            vertices: ibsp_surface
-                .vertices
-                .into_iter()
-                .map(|v| v.into())
-                .collect(),
-            triangles: ibsp_surface.triangles,
+            vertex_positions,
+            vertex_normals,
+            loop_uvs,
+            loop_colors,
+            polygons_len,
+            loops_len,
+            polygon_loop_starts,
+            polygon_loop_totals,
+            polygon_vertices,
         }
     }
 }
