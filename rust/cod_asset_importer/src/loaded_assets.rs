@@ -502,7 +502,7 @@ impl From<IbspSurface> for LoadedIbspSurface {
             .flat_map(|v| v.position)
             .collect();
 
-        // TODO
+
         // let vertex_normals: Vec<[f32; 3]> = ibsp_surface
         //     .triangles
         //     .iter()

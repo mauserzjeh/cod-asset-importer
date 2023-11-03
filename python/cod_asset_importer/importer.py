@@ -264,13 +264,10 @@ class Importer:
             mesh.polygons.foreach_set("loop_start", surface.polygon_loop_starts())
             mesh.polygons.foreach_set("vertices", surface.polygon_vertices())
             mesh.polygons.foreach_set("use_smooth", [True] * polygons_len)
-            mesh.use_auto_smooth = True
-            # mesh.create_normals_split()
-            
-            # TODO this makes blender crash
-            # mesh.normals_split_custom_set_from_vertices(surface.vertex_normals()) 
             mesh.update(calc_edges=True)
-            mesh.validate()
+            
+            mesh.use_auto_smooth = True
+            mesh.normals_split_custom_set_from_vertices(surface.vertex_normals()) # TODO fix normals, because have wrong orientation
 
             uv_layer = mesh.uv_layers.new()
             uv_layer.data.foreach_set("uv", surface.loop_uvs())
