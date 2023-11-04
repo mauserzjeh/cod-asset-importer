@@ -5,6 +5,7 @@ use crate::{
         xmodelpart::XModelPartBone,
         xmodelsurf::{XModelSurfSurface, XModelSurfVertex, XModelSurfWeight},
     },
+    debug_log,
     utils::math::Vec3,
 };
 use pyo3::prelude::*;
@@ -31,10 +32,10 @@ pub struct LoadedIbspEntity {
 #[pyclass(module = "cod_asset_importer")]
 pub struct LoadedIbspSurface {
     material: String,
-    vertex_positions: Vec<f32>,
-    vertex_normals: Vec<[f32; 3]>,
+    vertices: Vec<f32>,
+    normals: Vec<[f32; 3]>,
     loop_uvs: Vec<f32>,
-    loop_colors: Vec<f32>,
+    loop_colors: Vec<[f32; 4]>,
     loops_len: usize,
     polygons_len: usize,
     polygon_loop_starts: Vec<usize>,
@@ -297,19 +298,19 @@ impl LoadedIbspSurface {
         &self.material
     }
 
-    fn vertex_positions(&mut self) -> Vec<f32> {
-        mem::take(&mut self.vertex_positions)
+    fn vertices(&mut self) -> Vec<f32> {
+        mem::take(&mut self.vertices)
     }
 
-    fn vertex_normals(&mut self) -> Vec<[f32; 3]> {
-        mem::take(&mut self.vertex_normals)
+    fn normals(&mut self) -> Vec<[f32; 3]> {
+        mem::take(&mut self.normals)
     }
 
     fn loop_uvs(&mut self) -> Vec<f32> {
         mem::take(&mut self.loop_uvs)
     }
 
-    fn loop_colors(&mut self) -> Vec<f32> {
+    fn loop_colors(&mut self) -> Vec<[f32; 4]> {
         mem::take(&mut self.loop_colors)
     }
 
@@ -496,35 +497,25 @@ impl From<IbspEntity> for LoadedIbspEntity {
 
 impl From<IbspSurface> for LoadedIbspSurface {
     fn from(ibsp_surface: IbspSurface) -> Self {
-        let vertex_positions: Vec<f32> = ibsp_surface
+        let vertices: Vec<f32> = ibsp_surface
             .vertices
             .iter()
             .flat_map(|v| v.position)
             .collect();
 
-
-        // let vertex_normals: Vec<[f32; 3]> = ibsp_surface
-        //     .triangles
-        //     .iter()
-        //     .flat_map(|t| t.iter().map(|&i| ibsp_surface.vertices[i as usize].normal))
-        //     .collect();
-
-        let vertex_normals: Vec<[f32; 3]> =
-            ibsp_surface.vertices.iter().map(|v| v.normal).collect();
+        let normals: Vec<[f32; 3]> = ibsp_surface.vertices.iter().map(|v| v.normal).collect();
 
         let loop_uvs: Vec<f32> = ibsp_surface
             .triangles
             .iter()
-            .flat_map(|t| t.iter().flat_map(|&i| ibsp_surface.vertices[i as usize].uv))
+            .flat_map(|t| [t[0], t[2], t[1]].map(|i| ibsp_surface.vertices[i as usize].uv))
+            .flatten()
             .collect();
 
-        let loop_colors: Vec<f32> = ibsp_surface
+        let loop_colors: Vec<[f32; 4]> = ibsp_surface
             .triangles
             .iter()
-            .flat_map(|t| {
-                t.iter()
-                    .flat_map(|&i| ibsp_surface.vertices[i as usize].color)
-            })
+            .flat_map(|t| [t[0], t[2], t[1]].map(|i| ibsp_surface.vertices[i as usize].color))
             .collect();
 
         let polygons_len = ibsp_surface.triangles.len();
@@ -539,14 +530,13 @@ impl From<IbspSurface> for LoadedIbspSurface {
         let polygon_vertices: Vec<u32> = ibsp_surface
             .triangles
             .iter()
-            .flat_map(|t| t.iter())
-            .copied()
+            .flat_map(|t| [t[0], t[2], t[1]])
             .collect();
 
         Self {
             material: ibsp_surface.material,
-            vertex_positions,
-            vertex_normals,
+            vertices,
+            normals,
             loop_uvs,
             loop_colors,
             polygons_len,
