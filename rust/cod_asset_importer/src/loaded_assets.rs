@@ -5,7 +5,6 @@ use crate::{
         xmodelpart::XModelPartBone,
         xmodelsurf::{XModelSurfSurface, XModelSurfVertex, XModelSurfWeight},
     },
-    debug_log,
     utils::math::Vec3,
 };
 use pyo3::prelude::*;
@@ -34,8 +33,8 @@ pub struct LoadedIbspSurface {
     material: String,
     vertices: Vec<f32>,
     normals: Vec<[f32; 3]>,
+    colors: Vec<f32>,
     loop_uvs: Vec<f32>,
-    loop_colors: Vec<[f32; 4]>,
     loops_len: usize,
     polygons_len: usize,
     polygon_loop_starts: Vec<usize>,
@@ -306,12 +305,12 @@ impl LoadedIbspSurface {
         mem::take(&mut self.normals)
     }
 
-    fn loop_uvs(&mut self) -> Vec<f32> {
-        mem::take(&mut self.loop_uvs)
+    fn colors(&mut self) -> Vec<f32> {
+        mem::take(&mut self.colors)
     }
 
-    fn loop_colors(&mut self) -> Vec<[f32; 4]> {
-        mem::take(&mut self.loop_colors)
+    fn loop_uvs(&mut self) -> Vec<f32> {
+        mem::take(&mut self.loop_uvs)
     }
 
     fn loops_len(&self) -> usize {
@@ -505,17 +504,13 @@ impl From<IbspSurface> for LoadedIbspSurface {
 
         let normals: Vec<[f32; 3]> = ibsp_surface.vertices.iter().map(|v| v.normal).collect();
 
+        let colors = ibsp_surface.vertices.iter().flat_map(|v| v.color).collect();
+
         let loop_uvs: Vec<f32> = ibsp_surface
             .triangles
             .iter()
             .flat_map(|t| [t[0], t[2], t[1]].map(|i| ibsp_surface.vertices[i as usize].uv))
             .flatten()
-            .collect();
-
-        let loop_colors: Vec<[f32; 4]> = ibsp_surface
-            .triangles
-            .iter()
-            .flat_map(|t| [t[0], t[2], t[1]].map(|i| ibsp_surface.vertices[i as usize].color))
             .collect();
 
         let polygons_len = ibsp_surface.triangles.len();
@@ -537,8 +532,8 @@ impl From<IbspSurface> for LoadedIbspSurface {
             material: ibsp_surface.material,
             vertices,
             normals,
+            colors,
             loop_uvs,
-            loop_colors,
             polygons_len,
             loops_len,
             polygon_loop_starts,

@@ -273,9 +273,8 @@ class Importer:
             uv_layer = mesh.uv_layers.new()
             uv_layer.data.foreach_set("uv", surface.loop_uvs())
 
-            # TODO this is not working
-            # vertex_color_layer = mesh.color_attributes.new(name="VertexColor", type="FLOAT_COLOR", domain="POINT")
-            # vertex_color_layer.data.foreach_set("color", surface.loop_colors())
+            vertex_color_layer = mesh.color_attributes.new(name="VertexColor", type="FLOAT_COLOR", domain="POINT")
+            vertex_color_layer.data.foreach_set("color", surface.colors())
 
             obj = bpy.data.objects.new(name, mesh)
             obj.parent = ibsp_geometry_null
