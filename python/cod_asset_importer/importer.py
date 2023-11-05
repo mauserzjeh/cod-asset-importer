@@ -79,93 +79,12 @@ class Importer:
 
             bpy.context.scene.collection.objects.link(obj)
 
-            # TODO weights
             if len(loaded_bones) > 1:
                 for bone_index, weights in surface.weight_groups().items():
                     bone_name = loaded_bones[bone_index].name()
                     vg = obj.vertex_groups.new(name=bone_name)
                     for vertex_index, weight in weights.items():
                         vg.add(index=[vertex_index], weight=weight, type="REPLACE")
-
-            # bpy.context.view_layer.objects.active = obj
-            # obj.select_set(True)
-
-            # mesh_data = bpy.context.object.data
-            # bm = bmesh.new()
-            # vertex_weight_layer = bm.verts.layers.deform.new()
-
-            # surface_uvs = []
-            # surface_vertex_colors = []
-            # surface_normals = []
-
-            # vertices = surface.vertices()
-            # for triangle in surface.triangles():
-            #     vertex1 = vertices[triangle[0]]
-            #     vertex2 = vertices[triangle[2]]
-            #     vertex3 = vertices[triangle[1]]
-
-            #     triangle_uvs = []
-            #     triangle_uvs.append(vertex1.uv())
-            #     triangle_uvs.append(vertex2.uv())
-            #     triangle_uvs.append(vertex3.uv())
-            #     surface_uvs.append(triangle_uvs)
-
-            #     triangle_vertex_colors = []
-            #     triangle_vertex_colors.append(vertex1.color())
-            #     triangle_vertex_colors.append(vertex2.color())
-            #     triangle_vertex_colors.append(vertex3.color())
-            #     surface_vertex_colors.append(triangle_vertex_colors)
-
-            #     triangle_normals = []
-            #     triangle_normals.append(vertex1.normal())
-            #     triangle_normals.append(vertex2.normal())
-            #     triangle_normals.append(vertex3.normal())
-            #     surface_normals.append(triangle_normals)
-
-            #     v1 = bm.verts.new(vertex1.position())
-            #     v2 = bm.verts.new(vertex2.position())
-            #     v3 = bm.verts.new(vertex3.position())
-
-            #     bm.verts.ensure_lookup_table()
-            #     bm.verts.index_update()
-
-            #     verts_assoc = {v1: vertex1, v2: vertex2, v3: vertex3}
-
-            #     for bvert, svert in verts_assoc.items():
-            #         for weight in svert.weights():
-            #             bm.verts[bvert.index][vertex_weight_layer][
-            #                 weight.bone()
-            #             ] = weight.influence()
-
-            #     bm.faces.new((v1, v2, v3))
-            #     bm.faces.ensure_lookup_table()
-            #     bm.faces.index_update()
-
-            # uv_layer = bm.loops.layers.uv.new()
-            # vertex_color_layer = bm.loops.layers.color.new()
-            # vertex_normal_buffer = []
-
-            # for face, uv, color, normal in zip(
-            #     bm.faces, surface_uvs, surface_vertex_colors, surface_normals
-            # ):
-            #     for loop, uv_data, color_data, normal_data in zip(
-            #         face.loops, uv, color, normal
-            #     ):
-            #         loop[uv_layer].uv = uv_data
-            #         loop[vertex_color_layer] = color_data
-            #         vertex_normal_buffer.append(normal_data)
-
-            # bm.to_mesh(mesh_data)
-            # bm.free()
-
-            # # set normals
-            # mesh.create_normals_split()
-            # mesh.validate(clean_customdata=False)
-            # mesh.normals_split_custom_set(vertex_normal_buffer)
-
-            # polygon_count = len(mesh.polygons)
-            # mesh.polygons.foreach_set("use_smooth", [True] * polygon_count)
-            # mesh.use_auto_smooth = True
 
             mesh_objects.append(obj)
 
@@ -246,10 +165,6 @@ class Importer:
             modifier.object = skeleton
             modifier.use_bone_envelopes = False
             modifier.use_vertex_groups = True
-
-        # bpy.context.view_layer.update()
-        # bpy.ops.object.mode_set(mode="OBJECT")
-        # bpy.ops.object.select_all(action="DESELECT")
 
         if self.ibsp_entities_null != None:
             xmodel_null.parent = self.ibsp_entities_null
