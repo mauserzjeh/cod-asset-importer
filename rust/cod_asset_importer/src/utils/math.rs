@@ -24,14 +24,6 @@ pub fn uv_from_vec(v: Vec<f32>, flip_uv: bool) -> Option<UV> {
     }
 }
 
-pub fn quat_from_vec(v: Vec<f32>) -> Option<Quat> {
-    if v.len() != 4 {
-        return None;
-    }
-
-    Some([v[0], v[1], v[2], v[3]])
-}
-
 pub fn color_from_vec(v: Vec<u8>) -> Option<Color> {
     if v.len() != 4 {
         return None;

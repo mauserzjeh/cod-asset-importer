@@ -1,20 +1,16 @@
 import glob
-import bmesh
 import bpy
 import mathutils
 import os
 import math
 import traceback
 from .cod_asset_importer import (
-    IBSP_VERSIONS,
     XMODEL_VERSIONS,
-    # XMODEL_TYPES,
     LoadedModel,
     LoadedIbsp,
     LoadedMaterial,
     Loader,
     LoadedTexture,
-    debug_log,
     error_log,
 )
 from .blender_utils import (
@@ -28,7 +24,7 @@ from . import (
 class Importer:
     def __init__(self, asset_path: str) -> None:
         self.asset_path = asset_path
-        self.ibps_entities_null = None
+        self.ibsp_entities_null = None
 
     def xmodel(self, loaded_model: LoadedModel) -> None:
         model_name = loaded_model.name()
@@ -47,100 +43,132 @@ class Importer:
 
             self.material(loaded_material=material, append_asset_path=append_asset_path)
 
+        loaded_bones = loaded_model.bones()
         for i, surface in enumerate(loaded_model.surfaces()):
             mesh = bpy.data.meshes.new(model_name)
+            vertices = surface.vertices()
+            mesh.vertices.add(len(vertices) // 3)
+            mesh.loops.add(surface.loops_len())
+            polygons_len = surface.polygons_len()
+            mesh.polygons.add(polygons_len)
+            mesh.vertices.foreach_set("co", vertices)
+            mesh.polygons.foreach_set("loop_total", surface.polygon_loop_totals())
+            mesh.polygons.foreach_set("loop_start", surface.polygon_loop_starts())
+            mesh.polygons.foreach_set("vertices", surface.polygon_vertices())
+            mesh.polygons.foreach_set("use_smooth", [True] * polygons_len)
+            mesh.update(calc_edges=True)
+            mesh.validate()
+
+            mesh.use_auto_smooth = True
+            mesh.normals_split_custom_set_from_vertices(surface.normals())
+
+            uv_layer = mesh.uv_layers.new()
+            uv_layer.data.foreach_set("uv", surface.uvs())
+
+            vertex_color_layer = mesh.color_attributes.new(
+                name="VertexColor", type="FLOAT_COLOR", domain="POINT"
+            )
+            vertex_color_layer.data.foreach_set("color", surface.colors())
+
             obj = bpy.data.objects.new(model_name, mesh)
 
             active_material_name = materials[i].name()
             if model_version == XMODEL_VERSIONS.V14:
                 active_material_name = os.path.splitext(active_material_name)[0]
-
             obj.active_material = bpy.data.materials.get(active_material_name)
 
             bpy.context.scene.collection.objects.link(obj)
-            bpy.context.view_layer.objects.active = obj
-            obj.select_set(True)
 
-            mesh_data = bpy.context.object.data
-            bm = bmesh.new()
-            vertex_weight_layer = bm.verts.layers.deform.new()
+            # TODO weights
+            if len(loaded_bones) > 1:
+                for bone_index, weights in surface.weight_groups().items():
+                    bone_name = loaded_bones[bone_index].name()
+                    vg = obj.vertex_groups.new(name=bone_name)
+                    for vertex_index, weight in weights.items():
+                        vg.add(index=[vertex_index], weight=weight, type="REPLACE")
 
-            surface_uvs = []
-            surface_vertex_colors = []
-            surface_normals = []
+            # bpy.context.view_layer.objects.active = obj
+            # obj.select_set(True)
 
-            vertices = surface.vertices()
-            for triangle in surface.triangles():
-                vertex1 = vertices[triangle[0]]
-                vertex2 = vertices[triangle[2]]
-                vertex3 = vertices[triangle[1]]
+            # mesh_data = bpy.context.object.data
+            # bm = bmesh.new()
+            # vertex_weight_layer = bm.verts.layers.deform.new()
 
-                triangle_uvs = []
-                triangle_uvs.append(vertex1.uv())
-                triangle_uvs.append(vertex2.uv())
-                triangle_uvs.append(vertex3.uv())
-                surface_uvs.append(triangle_uvs)
+            # surface_uvs = []
+            # surface_vertex_colors = []
+            # surface_normals = []
 
-                triangle_vertex_colors = []
-                triangle_vertex_colors.append(vertex1.color())
-                triangle_vertex_colors.append(vertex2.color())
-                triangle_vertex_colors.append(vertex3.color())
-                surface_vertex_colors.append(triangle_vertex_colors)
+            # vertices = surface.vertices()
+            # for triangle in surface.triangles():
+            #     vertex1 = vertices[triangle[0]]
+            #     vertex2 = vertices[triangle[2]]
+            #     vertex3 = vertices[triangle[1]]
 
-                triangle_normals = []
-                triangle_normals.append(vertex1.normal())
-                triangle_normals.append(vertex2.normal())
-                triangle_normals.append(vertex3.normal())
-                surface_normals.append(triangle_normals)
+            #     triangle_uvs = []
+            #     triangle_uvs.append(vertex1.uv())
+            #     triangle_uvs.append(vertex2.uv())
+            #     triangle_uvs.append(vertex3.uv())
+            #     surface_uvs.append(triangle_uvs)
 
-                v1 = bm.verts.new(vertex1.position())
-                v2 = bm.verts.new(vertex2.position())
-                v3 = bm.verts.new(vertex3.position())
+            #     triangle_vertex_colors = []
+            #     triangle_vertex_colors.append(vertex1.color())
+            #     triangle_vertex_colors.append(vertex2.color())
+            #     triangle_vertex_colors.append(vertex3.color())
+            #     surface_vertex_colors.append(triangle_vertex_colors)
 
-                bm.verts.ensure_lookup_table()
-                bm.verts.index_update()
+            #     triangle_normals = []
+            #     triangle_normals.append(vertex1.normal())
+            #     triangle_normals.append(vertex2.normal())
+            #     triangle_normals.append(vertex3.normal())
+            #     surface_normals.append(triangle_normals)
 
-                verts_assoc = {v1: vertex1, v2: vertex2, v3: vertex3}
+            #     v1 = bm.verts.new(vertex1.position())
+            #     v2 = bm.verts.new(vertex2.position())
+            #     v3 = bm.verts.new(vertex3.position())
 
-                for bvert, svert in verts_assoc.items():
-                    for weight in svert.weights():
-                        bm.verts[bvert.index][vertex_weight_layer][
-                            weight.bone()
-                        ] = weight.influence()
+            #     bm.verts.ensure_lookup_table()
+            #     bm.verts.index_update()
 
-                bm.faces.new((v1, v2, v3))
-                bm.faces.ensure_lookup_table()
-                bm.faces.index_update()
+            #     verts_assoc = {v1: vertex1, v2: vertex2, v3: vertex3}
 
-            uv_layer = bm.loops.layers.uv.new()
-            vertex_color_layer = bm.loops.layers.color.new()
-            vertex_normal_buffer = []
+            #     for bvert, svert in verts_assoc.items():
+            #         for weight in svert.weights():
+            #             bm.verts[bvert.index][vertex_weight_layer][
+            #                 weight.bone()
+            #             ] = weight.influence()
 
-            for face, uv, color, normal in zip(
-                bm.faces, surface_uvs, surface_vertex_colors, surface_normals
-            ):
-                for loop, uv_data, color_data, normal_data in zip(
-                    face.loops, uv, color, normal
-                ):
-                    loop[uv_layer].uv = uv_data
-                    loop[vertex_color_layer] = color_data
-                    vertex_normal_buffer.append(normal_data)
+            #     bm.faces.new((v1, v2, v3))
+            #     bm.faces.ensure_lookup_table()
+            #     bm.faces.index_update()
 
-            bm.to_mesh(mesh_data)
-            bm.free()
+            # uv_layer = bm.loops.layers.uv.new()
+            # vertex_color_layer = bm.loops.layers.color.new()
+            # vertex_normal_buffer = []
 
-            # set normals
-            mesh.create_normals_split()
-            mesh.validate(clean_customdata=False)
-            mesh.normals_split_custom_set(vertex_normal_buffer)
+            # for face, uv, color, normal in zip(
+            #     bm.faces, surface_uvs, surface_vertex_colors, surface_normals
+            # ):
+            #     for loop, uv_data, color_data, normal_data in zip(
+            #         face.loops, uv, color, normal
+            #     ):
+            #         loop[uv_layer].uv = uv_data
+            #         loop[vertex_color_layer] = color_data
+            #         vertex_normal_buffer.append(normal_data)
 
-            polygon_count = len(mesh.polygons)
-            mesh.polygons.foreach_set("use_smooth", [True] * polygon_count)
-            mesh.use_auto_smooth = True
+            # bm.to_mesh(mesh_data)
+            # bm.free()
+
+            # # set normals
+            # mesh.create_normals_split()
+            # mesh.validate(clean_customdata=False)
+            # mesh.normals_split_custom_set(vertex_normal_buffer)
+
+            # polygon_count = len(mesh.polygons)
+            # mesh.polygons.foreach_set("use_smooth", [True] * polygon_count)
+            # mesh.use_auto_smooth = True
 
             mesh_objects.append(obj)
 
-        loaded_bones = loaded_model.bones()
         skeleton = None
         if len(loaded_bones) > 1:
             armature = bpy.data.armatures.new(f"{model_name}_armature")
@@ -203,6 +231,7 @@ class Importer:
                 bone.tail = bone.head + (bone.tail - bone.head).normalized() * length
 
             bpy.ops.object.mode_set(mode="OBJECT")
+            bpy.ops.object.select_all(action="DESELECT")
 
         for mesh_object in mesh_objects:
             if skeleton == None:
@@ -218,12 +247,12 @@ class Importer:
             modifier.use_bone_envelopes = False
             modifier.use_vertex_groups = True
 
-        bpy.context.view_layer.update()
-        bpy.ops.object.mode_set(mode="OBJECT")
-        bpy.ops.object.select_all(action="DESELECT")
+        # bpy.context.view_layer.update()
+        # bpy.ops.object.mode_set(mode="OBJECT")
+        # bpy.ops.object.select_all(action="DESELECT")
 
-        if self.ibps_entities_null != None:
-            xmodel_null.parent = self.ibps_entities_null
+        if self.ibsp_entities_null != None:
+            xmodel_null.parent = self.ibsp_entities_null
             xmodel_null.location = loaded_model.origin()
             xmodel_null.scale = loaded_model.scale()
             angles = loaded_model.angles()
@@ -247,7 +276,7 @@ class Importer:
         bpy.context.scene.collection.objects.link(ibsp_entities_null)
         ibsp_entities_null.parent = ibsp_null
 
-        self.ibps_entities_null = ibsp_entities_null
+        self.ibsp_entities_null = ibsp_entities_null
 
         surfaces = loaded_ibsp.surfaces()
         for surface in surfaces:
@@ -266,20 +295,21 @@ class Importer:
             mesh.polygons.foreach_set("use_smooth", [True] * polygons_len)
             mesh.update(calc_edges=True)
             mesh.validate()
-            
+
             mesh.use_auto_smooth = True
             mesh.normals_split_custom_set_from_vertices(surface.normals())
 
             uv_layer = mesh.uv_layers.new()
-            uv_layer.data.foreach_set("uv", surface.loop_uvs())
+            uv_layer.data.foreach_set("uv", surface.uvs())
 
-            vertex_color_layer = mesh.color_attributes.new(name="VertexColor", type="FLOAT_COLOR", domain="POINT")
+            vertex_color_layer = mesh.color_attributes.new(
+                name="VertexColor", type="FLOAT_COLOR", domain="POINT"
+            )
             vertex_color_layer.data.foreach_set("color", surface.colors())
 
             obj = bpy.data.objects.new(name, mesh)
             obj.parent = ibsp_geometry_null
 
-            # material
             active_material_name = surface.material()
             obj.active_material = bpy.data.materials.get(active_material_name)
 

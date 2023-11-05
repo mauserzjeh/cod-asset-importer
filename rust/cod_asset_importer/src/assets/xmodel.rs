@@ -18,7 +18,6 @@ pub struct XModelLod {
     pub materials: Vec<String>,
 }
 
-#[pyclass(module = "cod_asset_importer", name = "XMODEL_TYPES")]
 #[derive(ValidEnum)]
 #[valid_enum(u8)]
 pub enum XModelType {

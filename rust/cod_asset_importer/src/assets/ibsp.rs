@@ -7,7 +7,6 @@ use crate::utils::{
     path::file_name_without_ext,
     Result,
 };
-use pyo3::prelude::*;
 use std::{
     collections::HashMap,
     fs::File,
@@ -78,7 +77,6 @@ pub struct IbspSurface {
     pub triangles: Vec<[u32; 3]>,
 }
 
-#[pyclass(module = "cod_asset_importer", name = "IBSP_VERSIONS")]
 #[derive(ValidEnum)]
 #[valid_enum(i32)]
 pub enum IbspVersion {
