@@ -328,6 +328,8 @@ impl Ibsp {
         entities_string = entities_string.replace('\\', "/");
 
         let re = regex::Regex::new(r"^xmodel\/(.*)").unwrap();
+        let filter_classes = ["spawn", "actor"];
+        let filter_models = ["fx"];
 
         let entities_json = serde_json::from_str::<Vec<serde_json::Value>>(&entities_string)?;
         for entity in entities_json.iter() {
@@ -342,6 +344,16 @@ impl Ibsp {
             else {
                 continue;
             };
+
+            if filter_models.iter().any(|&s| name == s) {
+                continue
+            }
+
+            if let Some(classname) = entity.get("classname").and_then(|c| c.as_str()) {
+                if filter_classes.iter().any(|&s| classname.contains(s)) {
+                    continue;
+                }
+            }
 
             let angles = Self::parse_transform(
                 entity

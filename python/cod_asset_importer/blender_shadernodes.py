@@ -1,29 +1,6 @@
-from __future__ import annotations
-import bpy
 from . import base_enum
 
-"""
-Selects an object and all of its children
-"""
-def select_hierarchy(obj: bpy.types.Object) -> None:
-    obj.select_set(True)
-    for children in obj.children:
-        select_hierarchy(children)
 
-
-"""
-Copies the selected objects
-"""
-def copy_object_hierarchy(obj: bpy.types.Object) -> list[bpy.types.Object]:
-    select_hierarchy(obj)
-    bpy.ops.object.duplicate()
-    return bpy.context.selected_objects
-
-
-"""
-Blender shader node constants to make node setup a bit more readable
-and manageable
-"""
 class BLENDER_SHADERNODES(metaclass=base_enum.BaseEnum):
     SHADERNODE_OUTPUTMATERIAL = "ShaderNodeOutputMaterial"
     INPUT_OUTPUTMATERIAL_SURFACE = 0

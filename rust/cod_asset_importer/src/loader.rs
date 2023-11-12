@@ -18,6 +18,7 @@ use std::{
     collections::HashMap,
     path::PathBuf,
     sync::{mpsc::channel, Arc, Mutex},
+    thread,
     time::{Duration, Instant},
 };
 
@@ -30,8 +31,15 @@ pub struct Loader {
 #[pymethods]
 impl Loader {
     #[new]
-    #[pyo3(signature = (importer, threads))]
-    fn new(importer: PyObject, threads: usize) -> Self {
+    #[pyo3(signature = (importer))]
+    fn new(importer: PyObject) -> Self {
+
+        // use half the threads that is available on the system, fallback value 1
+        let threads = thread::available_parallelism()
+            .map(|p| p.get().checked_div(2).unwrap_or(1))
+            .unwrap_or(1);
+
+        info_log!("[AVAILABLE THREADS] {}", threads);
         Loader { importer, threads }
     }
 

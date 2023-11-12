@@ -13,7 +13,7 @@ from .cod_asset_importer import (
     LoadedTexture,
     error_log,
 )
-from .blender_utils import (
+from .blender_shadernodes import (
     BLENDER_SHADERNODES,
 )
 from . import (
@@ -593,9 +593,9 @@ class TEXTURE_TYPES(metaclass=base_enum.BaseEnum):
     SPECULARMAP = "specularMap"
 
 
-def import_ibsp(asset_path: str, file_path: str, threads: int) -> None:
+def import_ibsp(asset_path: str, file_path: str) -> None:
     importer = Importer(asset_path=asset_path)
-    loader = Loader(importer=importer, threads=threads)
+    loader = Loader(importer=importer)
     try:
         loader.import_bsp(asset_path=asset_path, file_path=file_path)
     except:
@@ -604,7 +604,7 @@ def import_ibsp(asset_path: str, file_path: str, threads: int) -> None:
 
 def import_xmodel(asset_path: str, file_path: str) -> bpy.types.Object | bool:
     importer = Importer(asset_path=asset_path)
-    loader = Loader(importer=importer, threads=1)
+    loader = Loader(importer=importer)
     try:
         loader.import_xmodel(
             asset_path=asset_path,

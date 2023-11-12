@@ -1,5 +1,4 @@
 from typing import Set
-from bpy.types import Context
 import bpy
 import os
 from . import importer
@@ -14,9 +13,7 @@ class MapImporter(bpy.types.Operator):
     filename_ext = ".d3dbsp"
     filter_glob: bpy.props.StringProperty(default="*.d3dbsp;*.bsp", options={"HIDDEN"})
 
-    threads: bpy.props.IntProperty(default=1, min=1, max=20, name="Import threads")
-
-    def execute(self, context: Context) -> Set[int] | Set[str]:
+    def execute(self, context: bpy.types.Context) -> Set[int] | Set[str]:
         assetpath = os.path.abspath(
             os.path.join(os.path.dirname(self.filepath), os.pardir)
         )
@@ -25,7 +22,7 @@ class MapImporter(bpy.types.Operator):
                 os.path.join(os.path.dirname(self.filepath), os.pardir, os.pardir)
             )
 
-        importer.import_ibsp(asset_path=assetpath, file_path=self.filepath, threads=self.threads)
+        importer.import_ibsp(asset_path=assetpath, file_path=self.filepath)
         return {"FINISHED"}
 
     def invoke(self, context, event):
@@ -40,7 +37,7 @@ class ModelImporter(bpy.types.Operator):
 
     filepath: bpy.props.StringProperty(subtype="FILE_PATH")
 
-    def execute(self, context: Context) -> Set[int] | Set[str]:
+    def execute(self, context: bpy.types.Context) -> Set[int] | Set[str]:
         assetpath = os.path.abspath(
             os.path.join(os.path.dirname(self.filepath), os.pardir)
         )
@@ -51,3 +48,16 @@ class ModelImporter(bpy.types.Operator):
     def invoke(self, context, event):
         bpy.context.window_manager.fileselect_add(self)
         return {"RUNNING_MODAL"}
+
+
+OPERATORS = [MapImporter, ModelImporter]
+
+
+def register():
+    for op in OPERATORS:
+        bpy.utils.register_class(op)
+
+
+def unregister():
+    for op in OPERATORS:
+        bpy.utils.unregister_class(op)
