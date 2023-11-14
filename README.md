@@ -60,7 +60,7 @@ Images can be found inside the .iwd files. The rest of the assets can be acquire
 - [Download the latest release](https://github.com/mauserzjeh/cod-asset-importer/releases/latest)
 - Launch Blender
 - `Edit > Preferences > Add-ons > Install`
-- Browse to the downloaded .zip file
+- Browse to the downloaded `.zip` file
 - Enable the addon by ticking the checkbox in front of its name
 
 ## Usage
@@ -72,7 +72,7 @@ Images can be found inside the .iwd files. The rest of the assets can be acquire
     - Browse to the map inside the maps folder
 - To import a model
     - `File > Import > CoD Asset Importer > Import model`
-    - Browse to the xmodel inside the xmodel folder
+    - Browse to the model inside the xmodel folder
 
 ## Installation from source
 
@@ -82,7 +82,6 @@ Images can be found inside the .iwd files. The rest of the assets can be acquire
 - [Rust](https://www.rust-lang.org/)
 
 ### Installation
-- Open Git Bash in the folder where you would like to clone the repository
 - Clone the repository
 ```
 $ git clone git@github.com:mauserzjeh/cod-asset-importer.git
@@ -93,14 +92,14 @@ $ git clone git@github.com:mauserzjeh/cod-asset-importer.git
 $ pip install -r requirements.txt
 ```
 
-- Run the build script which will create a `.zip` file in the `release` folder. Alternatively the `Build & Package` task can be run from VS Code
-```sh
+- Run the build script which will create a `.zip` file in the `release` folder. Alternatively the `Build & Package` task can be run from Visual Studio Code
+```
 $ python setup.py build_rust --inplace --release --create-release-package
 ```
 
 - Launch Blender
 - `Edit > Preferences > Add-ons > Install`
-- Browse to the generated .zip file in the release folder
+- Browse to the generated `.zip` file in the release folder
 - Enable the addon by ticking the checkbox in front of its name
 
 
