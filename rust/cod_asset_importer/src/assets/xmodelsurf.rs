@@ -37,7 +37,7 @@ pub struct XModelSurfWeight {
 
 pub struct XModelSurfSurface {
     pub vertices: Vec<XModelSurfVertex>,
-    pub triangles: Vec<Triangle>,
+    pub triangles: Vec<u16>,
 }
 
 impl XModelSurf {
@@ -90,7 +90,7 @@ impl XModelSurf {
                 og_default_bone_idx
             };
 
-            let mut triangles: Vec<Triangle> = Vec::new();
+            let mut triangles: Vec<u16> = Vec::new();
             loop {
                 let idx_count = binary::read::<u8>(file)?;
 
@@ -99,7 +99,7 @@ impl XModelSurf {
                 let mut idx3 = binary::read::<u16>(file)?;
 
                 if idx1 != idx2 && idx1 != idx3 && idx2 != idx3 {
-                    triangles.push([idx1, idx2, idx3]);
+                    triangles.extend_from_slice(&[idx3, idx2, idx1]);
                 }
 
                 let mut i = 3;
@@ -108,7 +108,7 @@ impl XModelSurf {
                     let idx5 = binary::read::<u16>(file)?;
 
                     if idx4 != idx2 && idx4 != idx5 && idx2 != idx5 {
-                        triangles.push([idx4, idx2, idx5]);
+                        triangles.extend_from_slice(&[idx5, idx2, idx4]);
                     }
 
                     let v = i + 1;
@@ -120,13 +120,13 @@ impl XModelSurf {
                     idx3 = binary::read::<u16>(file)?;
 
                     if idx4 != idx2 && idx4 != idx3 && idx2 != idx3 {
-                        triangles.push([idx4, idx2, idx3]);
+                        triangles.extend_from_slice(&[idx3, idx2, idx4]);
                     }
 
                     i = v + 1;
                 }
 
-                if triangles.len() >= triangle_count as usize {
+                if triangles.len() / 3 >= triangle_count as usize {
                     break;
                 }
             }
@@ -279,10 +279,10 @@ impl XModelSurf {
                 });
             }
 
-            let mut triangles: Vec<Triangle> = Vec::new();
+            let mut triangles: Vec<u16> = Vec::new();
             for _ in 0..triangle_count {
-                let triangle = binary::read_vec::<u16>(file, 3)?;
-                triangles.push(triangle_from_vec(triangle).unwrap());
+                let t = binary::read_vec::<u16>(file, 3)?;
+                triangles.extend_from_slice(&[t[0], t[2], t[1]]);
             }
 
             self.surfaces.push(XModelSurfSurface {
@@ -361,10 +361,10 @@ impl XModelSurf {
                 })
             }
 
-            let mut triangles: Vec<Triangle> = Vec::new();
+            let mut triangles: Vec<u16> = Vec::new();
             for _ in 0..triangle_count {
-                let triangle = binary::read_vec::<u16>(file, 3)?;
-                triangles.push(triangle_from_vec(triangle).unwrap());
+                let t = binary::read_vec::<u16>(file, 3)?;
+                triangles.extend_from_slice(&[t[0], t[2], t[1]]);
             }
 
             self.surfaces.push(XModelSurfSurface {

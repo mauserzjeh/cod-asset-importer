@@ -347,23 +347,16 @@ impl From<IbspSurface> for LoadedSurface {
         let uvs: Vec<f32> = ibsp_surface
             .triangles
             .iter()
-            .flat_map(|t| [t[0], t[2], t[1]].map(|i| ibsp_surface.vertices[i as usize].uv))
-            .flatten()
+            .flat_map(|&i| ibsp_surface.vertices[i as usize].uv)
             .collect();
 
-        let polygons_len = ibsp_surface.triangles.len();
+        let loops_len = ibsp_surface.triangles.len();
 
-        let loops_len = polygons_len * 3;
+        let polygons_len = loops_len / 3;
 
         let polygon_loop_starts: Vec<usize> = (0..polygons_len).map(|i| i * 3).collect();
 
         let polygon_loop_totals: Vec<usize> = iter::repeat(3).take(polygons_len).collect();
-
-        let polygon_vertices: Vec<u32> = ibsp_surface
-            .triangles
-            .iter()
-            .flat_map(|t| [t[0], t[2], t[1]])
-            .collect();
 
         let weight_groups: HashMap<u16, HashMap<usize, f32>> = HashMap::new();
 
@@ -377,7 +370,7 @@ impl From<IbspSurface> for LoadedSurface {
             polygons_len,
             polygon_loop_starts,
             polygon_loop_totals,
-            polygon_vertices,
+            polygon_vertices: ibsp_surface.triangles,
             weight_groups,
         }
     }
@@ -406,13 +399,12 @@ impl From<XModelSurfSurface> for LoadedSurface {
         let uvs: Vec<f32> = xmodelsurf_surface
             .triangles
             .iter()
-            .flat_map(|t| [t[0], t[2], t[1]].map(|i| xmodelsurf_surface.vertices[i as usize].uv))
-            .flatten()
+            .flat_map(|&i| xmodelsurf_surface.vertices[i as usize].uv)
             .collect();
 
-        let polygons_len = xmodelsurf_surface.triangles.len();
+        let loops_len = xmodelsurf_surface.triangles.len();
 
-        let loops_len = polygons_len * 3;
+        let polygons_len = loops_len / 3;
 
         let polygon_loop_starts: Vec<usize> = (0..polygons_len).map(|i| i * 3).collect();
 
@@ -421,7 +413,7 @@ impl From<XModelSurfSurface> for LoadedSurface {
         let polygon_vertices: Vec<u32> = xmodelsurf_surface
             .triangles
             .iter()
-            .flat_map(|t| [t[0], t[2], t[1]].map(|i| i.into()))
+            .map(|&t| t.into())
             .collect();
 
         let mut weight_groups: HashMap<u16, HashMap<usize, f32>> = HashMap::new();

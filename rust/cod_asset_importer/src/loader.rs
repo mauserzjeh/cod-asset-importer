@@ -33,7 +33,6 @@ impl Loader {
     #[new]
     #[pyo3(signature = (importer))]
     fn new(importer: PyObject) -> Self {
-
         // use half the threads that is available on the system, fallback value 1
         let threads = thread::available_parallelism()
             .map(|p| p.get().checked_div(2).unwrap_or(1))
@@ -278,15 +277,14 @@ impl Loader {
 
                     let cached_model = cache.get_model(&model_name).unwrap();
                     let CachedModel::Cached(model) = cached_model else {
-                        panic!("model {} still not cached", model_name);
+                        panic!("model {} still not cached\n", model_name);
                     };
 
-                    Ok(model)
+                    Ok(model.clone())
                 }
             },
             None => {
                 let wg = WaitGroup::new();
-
                 cache.set_model(&model_name, CachedModel::Loading(wg.clone()));
 
                 let loaded_model = match Self::load_xmodel(asset_path, file_path) {
@@ -298,7 +296,8 @@ impl Loader {
                 };
 
                 cache.set_model(&model_name, CachedModel::Cached(loaded_model.clone()));
-                Ok(loaded_model)
+                drop(wg);
+                Ok(loaded_model.clone())
             }
         }
     }
