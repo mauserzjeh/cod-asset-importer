@@ -47,6 +47,7 @@ typedef struct {
     FSeek( current_offset );
     
     FSkip( 44 ); // padding
+    
     SetBackColor( cLtYellow );
     u16 texture_count;
 

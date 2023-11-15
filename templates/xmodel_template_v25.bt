@@ -17,7 +17,6 @@ typedef unsigned int u32;
 typedef char i8;
 typedef short i16;
 typedef int i32;
-typedef int64 i64;
 
 typedef struct {
     SetBackColor( cLtRed );
@@ -33,30 +32,29 @@ typedef struct {
 
 typedef struct {
     SetBackColor( cLtBlue );
-    string texture_name;
-} TEXTURE;
+    string material_name;
+} MATERIAL;
 
 typedef struct {
-    SetBackColor( cLtRed );
-    i16 num_textures;
-    TEXTURE textures[num_textures] <optimize=false>;
-} LODMATERIAL;
+    i16 material_count;
+    MATERIAL material_names[material_count] <optimize=false>;
+} LODMATERIALS;
+
 
 typedef struct {
     SetBackColor( cLtGreen );
     u16 header;
     
-    FSkip( 24 ); // padding
+    FSkip( 26 ); // padding CoD4: 26
+    //FSkip( 27 ); // padding CoD5: 27
     
-    
-    local int num_lods = 3;
+    local int num_lods = 4;
     LOD lods[num_lods] <optimize=false>;
     
     FSkip( 4 ); // padding
 
     i32 unk_count;
-    UNK unks[unk_count] <optimize=false>;  
-    
+    UNK unks[unk_count] <optimize=false>;
 
     local int valid_lods, i = 0;
     for(i = 0; i<num_lods; i++) {
@@ -64,7 +62,8 @@ typedef struct {
             valid_lods++;
         }
     }
-    LODMATERIAL lodmaterials[valid_lods] <optimize=false>;
+    
+    LODMATERIALS materials[valid_lods] <optimize=false>;
 
 } XMODEL;
 
