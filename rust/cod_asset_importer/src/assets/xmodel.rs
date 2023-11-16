@@ -31,7 +31,7 @@ pub enum XModelType {
 }
 
 #[pyclass(module = "cod_asset_importer", name = "XMODEL_VERSIONS")]
-#[derive(ValidEnum, Clone, Copy)]
+#[derive(ValidEnum, Clone, Copy, PartialEq)]
 #[valid_enum(u16)]
 pub enum XModelVersion {
     V14 = 0x0E, // CoD1 & CoDUO
@@ -66,7 +66,7 @@ impl XModel {
                 GameVersion::CoD5 => (XModelVersion::V25, XModel::load_v25_2),
             };
 
-        if version != expected_version as u16 {
+        if xmodel_version != expected_version {
             return Err(Error::new(format!(
                 "invalid xmodel version selected {:?} for version {}",
                 selected_version, version
