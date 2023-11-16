@@ -3,11 +3,13 @@ use pyo3::prelude::*;
 use std::{fs::File, path::PathBuf};
 use valid_enum::ValidEnum;
 
+use super::GameVersion;
+
 pub const ASSETPATH: &str = "xmodel";
 
 pub struct XModel {
     pub name: String,
-    pub version: u16,
+    pub version: XModelVersion,
     pub lods: Vec<XModelLod>,
 }
 
@@ -29,43 +31,50 @@ pub enum XModelType {
 }
 
 #[pyclass(module = "cod_asset_importer", name = "XMODEL_VERSIONS")]
-#[derive(ValidEnum)]
+#[derive(ValidEnum, Clone, Copy)]
 #[valid_enum(u16)]
 pub enum XModelVersion {
-    // CoD1 & CoDUO
-    V14 = 0x0E,
-    // CoD2
-    V20 = 0x14,
-    // CoD4
-    V25 = 0x19,
+    V14 = 0x0E, // CoD1 & CoDUO
+    V20 = 0x14, // CoD2
+    V25 = 0x19, // CoD4 & CoD5
 }
 
+type XModelLoadFunction = fn(&mut XModel, &mut File) -> Result<()>;
+
 impl XModel {
-    pub fn load(file_path: PathBuf) -> Result<XModel> {
+    pub fn load(file_path: PathBuf, selected_version: GameVersion) -> Result<XModel> {
         let mut file = File::open(&file_path)?;
         let name = file_name_without_ext(file_path);
         let version = binary::read::<u16>(&mut file)?;
+
+        let xmodel_version = match XModelVersion::valid(version) {
+            Some(version) => version,
+            None => return Err(Error::new(format!("invalid xmodel version {}", version))),
+        };
+
         let mut xmodel = XModel {
             name,
-            version,
+            version: xmodel_version,
             lods: Vec::new(),
         };
 
-        match XModelVersion::valid(version) {
-            Some(XModelVersion::V14) => {
-                xmodel.load_v14(&mut file)?;
-                Ok(xmodel)
-            }
-            Some(XModelVersion::V20) => {
-                xmodel.load_v20(&mut file)?;
-                Ok(xmodel)
-            }
-            Some(XModelVersion::V25) => {
-                xmodel.load_v25(&mut file)?;
-                Ok(xmodel)
-            }
-            None => Err(Error::new(format!("invalid xmodel version {}", version))),
+        let (expected_version, load_function): (XModelVersion, XModelLoadFunction) =
+            match selected_version {
+                GameVersion::CoD1 => (XModelVersion::V14, XModel::load_v14),
+                GameVersion::CoD2 => (XModelVersion::V20, XModel::load_v20),
+                GameVersion::CoD4 => (XModelVersion::V25, XModel::load_v25),
+                GameVersion::CoD5 => (XModelVersion::V25, XModel::load_v25_2),
+            };
+
+        if version != expected_version as u16 {
+            return Err(Error::new(format!(
+                "invalid xmodel version selected {:?} for version {}",
+                selected_version, version
+            )));
         }
+
+        (load_function)(&mut xmodel, &mut file)?;
+        Ok(xmodel)
     }
 
     fn load_v14(&mut self, file: &mut File) -> Result<()> {
@@ -140,6 +149,41 @@ impl XModel {
 
     fn load_v25(&mut self, file: &mut File) -> Result<()> {
         binary::skip(file, 26)?;
+
+        for _ in 0..4 {
+            let distance = binary::read::<f32>(file)?;
+            let name = binary::read_string(file)?;
+
+            if !name.is_empty() {
+                self.lods.push(XModelLod {
+                    name,
+                    distance,
+                    materials: Vec::new(),
+                })
+            }
+        }
+
+        binary::skip(file, 4)?;
+
+        let padding_count = binary::read::<u32>(file)?;
+        for _ in 0..padding_count {
+            let sub_padding_count = binary::read::<u32>(file)?;
+            binary::skip(file, ((sub_padding_count * 48) + 36) as i64)?;
+        }
+
+        for k in 0..self.lods.len() {
+            let material_count = binary::read::<u16>(file)?;
+            for _ in 0..material_count {
+                let material = binary::read_string(file)?;
+                self.lods[k].materials.push(material);
+            }
+        }
+
+        Ok(())
+    }
+
+    fn load_v25_2(&mut self, file: &mut File) -> Result<()> {
+        binary::skip(file, 27)?;
 
         for _ in 0..4 {
             let distance = binary::read::<f32>(file)?;

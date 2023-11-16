@@ -3,10 +3,7 @@ use super::xmodelpart::XModelPart;
 use crate::utils::{
     binary,
     error::Error,
-    math::{
-        color_from_vec, triangle_from_vec, uv_from_vec, vec3_add, vec3_from_vec, vec3_rotate,
-        Color, Triangle, Vec3, UV,
-    },
+    math::{color_from_vec, uv_from_vec, vec3_add, vec3_from_vec, vec3_rotate, Color, Vec3, UV},
     path::file_name_without_ext,
     Result,
 };
@@ -304,14 +301,16 @@ impl XModelSurf {
             let vertex_count2 = binary::read::<u16>(file)?;
 
             if vertex_count != vertex_count2 {
-                loop {
-                    let p = binary::read::<u16>(file)?;
-                    if p == 0 {
-                        break;
-                    }
-                }
-
                 binary::skip(file, 2)?;
+                if vertex_count2 != 0 {
+                    loop {
+                        let p = binary::read::<u16>(file)?;
+                        if p == 0 {
+                            break;
+                        }
+                    }
+                    binary::skip(file, 2)?;
+                }
             } else {
                 binary::skip(file, 4)?;
             }

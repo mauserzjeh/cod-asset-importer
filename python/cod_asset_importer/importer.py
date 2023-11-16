@@ -6,12 +6,12 @@ import math
 import traceback
 from .cod_asset_importer import (
     XMODEL_VERSIONS,
+    GAME_VERSIONS,
     LoadedModel,
     LoadedIbsp,
     LoadedMaterial,
     Loader,
     LoadedTexture,
-    error_log,
 )
 from .blender_shadernodes import (
     BLENDER_SHADERNODES,
@@ -599,19 +599,22 @@ def import_ibsp(asset_path: str, file_path: str) -> None:
     try:
         loader.import_bsp(asset_path=asset_path, file_path=file_path)
     except:
-        error_log(traceback.print_exc())
+        traceback.print_exc()
 
 
-def import_xmodel(asset_path: str, file_path: str) -> bpy.types.Object | bool:
+def import_xmodel(
+    asset_path: str, file_path: str, selected_version: GAME_VERSIONS
+) -> bpy.types.Object | bool:
     importer = Importer(asset_path=asset_path)
     loader = Loader(importer=importer)
     try:
         loader.import_xmodel(
             asset_path=asset_path,
             file_path=file_path,
+            selected_version=selected_version,
             angles=(0.0, 0.0, 0.0),
             origin=(0.0, 0.0, 0.0),
             scale=(1.0, 1.0, 1.0),
         )
     except:
-        error_log(traceback.print_exc())
+        traceback.print_exc()

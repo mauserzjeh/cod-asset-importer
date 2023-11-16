@@ -1,14 +1,16 @@
 from typing import List, Dict
 import importer
 
-def error_log(error: str) -> None: ...
-def info_log(info: str) -> None: ...
-def debug_log(debug: str) -> None: ...
-
 class XMODEL_VERSIONS:
     V14: int
     V20: int
     V25: int
+
+class GAME_VERSIONS:
+    CoD1: int
+    CoD2: int
+    CoD4: int
+    CoD5: int
 
 class Loader:
     def __init__(self, importer: importer.Importer) -> None: ...
@@ -17,6 +19,7 @@ class Loader:
         self,
         asset_path: str,
         file_path: str,
+        selected_version: GAME_VERSIONS,
         angles: List[float],
         origin: List[float],
         scale: List[float],
@@ -28,7 +31,7 @@ class LoadedIbsp:
 
 class LoadedModel:
     def name(self) -> str: ...
-    def version(self) -> int: ...
+    def version(self) -> XMODEL_VERSIONS: ...
     def angles(self) -> List[float]: ...
     def origin(self) -> List[float]: ...
     def scale(self) -> List[float]: ...
@@ -38,7 +41,7 @@ class LoadedModel:
 
 class LoadedMaterial:
     def name(self) -> str: ...
-    def version(self) -> int: ...
+    def version(self) -> XMODEL_VERSIONS: ...
     def textures(self) -> List[LoadedTexture]: ...
 
 class LoadedTexture:

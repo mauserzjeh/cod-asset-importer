@@ -6,6 +6,7 @@ use crate::{
         xmodel::{self, XModel, XModelVersion},
         xmodelpart::{self, XModelPart},
         xmodelsurf::{self, XModelSurf},
+        GameVersion,
     },
     error_log, info_log,
     loaded_assets::{LoadedBone, LoadedIbsp, LoadedMaterial, LoadedModel, LoadedTexture},
@@ -59,18 +60,20 @@ impl Loader {
         let materials = loaded_ibsp.materials.clone();
         let entities = loaded_ibsp.entities.clone();
 
+        let mut version = XModelVersion::V14;
+        let mut game_version = GameVersion::CoD1;
+        if loaded_ibsp.version == IbspVersion::V4 as i32 {
+            version = XModelVersion::V20;
+            game_version = GameVersion::CoD2
+        }
+
         for material in materials {
             let material_name = material.clone();
             let start_material = Instant::now();
-            let mut version = XModelVersion::V14;
-            if loaded_ibsp.version == IbspVersion::V4 as i32 {
-                version = XModelVersion::V20;
-            }
-
             let loaded_material = if loaded_ibsp.version == IbspVersion::V59 as i32 {
-                Ok(LoadedMaterial::new(material, Vec::new(), version as i32))
+                Ok(LoadedMaterial::new(material, Vec::new(), version))
             } else {
-                Self::load_material(PathBuf::from(asset_path), material, version as i32)
+                Self::load_material(PathBuf::from(asset_path), material, version)
             };
 
             match loaded_material {
@@ -116,6 +119,7 @@ impl Loader {
             let entity_path = PathBuf::from(asset_path)
                 .join(xmodel::ASSETPATH)
                 .join(entity.name);
+            let game_version = game_version.clone();
 
             pool.spawn(move || {
                 let load_start = Instant::now();
@@ -123,6 +127,7 @@ impl Loader {
                     entity_asset_path.clone(),
                     entity_path,
                     entity_name,
+                    game_version,
                     &mut cache,
                 ) {
                     Ok(loaded_model) => loaded_model,
@@ -163,12 +168,14 @@ impl Loader {
         Ok(())
     }
 
-    #[pyo3(signature = (asset_path, file_path, angles, origin, scale))]
+    #[allow(clippy::too_many_arguments)]
+    #[pyo3(signature = (asset_path, file_path, selected_version, angles, origin, scale))]
     fn import_xmodel(
         &self,
         py: Python,
         asset_path: &str,
         file_path: &str,
+        selected_version: GameVersion,
         angles: [f32; 3],
         origin: [f32; 3],
         scale: [f32; 3],
@@ -177,14 +184,17 @@ impl Loader {
 
         let importer_ref = self.importer.as_ref(py);
 
-        let mut loaded_model =
-            match Self::load_xmodel(PathBuf::from(asset_path), PathBuf::from(file_path)) {
-                Ok(loaded_model) => loaded_model,
-                Err(error) => {
-                    error_log!("{}", error);
-                    return Err(PyBaseException::new_err(error.to_string()));
-                }
-            };
+        let mut loaded_model = match Self::load_xmodel(
+            PathBuf::from(asset_path),
+            PathBuf::from(file_path),
+            selected_version,
+        ) {
+            Ok(loaded_model) => loaded_model,
+            Err(error) => {
+                error_log!("{}", error);
+                return Err(PyBaseException::new_err(error.to_string()));
+            }
+        };
 
         loaded_model.set_angles(angles);
         loaded_model.set_origin(origin);
@@ -210,8 +220,12 @@ impl Loader {
         Ok(ibsp.into())
     }
 
-    fn load_xmodel(asset_path: PathBuf, file_path: PathBuf) -> Result<LoadedModel> {
-        let xmodel = XModel::load(file_path)?;
+    fn load_xmodel(
+        asset_path: PathBuf,
+        file_path: PathBuf,
+        selected_version: GameVersion,
+    ) -> Result<LoadedModel> {
+        let xmodel = XModel::load(file_path, selected_version)?;
         let lod0 = xmodel.lods[0].clone();
 
         let xmodelpart_file_path = asset_path
@@ -231,21 +245,23 @@ impl Loader {
 
         let mut loaded_materials: Vec<LoadedMaterial> = Vec::new();
         for mat in lod0.materials {
-            if xmodel.version != xmodel::XModelVersion::V14 as u16 {
-                let loaded_material =
-                    match Self::load_material(asset_path.clone(), mat, xmodel.version as i32) {
-                        Ok(material) => material,
-                        Err(error) => {
-                            error_log!("{}", error);
-                            continue;
-                        }
-                    };
+            match xmodel.version {
+                XModelVersion::V14 => {
+                    loaded_materials.push(LoadedMaterial::new(mat, Vec::new(), xmodel.version))
+                }
+                _ => {
+                    let loaded_material =
+                        match Self::load_material(asset_path.clone(), mat, xmodel.version) {
+                            Ok(material) => material,
+                            Err(error) => {
+                                error_log!("{}", error);
+                                continue;
+                            }
+                        };
 
-                loaded_materials.push(loaded_material);
-                continue;
+                    loaded_materials.push(loaded_material);
+                }
             }
-
-            loaded_materials.push(LoadedMaterial::new(mat, Vec::new(), xmodel.version as i32))
         }
 
         Ok(LoadedModel::new(
@@ -267,6 +283,7 @@ impl Loader {
         asset_path: PathBuf,
         file_path: PathBuf,
         model_name: String,
+        selected_version: GameVersion,
         cache: &mut ModelCache,
     ) -> Result<LoadedModel> {
         match cache.get_model(&model_name) {
@@ -287,7 +304,8 @@ impl Loader {
                 let wg = WaitGroup::new();
                 cache.set_model(&model_name, CachedModel::Loading(wg.clone()));
 
-                let loaded_model = match Self::load_xmodel(asset_path, file_path) {
+                let loaded_model = match Self::load_xmodel(asset_path, file_path, selected_version)
+                {
                     Ok(loaded_model) => loaded_model,
                     Err(error) => {
                         error_log!("{}", error);
@@ -305,7 +323,7 @@ impl Loader {
     fn load_material(
         asset_path: PathBuf,
         material_name: String,
-        version: i32,
+        version: XModelVersion,
     ) -> Result<LoadedMaterial> {
         let material_file_path = asset_path.join(material::ASSETPATH).join(&material_name);
         let material = Material::load(material_file_path, version)?;

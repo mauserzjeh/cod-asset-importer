@@ -3,7 +3,7 @@ use crate::{
         ibsp::{Ibsp, IbspEntity, IbspSurface},
         iwi::IWi,
         xmodelpart::XModelPartBone,
-        xmodelsurf::XModelSurfSurface,
+        xmodelsurf::XModelSurfSurface, xmodel::XModelVersion,
     },
     utils::math::Vec3,
 };
@@ -32,7 +32,7 @@ pub struct LoadedIbspEntity {
 #[derive(Clone)]
 pub struct LoadedModel {
     pub name: String,
-    version: u16,
+    version: XModelVersion,
     angles: Vec3,
     origin: Vec3,
     scale: Vec3,
@@ -45,7 +45,7 @@ pub struct LoadedModel {
 #[derive(Clone)]
 pub struct LoadedMaterial {
     name: String,
-    version: i32,
+    version: XModelVersion,
     textures: Vec<LoadedTexture>,
 }
 
@@ -90,7 +90,7 @@ impl LoadedModel {
         &self.name
     }
 
-    fn version(&self) -> u16 {
+    fn version(&self) -> XModelVersion {
         self.version
     }
 
@@ -125,7 +125,7 @@ impl LoadedMaterial {
         &self.name
     }
 
-    fn version(&self) -> i32 {
+    fn version(&self) -> XModelVersion {
         self.version
     }
 
@@ -257,7 +257,7 @@ impl LoadedModel {
     #[allow(clippy::too_many_arguments)]
     pub fn new(
         name: String,
-        version: u16,
+        version: XModelVersion,
         angles: Vec3,
         origin: Vec3,
         scale: Vec3,
@@ -291,7 +291,7 @@ impl LoadedModel {
 }
 
 impl LoadedMaterial {
-    pub fn new(name: String, textures: Vec<LoadedTexture>, version: i32) -> Self {
+    pub fn new(name: String, textures: Vec<LoadedTexture>, version: XModelVersion) -> Self {
         LoadedMaterial {
             name,
             textures,

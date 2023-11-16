@@ -23,14 +23,17 @@ pub struct MaterialTexture {
 }
 
 impl Material {
-    pub fn load(file_path: PathBuf, version: i32) -> Result<Material> {
+    pub fn load(file_path: PathBuf, version: XModelVersion) -> Result<Material> {
         let mut file = File::open(&file_path)?;
         let name_offset = binary::read::<u32>(&mut file)?;
 
-        if version == XModelVersion::V20 as i32 {
-            binary::skip(&mut file, 48)?;
-        } else {
-            binary::skip(&mut file, 44)?;
+        match version {
+            XModelVersion::V20 => {
+                binary::skip(&mut file, 48)?;
+            }
+            _ => {
+                binary::skip(&mut file, 44)?;
+            }
         }
 
         let texture_count = binary::read::<u16>(&mut file)?;
