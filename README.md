@@ -13,6 +13,8 @@ Blender add-on for importing various Call of Duty assets via the game files.
     - XModel - Compiled models
 - Call of Duty 4 Modern Warfare
     - XModel - Compiled models
+- Call of Duty 5 World at War
+    - XModel - Compiled models
 
 ## Installation & setup
 First of all, extract all the necessary game specific contents. Make sure to have the exact same folder structure as they have originally.
@@ -57,6 +59,19 @@ Images can be found inside the .iwd files. The rest of the assets can be acquire
   └── xmodelsurfs/
 ```
 
+### Call of Duty 5 Worl at War
+Images can be found inside the .iwd files. The rest of the assets can be acquired by installing modtools.
+```
+  .
+  ├── images/
+  ├── materials/
+  ├── xanim/
+  ├── xmodel/
+  ├── xmodelalias/
+  ├── xmodelparts/
+  └── xmodelsurfs/
+```
+
 - [Download the latest release](https://github.com/mauserzjeh/cod-asset-importer/releases/latest)
 - Launch Blender
 - `Edit > Preferences > Add-ons > Install`
@@ -69,10 +84,11 @@ Images can be found inside the .iwd files. The rest of the assets can be acquire
     - `Window > Toggle System Console`
 - To import a map
     - `File > Import > CoD Asset Importer > Import map`
-    - Browse to the map inside the maps folder
+    - Browse to the map inside the `maps` folder
 - To import a model
     - `File > Import > CoD Asset Importer > Import model`
-    - Browse to the model inside the xmodel folder
+    - Select the version of the model
+    - Browse to the model inside the `xmodel` folder
 
 ## Installation from source
 
