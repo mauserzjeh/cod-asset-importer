@@ -59,7 +59,7 @@ Images can be found inside the .iwd files. The rest of the assets can be acquire
   └── xmodelsurfs/
 ```
 
-### Call of Duty 5 Worl at War
+### Call of Duty 5 World at War
 Images can be found inside the .iwd files. The rest of the assets can be acquired by installing modtools.
 ```
   .
