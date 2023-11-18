@@ -6,6 +6,7 @@
 // Revision:
 // Purpose:
 //--------------------------------------
+
 LittleEndian();
 
 // modelType 0 -> rigid

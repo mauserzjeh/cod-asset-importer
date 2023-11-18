@@ -49,6 +49,8 @@ typedef struct {
     
     SetBackColor( cLtGray );
     f32 tangent[3]; // 12
+
+    FSkip( 4 );
     
     SetBackColor( cAqua );
     u8 num_weights; //1
@@ -78,6 +80,8 @@ typedef struct {
     
     SetBackColor( cLtGray );
     f32 tangent[3]; // 12
+
+    FSkip( 4 );
     
     SetBackColor( cLtYellow );
     f32 position[3]; // 12
@@ -95,7 +99,7 @@ typedef struct {
     FSkip( 3 ); // padding
     u16 num_verts;
     u16 num_tris;
-    i16 num_verts2;
+    u16 num_verts2;
     
     SetBackColor( cNone );
     if(num_verts != num_verts2) {
