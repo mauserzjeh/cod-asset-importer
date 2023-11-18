@@ -243,7 +243,7 @@ class Importer:
                 append_asset_path=append_asset_path,
             )
         else:
-            self._import_material_v20_v25(loaded_material=loaded_material)
+            self._import_material(loaded_material=loaded_material)
 
     def _import_material_v14(
         self, loaded_material: LoadedMaterial, has_ext: bool, append_asset_path: str
@@ -353,7 +353,7 @@ class Importer:
         except:
             return
 
-    def _import_material_v20_v25(self, loaded_material: LoadedMaterial) -> None:
+    def _import_material(self, loaded_material: LoadedMaterial) -> None:
         material_name = loaded_material.name()
 
         if bpy.data.materials.get(material_name):

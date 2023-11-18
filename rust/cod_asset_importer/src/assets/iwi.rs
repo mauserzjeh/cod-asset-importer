@@ -42,6 +42,7 @@ struct IWiMipMap {
 pub enum IWiVersion {
     V5 = 0x05,
     V6 = 0x06,
+    // V13 = 0x0D,
 }
 
 #[derive(ValidEnum)]

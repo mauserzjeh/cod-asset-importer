@@ -61,6 +61,10 @@ impl XModelSurf {
                 xmodel_surf.load_v25(&mut file)?;
                 Ok(xmodel_surf)
             }
+            Some(XModelVersion::V62) => {
+                xmodel_surf.load_v62(&mut file)?;
+                Ok(xmodel_surf)
+            }
             None => Err(Error::new(format!(
                 "invalid xmodelsurf version {}",
                 version
@@ -322,6 +326,90 @@ impl XModelSurf {
                 let uv = binary::read_vec::<f32>(file, 2)?;
 
                 binary::skip(file, 24)?;
+
+                let mut weight_count = 0;
+                let mut vertex_bone_idx = 0;
+                if vertex_count != vertex_count2 {
+                    weight_count = binary::read::<u8>(file)?;
+                    vertex_bone_idx = binary::read::<u16>(file)?;
+                }
+
+                let position = binary::read_vec::<f32>(file, 3)?;
+
+                let mut vertex_weights: Vec<XModelSurfWeight> = vec![XModelSurfWeight {
+                    bone: vertex_bone_idx,
+                    influence: 1.0,
+                }];
+
+                if weight_count > 0 {
+                    for _ in 0..weight_count {
+                        let weight_bone_idx = binary::read::<u16>(file)?;
+                        let weight_influence = binary::read::<u16>(file)?;
+                        let weight_influence = weight_influence as f32 / RIGGED as f32;
+                        vertex_weights[0].influence -= weight_influence;
+                        vertex_weights.push(XModelSurfWeight {
+                            bone: weight_bone_idx,
+                            influence: weight_influence,
+                        });
+                    }
+                }
+
+                vertices.push(XModelSurfVertex {
+                    normal: vec3_from_vec(normal).unwrap(),
+                    color: color_from_vec(color).unwrap(),
+                    uv: uv_from_vec(uv, false).unwrap(),
+                    bone: vertex_bone_idx,
+                    position: vec3_from_vec(position).unwrap(),
+                    weights: vertex_weights,
+                })
+            }
+
+            let mut triangles: Vec<u16> = Vec::new();
+            for _ in 0..triangle_count {
+                let t = binary::read_vec::<u16>(file, 3)?;
+                triangles.extend_from_slice(&[t[0], t[2], t[1]]);
+            }
+
+            self.surfaces.push(XModelSurfSurface {
+                vertices,
+                triangles,
+            });
+        }
+
+        Ok(())
+    }
+
+    fn load_v62(&mut self, file: &mut File) -> Result<()> {
+        let surface_count = binary::read::<u16>(file)?;
+
+        for _ in 0..surface_count {
+            binary::skip(file, 3)?;
+            let vertex_count = binary::read::<u16>(file)?;
+            let triangle_count = binary::read::<u16>(file)?;
+            let vertex_count2 = binary::read::<u16>(file)?;
+
+            if vertex_count != vertex_count2 {
+                binary::skip(file, 2)?;
+                if vertex_count2 != 0 {
+                    loop {
+                        let p = binary::read::<u16>(file)?;
+                        if p == 0 {
+                            break;
+                        }
+                    }
+                    binary::skip(file, 2)?;
+                }
+            } else {
+                binary::skip(file, 4)?;
+            }
+
+            let mut vertices: Vec<XModelSurfVertex> = Vec::new();
+            for _ in 0..vertex_count {
+                let normal = binary::read_vec::<f32>(file, 3)?;
+                let color = binary::read_vec::<u8>(file, 4)?;
+                let uv = binary::read_vec::<f32>(file, 2)?;
+
+                binary::skip(file, 28)?;
 
                 let mut weight_count = 0;
                 let mut vertex_bone_idx = 0;
