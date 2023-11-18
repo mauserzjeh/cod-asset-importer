@@ -19,7 +19,7 @@ pub struct IWi {
 
 struct IWiHeader {
     magic: [u8; 3],
-    version: u8,
+    version: IWiVersion,
 }
 
 #[derive(Clone, Copy)]
@@ -37,11 +37,14 @@ struct IWiMipMap {
     size: u32,
 }
 
-#[derive(ValidEnum)]
+#[derive(ValidEnum, PartialEq)]
 #[valid_enum(u8)]
 pub enum IWiVersion {
-    V5 = 0x05,
-    V6 = 0x06,
+    V5 = 0x05,  // CoD2
+    V6 = 0x06,  // CoD4, CoD5
+    V8 = 0x08,  // CoDMW2, CoDMW3
+    V13 = 0x0D, // CoDBO1
+    V27 = 0x1B, // CoDBO2
 }
 
 #[derive(ValidEnum)]
@@ -59,10 +62,28 @@ pub enum IWiFormat {
 impl IWi {
     pub fn load(file_path: PathBuf) -> Result<IWi> {
         let mut file = File::open(file_path)?;
-        Self::read_header(&mut file)?;
+        let header = Self::read_header(&mut file)?;
+
+        if header.version == IWiVersion::V8 {
+            file.seek(SeekFrom::Start(0x08))?;
+        }
+
         let info = Self::read_info(&mut file)?;
 
-        let offsets = binary::read_vec::<u32>(&mut file, 4)?;
+        let mut offset_amount = 4;
+        match header.version {
+            IWiVersion::V13 => {
+                offset_amount = 8;
+                file.seek(SeekFrom::Start(0x10))?;
+            }
+            IWiVersion::V27 => {
+                offset_amount = 8;
+                file.seek(SeekFrom::Start(0x20))?;
+            }
+            _ => (),
+        }
+
+        let offsets = binary::read_vec::<u32>(&mut file, offset_amount)?;
         let current_offset = binary::current_offset(&mut file)?;
         let file_size = file.seek(SeekFrom::End(0))?;
         let mipmap = Self::calculate_highest_mipmap(offsets, current_offset, file_size);
@@ -90,11 +111,11 @@ impl IWi {
             )));
         }
 
-        let version = binary::read::<u8>(file)?;
-        match IWiVersion::valid(version) {
-            Some(_) => (),
-            None => return Err(Error::new(format!("invalid IWi version {}", version))),
-        }
+        let v = binary::read::<u8>(file)?;
+        let version = match IWiVersion::valid(v) {
+            Some(version) => version,
+            None => return Err(Error::new(format!("invalid IWi version {}", v))),
+        };
 
         Ok(IWiHeader {
             magic: magic.try_into().unwrap(),

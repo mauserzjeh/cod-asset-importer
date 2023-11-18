@@ -47,6 +47,7 @@ class ModelImporter(bpy.types.Operator):
             ("cod2", "CoD2 (v20)", "Call of Duty 2"),
             ("cod4", "CoD4 (v25)", "Call of Duty: Modern Warfare"),
             ("cod5", "CoD5 (v25)", "Call of Duty: World at War"),
+            ("cod7", "CoD7 (v62)", "Call of Duty: Black Ops")
         ],
     )
 
@@ -55,6 +56,7 @@ class ModelImporter(bpy.types.Operator):
         "cod2": GAME_VERSIONS.CoD2,
         "cod4": GAME_VERSIONS.CoD4,
         "cod5": GAME_VERSIONS.CoD5,
+        "cod7": GAME_VERSIONS.CoD7,
     }
 
     def execute(self, context: bpy.types.Context) -> Set[int] | Set[str]:

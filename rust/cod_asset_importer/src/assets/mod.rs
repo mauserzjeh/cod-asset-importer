@@ -16,4 +16,5 @@ pub enum GameVersion {
     CoD2 = 2, // CoD2
     CoD4 = 4, // CoD4
     CoD5 = 5, // CoD5
+    CoD7 = 7, // CoDBO1
 }

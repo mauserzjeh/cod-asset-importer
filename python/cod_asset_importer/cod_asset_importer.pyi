@@ -8,9 +8,10 @@ class XMODEL_VERSIONS:
 
 class GAME_VERSIONS:
     CoD1: int
-    CoD2: int
+    CoD2: int 
     CoD4: int
     CoD5: int
+    CoD7: int
 
 class Loader:
     def __init__(self, importer: importer.Importer) -> None: ...
