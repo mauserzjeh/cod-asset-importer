@@ -1,0 +1,29 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "Build",
+            "type": "shell",
+            "command": "${command:python.interpreterPath} setup.py build_rust --inplace ${input:buildTarget}",
+            "group": "build"
+        },
+        {
+            "label": "Build & Package",
+            "type": "shell",
+            "command": "${command:python.interpreterPath} setup.py build_rust --inplace ${input:buildTarget} --create-release-package",
+            "group": "build"
+        }
+    ],
+    "inputs": [
+        {
+            "id": "buildTarget",
+            "type": "pickString",
+            "description": "Build target",
+            "options": [
+                "--debug",
+                "--release"
+            ],
+            "default": "--release"
+        }
+    ]
+}

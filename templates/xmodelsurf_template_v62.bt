@@ -1,0 +1,130 @@
+//--------------------------------------
+//--- 010 Editor v6.0.1 Binary Template
+//
+// File:
+// Author:
+// Revision:
+// Purpose:
+//--------------------------------------
+
+LittleEndian();
+
+// modelType 0 -> rigid
+// modelType 1 -> animated
+// modelType 2 -> viewmodel
+// modelType 3 -> playerbody
+// modelType 4 -> viewhands
+
+typedef float f32;
+typedef double f64;
+typedef unsigned char u8;
+typedef unsigned short u16;
+typedef unsigned int u32;
+typedef char i8;
+typedef short i16;
+typedef int i32;
+
+
+typedef struct {
+    SetBackColor( cPurple );    
+    u16 bone; // 2
+
+    SetBackColor( cGray );
+    u16 weight; // 2
+
+} WEIGHT; // 4
+
+typedef struct {
+    SetBackColor( cLtRed );
+    f32 normal[3]; //12
+
+    SetBackColor( cLtBlue );
+    u8 color[4]; //4
+    
+    SetBackColor( cLtGreen );
+    f32 uv[2]; //8
+
+    SetBackColor( cAqua );
+    f32 binormal[3]; // 12
+    
+    SetBackColor( cLtGray );
+    f32 tangent[3]; // 12
+
+    FSkip( 4 );
+    
+    SetBackColor( cAqua );
+    u8 num_weights; //1
+    
+    SetBackColor( cNone );
+    u16 bone_id; //2
+    
+    SetBackColor( cLtYellow );
+    f32 position[3]; // 12
+
+    WEIGHT weights[num_weights] <optimize=false>;
+    
+} VERT_PHYSIQUED; 
+
+typedef struct {
+    SetBackColor( cLtRed );
+    f32 normal[3]; //12
+
+    SetBackColor( cLtBlue );
+    u8 color[4]; //4
+    
+    SetBackColor( cLtGreen );
+    f32 uv[2]; //8
+    
+    SetBackColor( cAqua );
+    f32 binormal[3]; // 12
+    
+    SetBackColor( cLtGray );
+    f32 tangent[3]; // 12
+
+    FSkip( 4 );
+    
+    SetBackColor( cLtYellow );
+    f32 position[3]; // 12
+} VERT_NON_PHYSIQUED; // 60
+
+typedef struct {
+    SetBackColor( cLtYellow );
+    u16 vertidx1;
+    u16 vertidx2;
+    u16 vertidx3;
+} TRI;
+
+typedef struct {
+    SetBackColor( cLtYellow );
+    FSkip( 3 ); // padding
+    u16 num_verts;
+    u16 num_tris;
+    u16 num_verts2;
+    
+    SetBackColor( cNone );
+    if(num_verts != num_verts2) {
+        FSkip( 2 );
+        if (num_verts2 != 0) {
+            do {
+                u16 p <hidden=true>;
+            } while (p != 0);  
+            FSkip( 2 );
+        }        
+        VERT_PHYSIQUED verts[num_verts] <optimize=false>;
+    } else {
+        FSkip( 4 ); // padding
+        VERT_NON_PHYSIQUED verts[num_verts] <optimize=false>;
+    }
+    
+    TRI tris[num_tris] <optimize=false>;
+} MESH;
+
+typedef struct {
+    SetBackColor( cLtRed );
+    u16 version;
+    u16 mesh_number;
+
+    MESH meshes[mesh_number] <optimize=false>;
+} XMODELSURF;
+
+XMODELSURF x;

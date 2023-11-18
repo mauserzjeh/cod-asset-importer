@@ -6,6 +6,7 @@
 // Revision:
 // Purpose:
 //--------------------------------------
+
 LittleEndian();
 
 typedef float f32;

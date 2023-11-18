@@ -13,11 +13,13 @@ Blender add-on for importing various Call of Duty assets via the game files.
     - XModel - Compiled models
 - Call of Duty 4 Modern Warfare
     - XModel - Compiled models
+- Call of Duty 5 World at War
+    - XModel - Compiled models
 
 ## Installation & setup
 First of all, extract all the necessary game specific contents. Make sure to have the exact same folder structure as they have originally.
 
-### Call of Duty
+### Call of Duty & Call of Duty United Offensive
 Files can be found inside the .pk3 files.
 ```
   .
@@ -57,10 +59,23 @@ Images can be found inside the .iwd files. The rest of the assets can be acquire
   └── xmodelsurfs/
 ```
 
+### Call of Duty 5 World at War
+Images can be found inside the .iwd files. The rest of the assets can be acquired by installing modtools.
+```
+  .
+  ├── images/
+  ├── materials/
+  ├── xanim/
+  ├── xmodel/
+  ├── xmodelalias/
+  ├── xmodelparts/
+  └── xmodelsurfs/
+```
+
 - [Download the latest release](https://github.com/mauserzjeh/cod-asset-importer/releases/latest)
 - Launch Blender
 - `Edit > Preferences > Add-ons > Install`
-- Browse to the downloaded .zip file
+- Browse to the downloaded `.zip` file
 - Enable the addon by ticking the checkbox in front of its name
 
 ## Usage
@@ -68,39 +83,39 @@ Images can be found inside the .iwd files. The rest of the assets can be acquire
 - To see import progress, information and errors
     - `Window > Toggle System Console`
 - To import a map
-    - `File > Import > Call of Duty map`
-    - Browse to the map inside the maps folder
+    - `File > Import > CoD Asset Importer > Import map`
+    - Browse to the map inside the `maps` folder
 - To import a model
-    - `File > Import > Call of Duty xmodel`
-    - Browse to the xmodel inside the xmodel folder
+    - `File > Import > CoD Asset Importer > Import model`
+    - Select the version of the model
+    - Browse to the model inside the `xmodel` folder
 
 ## Installation from source
 
 ### Requirements
 - [Git](https://git-scm.com/)
-- [Python 3.8 <=](https://www.python.org/)
-- [Go 1.18 <=](https://go.dev/)
+- [Python](https://www.python.org/)
+- [Rust](https://www.rust-lang.org/)
 
 ### Installation
-- Open Git Bash in the folder where you would like to clone the repository
 - Clone the repository
 ```
-$ git clone --recurse-submodules git@github.com:mauserzjeh/cod-asset-importer.git
+$ git clone git@github.com:mauserzjeh/cod-asset-importer.git
 ```
 
-- Go to the release folder
+- Install dependencies
 ```
-$ cd cod-asset-importer/release
+$ pip install -r requirements.txt
 ```
 
-- Run the release script which will compile iwi2dds.exe and pack all the necessary files into a .zip
+- Run the build script which will create a `.zip` file in the `release` folder. Alternatively the `Build & Package` task can be run from Visual Studio Code
 ```
-$ ./release.sh
+$ python setup.py build_rust --inplace --release --create-release-package
 ```
 
 - Launch Blender
 - `Edit > Preferences > Add-ons > Install`
-- Browse to the generated .zip file in the release folder
+- Browse to the generated `.zip` file in the release folder
 - Enable the addon by ticking the checkbox in front of its name
 
 
