@@ -20,11 +20,11 @@ rust_extension = RustExtension(
     py_limited_api=True,
 )
 
-setup_version = ".".join(map(str, version))
+version_str = ".".join(map(str, version))
 
 setup(
     name="cod-asset-importer",
-    version=sic(setup_version),
+    version=sic(version_str),
     rust_extensions=[rust_extension],
     package_dir={"": "python"},
     packages=find_packages(where="python"),
@@ -33,12 +33,8 @@ setup(
 
 if package:
     cod_asset_importer = "cod_asset_importer"
-
-    package_version = "_".join(map(str, version))
-    package_name = f"{cod_asset_importer}_{package_version}"
-
+    package_name = f"{cod_asset_importer}_v{version_str}"
     src = os.path.join(os.curdir, "python", cod_asset_importer)
-
     zip_file_path = os.path.join(os.curdir, "release", f"{package_name}.zip")
     with ZipFile(zip_file_path, "w") as zip_file:
         for ext in ("*.py", "*.pyd"):
