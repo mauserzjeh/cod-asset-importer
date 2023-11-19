@@ -4,7 +4,7 @@ bl_info = {
     "author": "Soma Rádóczi",
     "version": (3, 0, 0),
     "blender": (3, 0, 0),
-    "location": "File > Import/Export",
+    "location": "File > Import -> CoD Asset Importer",
     "category": "Import-Export",
     "warning": "This addon is still in development",
 }
