@@ -3,7 +3,7 @@ use crate::{
         ibsp::{Ibsp, IbspEntity, IbspSurface},
         iwi::IWi,
         xmodelpart::XModelPartBone,
-        xmodelsurf::XModelSurfSurface, xmodel::XModelVersion,
+        xmodelsurf::XModelSurfSurface, xmodel::XModelVersion, material::TextureType,
     },
     utils::math::Vec3,
 };
@@ -53,7 +53,7 @@ pub struct LoadedMaterial {
 #[derive(Clone)]
 pub struct LoadedTexture {
     name: String,
-    texture_type: String,
+    texture_type: TextureType,
     width: u16,
     height: u16,
     data: Vec<f32>,
@@ -140,8 +140,8 @@ impl LoadedTexture {
         &self.name
     }
 
-    fn texture_type(&self) -> &str {
-        &self.texture_type
+    fn texture_type(&self) -> TextureType {
+        self.texture_type
     }
 
     fn width(&self) -> u16 {
@@ -301,7 +301,7 @@ impl LoadedMaterial {
 }
 
 impl LoadedTexture {
-    pub fn set_texture_type(&mut self, texture_type: String) {
+    pub fn set_texture_type(&mut self, texture_type: TextureType) {
         self.texture_type = texture_type;
     }
     pub fn set_name(&mut self, name: String) {
@@ -313,7 +313,7 @@ impl From<IWi> for LoadedTexture {
     fn from(iwi: IWi) -> Self {
         Self {
             name: "".to_string(),
-            texture_type: "".to_string(),
+            texture_type: "".to_string().into(),
             width: iwi.width,
             height: iwi.height,
             data: iwi.data,

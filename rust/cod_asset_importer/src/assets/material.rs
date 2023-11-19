@@ -1,11 +1,11 @@
+use super::xmodel::XModelVersion;
 use crate::utils::{binary, Result};
+use pyo3::prelude::*;
 use std::{
     fs::File,
     io::{Seek, SeekFrom},
     path::PathBuf,
 };
-
-use super::xmodel::XModelVersion;
 
 pub const ASSETPATH: &str = "materials";
 
@@ -17,9 +17,20 @@ pub struct Material {
 
 #[derive(Debug)]
 pub struct MaterialTexture {
-    pub texture_type: String,
+    pub texture_type: TextureType,
     flags: u32,
     pub name: String,
+}
+
+#[pyclass(module = "cod_asset_importer", name = "TEXTURE_TYPE")]
+#[derive(Debug, Copy, Clone)]
+pub enum TextureType {
+    Unused,
+    Color,
+    Normal,
+    Specular,
+    Roughness,
+    Detail,
 }
 
 impl Material {
@@ -66,7 +77,7 @@ impl Material {
             let texture_name = binary::read_string(&mut file)?;
 
             textures.push(MaterialTexture {
-                texture_type,
+                texture_type: texture_type.into(),
                 flags: texture_flags,
                 name: texture_name,
             });
@@ -79,5 +90,18 @@ impl Material {
             name,
             textures,
         })
+    }
+}
+
+impl From<String> for TextureType {
+    fn from(texture_type: String) -> Self {
+        match texture_type.as_str() {
+            "colorMap" => TextureType::Color,
+            "normalMap" | "Normal_Map" => TextureType::Normal,
+            "detailMap" | "Detail_Map" => TextureType::Detail,
+            "specularMap" | "Specular_Map" => TextureType::Specular,
+            "Roughness_Map" => TextureType::Roughness,
+            _ => TextureType::Unused,
+        }
     }
 }

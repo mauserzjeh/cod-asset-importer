@@ -3,7 +3,7 @@ import bpy
 import os
 from . import importer
 from .cod_asset_importer import (
-    GAME_VERSIONS,
+    GAME_VERSION,
 )
 
 
@@ -43,20 +43,20 @@ class ModelImporter(bpy.types.Operator):
         name="Version",
         description="Version of the model",
         items=[
-            ("cod1", "CoD1 (v14)", "Call of Duty & Call of Duty UO"),
+            ("cod", "CoD (v14)", "Call of Duty & Call of Duty UO"),
             ("cod2", "CoD2 (v20)", "Call of Duty 2"),
             ("cod4", "CoD4 (v25)", "Call of Duty: Modern Warfare"),
             ("cod5", "CoD5 (v25)", "Call of Duty: World at War"),
-            ("cod7", "CoD7 (v62)", "Call of Duty: Black Ops")
+            ("codbo1", "CoDBO1 (v62)", "Call of Duty: Black Ops"),
         ],
     )
 
     version_options = {
-        "cod1": GAME_VERSIONS.CoD1,
-        "cod2": GAME_VERSIONS.CoD2,
-        "cod4": GAME_VERSIONS.CoD4,
-        "cod5": GAME_VERSIONS.CoD5,
-        "cod7": GAME_VERSIONS.CoD7,
+        "cod": GAME_VERSION.CoD,
+        "cod2": GAME_VERSION.CoD2,
+        "cod4": GAME_VERSION.CoD4,
+        "cod5": GAME_VERSION.CoD5,
+        "codbo1": GAME_VERSION.CoDBO1,
     }
 
     def execute(self, context: bpy.types.Context) -> Set[int] | Set[str]:
