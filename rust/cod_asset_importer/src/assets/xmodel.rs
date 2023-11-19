@@ -30,7 +30,7 @@ pub enum XModelType {
     Viewhands = 52,
 }
 
-#[pyclass(module = "cod_asset_importer", name = "XMODEL_VERSIONS")]
+#[pyclass(module = "cod_asset_importer", name = "XMODEL_VERSION")]
 #[derive(ValidEnum, Clone, Copy, PartialEq)]
 #[valid_enum(u16)]
 pub enum XModelVersion {
@@ -61,7 +61,7 @@ impl XModel {
 
         let (expected_version, load_function): (XModelVersion, XModelLoadFunction) =
             match selected_version {
-                GameVersion::CoD1 => (XModelVersion::V14, XModel::load_v14),
+                GameVersion::CoD => (XModelVersion::V14, XModel::load_v14),
                 GameVersion::CoD2 => (XModelVersion::V20, XModel::load_v20),
                 GameVersion::CoD4 => (XModelVersion::V25, |xmodel, file| {
                     XModel::load_v25(xmodel, file, 26)
@@ -69,7 +69,7 @@ impl XModel {
                 GameVersion::CoD5 => (XModelVersion::V25, |xmodel, file| {
                     XModel::load_v25(xmodel, file, 27)
                 }),
-                GameVersion::CoD7 => (XModelVersion::V62, XModel::load_v62),
+                GameVersion::CoDBO1 => (XModelVersion::V62, XModel::load_v62),
             };
 
         if xmodel_version != expected_version {

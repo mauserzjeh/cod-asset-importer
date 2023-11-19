@@ -61,7 +61,7 @@ impl Loader {
         let entities = loaded_ibsp.entities.clone();
 
         let mut version = XModelVersion::V14;
-        let mut game_version = GameVersion::CoD1;
+        let mut game_version = GameVersion::CoD;
         if loaded_ibsp.version == IbspVersion::V4 as i32 {
             version = XModelVersion::V20;
             game_version = GameVersion::CoD2
