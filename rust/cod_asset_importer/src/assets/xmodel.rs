@@ -30,13 +30,14 @@ pub enum XModelType {
     Viewhands = 52,
 }
 
-#[pyclass(module = "cod_asset_importer", name = "XMODEL_VERSIONS")]
+#[pyclass(module = "cod_asset_importer", name = "XMODEL_VERSION")]
 #[derive(ValidEnum, Clone, Copy, PartialEq)]
 #[valid_enum(u16)]
 pub enum XModelVersion {
     V14 = 0x0E, // CoD1 & CoDUO
     V20 = 0x14, // CoD2
     V25 = 0x19, // CoD4 & CoD5
+    V62 = 0x3E, // CoDBO1
 }
 
 type XModelLoadFunction = fn(&mut XModel, &mut File) -> Result<()>;
@@ -60,10 +61,15 @@ impl XModel {
 
         let (expected_version, load_function): (XModelVersion, XModelLoadFunction) =
             match selected_version {
-                GameVersion::CoD1 => (XModelVersion::V14, XModel::load_v14),
+                GameVersion::CoD => (XModelVersion::V14, XModel::load_v14),
                 GameVersion::CoD2 => (XModelVersion::V20, XModel::load_v20),
-                GameVersion::CoD4 => (XModelVersion::V25, XModel::load_v25),
-                GameVersion::CoD5 => (XModelVersion::V25, XModel::load_v25_2),
+                GameVersion::CoD4 => (XModelVersion::V25, |xmodel, file| {
+                    XModel::load_v25(xmodel, file, 26)
+                }),
+                GameVersion::CoD5 => (XModelVersion::V25, |xmodel, file| {
+                    XModel::load_v25(xmodel, file, 27)
+                }),
+                GameVersion::CoDBO1 => (XModelVersion::V62, XModel::load_v62),
             };
 
         if xmodel_version != expected_version {
@@ -147,8 +153,8 @@ impl XModel {
         Ok(())
     }
 
-    fn load_v25(&mut self, file: &mut File) -> Result<()> {
-        binary::skip(file, 26)?;
+    fn load_v25(&mut self, file: &mut File, skip: i64) -> Result<()> {
+        binary::skip(file, skip)?;
 
         for _ in 0..4 {
             let distance = binary::read::<f32>(file)?;
@@ -182,8 +188,11 @@ impl XModel {
         Ok(())
     }
 
-    fn load_v25_2(&mut self, file: &mut File) -> Result<()> {
-        binary::skip(file, 27)?;
+    fn load_v62(&mut self, file: &mut File) -> Result<()> {
+        binary::skip(file, 28)?;
+        binary::read_string(file)?;
+        binary::read_string(file)?;
+        binary::skip(file, 5)?;
 
         for _ in 0..4 {
             let distance = binary::read::<f32>(file)?;

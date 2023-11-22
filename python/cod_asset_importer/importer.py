@@ -5,8 +5,9 @@ import os
 import math
 import traceback
 from .cod_asset_importer import (
-    XMODEL_VERSIONS,
-    GAME_VERSIONS,
+    XMODEL_VERSION,
+    GAME_VERSION,
+    TEXTURE_TYPE,
     LoadedModel,
     LoadedIbsp,
     LoadedMaterial,
@@ -15,9 +16,6 @@ from .cod_asset_importer import (
 )
 from .blender_shadernodes import (
     BLENDER_SHADERNODES,
-)
-from . import (
-    base_enum,
 )
 
 
@@ -36,9 +34,9 @@ class Importer:
         mesh_objects = []
 
         materials = loaded_model.materials()
-        for material in materials:
+        for _, material in materials.items():
             append_asset_path = ""
-            if model_version == XMODEL_VERSIONS.V14:
+            if model_version == XMODEL_VERSION.V14:
                 append_asset_path = "skins"
 
             self.material(loaded_material=material, append_asset_path=append_asset_path)
@@ -71,9 +69,8 @@ class Importer:
             vertex_color_layer.data.foreach_set("color", surface.colors())
 
             obj = bpy.data.objects.new(model_name, mesh)
-
-            active_material_name = materials[i].name()
-            if model_version == XMODEL_VERSIONS.V14:
+            active_material_name = surface.material()
+            if model_version == XMODEL_VERSION.V14:
                 active_material_name = os.path.splitext(active_material_name)[0]
             obj.active_material = bpy.data.materials.get(active_material_name)
 
@@ -236,15 +233,19 @@ class Importer:
         has_ext: bool = True,
         append_asset_path: str = "",
     ) -> None:
-        if loaded_material.version() == XMODEL_VERSIONS.V14:
+        version = loaded_material.version()
+        if version == XMODEL_VERSION.V14:
             self._import_material_v14(
                 loaded_material=loaded_material,
                 has_ext=has_ext,
                 append_asset_path=append_asset_path,
             )
+        elif version == XMODEL_VERSION.V62:
+            self._import_material_v62(loaded_material=loaded_material)
         else:
             self._import_material_v20_v25(loaded_material=loaded_material)
 
+    # TODO
     def _import_material_v14(
         self, loaded_material: LoadedMaterial, has_ext: bool, append_asset_path: str
     ) -> None:
@@ -318,7 +319,7 @@ class Importer:
             )
 
             texture_node = nodes.new(BLENDER_SHADERNODES.SHADERNODE_TEXIMAGE)
-            texture_node.label = "colorMap"
+            texture_node.label = str(TEXTURE_TYPE.Color)
             texture_node.location = (-700, 0)
             texture_node.image = texture_image
             links.new(
@@ -353,6 +354,7 @@ class Importer:
         except:
             return
 
+    # TODO
     def _import_material_v20_v25(self, loaded_material: LoadedMaterial) -> None:
         material_name = loaded_material.name()
 
@@ -419,11 +421,11 @@ class Importer:
             loaded_texture_type = loaded_texture.texture_type()
 
             texture_node = nodes.new(BLENDER_SHADERNODES.SHADERNODE_TEXIMAGE)
-            texture_node.label = loaded_texture_type
+            texture_node.label = str(loaded_texture_type)
             texture_node.location = (-700, -255 * i)
             texture_node.image = texture_image
 
-            if loaded_texture_type == TEXTURE_TYPES.COLORMAP:
+            if loaded_texture_type == TEXTURE_TYPE.Color:
                 links.new(
                     texture_node.outputs[BLENDER_SHADERNODES.OUTPUT_TEXIMAGE_COLOR],
                     principled_bsdf_node.inputs[
@@ -434,7 +436,7 @@ class Importer:
                     texture_node.outputs[BLENDER_SHADERNODES.OUTPUT_TEXIMAGE_ALPHA],
                     mix_shader_node.inputs[BLENDER_SHADERNODES.INPUT_MIXSHADER_FAC],
                 )
-            elif loaded_texture_type == TEXTURE_TYPES.SPECULARMAP:
+            elif loaded_texture_type == TEXTURE_TYPE.Specular:
                 links.new(
                     texture_node.outputs[BLENDER_SHADERNODES.OUTPUT_TEXIMAGE_COLOR],
                     principled_bsdf_node.inputs[
@@ -445,7 +447,220 @@ class Importer:
                     BLENDER_SHADERNODES.TEXIMAGE_COLORSPACE_LINEAR
                 )
                 texture_node.location = (-700, -255)
-            elif loaded_texture_type == TEXTURE_TYPES.NORMALMAP:
+            elif loaded_texture_type == TEXTURE_TYPE.Normal:
+                texture_node.image.colorspace_settings.name = (
+                    BLENDER_SHADERNODES.TEXIMAGE_COLORSPACE_LINEAR
+                )
+                texture_node.location = (-1900, -655)
+
+                normal_map_node = nodes.new(BLENDER_SHADERNODES.SHADERNODE_NORMALMAP)
+                normal_map_node.location = (-450, -650)
+                normal_map_node.space = BLENDER_SHADERNODES.NORMALMAP_SPACE_TANGENT
+                normal_map_node.inputs[
+                    BLENDER_SHADERNODES.INPUT_NORMALMAP_STRENGTH
+                ].default_value = 0.3
+                links.new(
+                    normal_map_node.outputs[
+                        BLENDER_SHADERNODES.OUTPUT_NORMALMAP_NORMAL
+                    ],
+                    principled_bsdf_node.inputs[
+                        BLENDER_SHADERNODES.INPUT_BSDFPRINCIPLED_NORMAL
+                    ],
+                )
+
+                combine_rgb_node = nodes.new(BLENDER_SHADERNODES.SHADERNODE_COMBINERGB)
+                combine_rgb_node.location = (-650, -750)
+                links.new(
+                    combine_rgb_node.outputs[
+                        BLENDER_SHADERNODES.OUTPUT_COMBINERGB_IMAGE
+                    ],
+                    normal_map_node.inputs[BLENDER_SHADERNODES.INPUT_NORMALMAP_COLOR],
+                )
+
+                math_sqrt_node = nodes.new(BLENDER_SHADERNODES.SHADERNODE_MATH)
+                math_sqrt_node.location = (-850, -850)
+                math_sqrt_node.operation = BLENDER_SHADERNODES.OPERATION_MATH_SQRT
+                links.new(
+                    math_sqrt_node.outputs[BLENDER_SHADERNODES.OUTPUT_MATH_VALUE],
+                    combine_rgb_node.inputs[BLENDER_SHADERNODES.INPUT_COMBINERGB_B],
+                )
+
+                math_subtract_node = nodes.new(BLENDER_SHADERNODES.SHADERNODE_MATH)
+                math_subtract_node.location = (-1050, -850)
+                math_subtract_node.operation = (
+                    BLENDER_SHADERNODES.OPERATION_MATH_SUBTRACT
+                )
+                links.new(
+                    math_subtract_node.outputs[BLENDER_SHADERNODES.OUTPUT_MATH_VALUE],
+                    math_sqrt_node.inputs[BLENDER_SHADERNODES.INPUT_MATH_SQRT_VALUE],
+                )
+
+                math_subtract_node2 = nodes.new(BLENDER_SHADERNODES.SHADERNODE_MATH)
+                math_subtract_node2.location = (-1250, -950)
+                math_subtract_node2.operation = (
+                    BLENDER_SHADERNODES.OPERATION_MATH_SUBTRACT
+                )
+                math_subtract_node2.inputs[
+                    BLENDER_SHADERNODES.INPUT_MATH_SUBTRACT_VALUE1
+                ].default_value = 1.0
+                links.new(
+                    math_subtract_node2.outputs[BLENDER_SHADERNODES.OUTPUT_MATH_VALUE],
+                    math_subtract_node.inputs[
+                        BLENDER_SHADERNODES.INPUT_MATH_SUBTRACT_VALUE1
+                    ],
+                )
+
+                math_power_node = nodes.new(BLENDER_SHADERNODES.SHADERNODE_MATH)
+                math_power_node.location = (-1250, -750)
+                math_power_node.operation = BLENDER_SHADERNODES.OPERATION_MATH_POWER
+                math_power_node.inputs[
+                    BLENDER_SHADERNODES.INPUT_MATH_POWER_EXPONENT
+                ].default_value = 2.0
+                links.new(
+                    math_power_node.outputs[BLENDER_SHADERNODES.OUTPUT_MATH_VALUE],
+                    math_subtract_node.inputs[
+                        BLENDER_SHADERNODES.INPUT_MATH_SUBTRACT_VALUE2
+                    ],
+                )
+
+                math_power_node2 = nodes.new(BLENDER_SHADERNODES.SHADERNODE_MATH)
+                math_power_node2.location = (-1500, -950)
+                math_power_node2.operation = BLENDER_SHADERNODES.OPERATION_MATH_POWER
+                math_power_node2.inputs[
+                    BLENDER_SHADERNODES.INPUT_MATH_POWER_EXPONENT
+                ].default_value = 2.0
+                links.new(
+                    math_power_node2.outputs[BLENDER_SHADERNODES.OUTPUT_MATH_VALUE],
+                    math_subtract_node2.inputs[
+                        BLENDER_SHADERNODES.INPUT_MATH_SUBTRACT_VALUE2
+                    ],
+                )
+                links.new(
+                    texture_node.outputs[BLENDER_SHADERNODES.OUTPUT_TEXIMAGE_ALPHA],
+                    math_power_node2.inputs[BLENDER_SHADERNODES.INPUT_MATH_POWER_BASE],
+                )
+
+                separate_rgb_node = nodes.new(
+                    BLENDER_SHADERNODES.SHADERNODE_SEPARATERGB
+                )
+                separate_rgb_node.location = (-1500, -450)
+                links.new(
+                    separate_rgb_node.outputs[BLENDER_SHADERNODES.OUTPUT_SEPARATERGB_G],
+                    combine_rgb_node.inputs[BLENDER_SHADERNODES.INPUT_COMBINERGB_G],
+                )
+                links.new(
+                    separate_rgb_node.outputs[BLENDER_SHADERNODES.OUTPUT_SEPARATERGB_G],
+                    math_power_node.inputs[BLENDER_SHADERNODES.INPUT_MATH_POWER_BASE],
+                )
+                links.new(
+                    texture_node.outputs[BLENDER_SHADERNODES.OUTPUT_TEXIMAGE_COLOR],
+                    separate_rgb_node.inputs[
+                        BLENDER_SHADERNODES.INPUT_SEPARATERGB_IMAGE
+                    ],
+                )
+                links.new(
+                    texture_node.outputs[BLENDER_SHADERNODES.OUTPUT_TEXIMAGE_ALPHA],
+                    math_power_node2.inputs[BLENDER_SHADERNODES.INPUT_MATH_POWER_BASE],
+                )
+                links.new(
+                    texture_node.outputs[BLENDER_SHADERNODES.OUTPUT_TEXIMAGE_ALPHA],
+                    combine_rgb_node.inputs[BLENDER_SHADERNODES.INPUT_COMBINERGB_R],
+                )
+
+    # TODO
+    def _import_material_v62(self, loaded_material: LoadedMaterial) -> None:
+        material_name = loaded_material.name()
+
+        if bpy.data.materials.get(material_name):
+            return
+
+        material = bpy.data.materials.new(material_name)
+        material.use_nodes = True
+        material.blend_method = "HASHED"
+        material.shadow_method = "HASHED"
+
+        nodes = material.node_tree.nodes
+        links = material.node_tree.links
+
+        output_node = None
+
+        for node in nodes:
+            if node.type != "OUTPUT_MATERIAL":
+                nodes.remove(node)
+                continue
+
+            if node.type == "OUTPUT_MATERIAL" and output_node == None:
+                output_node = node
+
+        if output_node == None:
+            output_node = nodes.new(BLENDER_SHADERNODES.SHADERNODE_OUTPUTMATERIAL)
+
+        output_node.location = (300, 0)
+
+        mix_shader_node = nodes.new(BLENDER_SHADERNODES.SHADERNODE_MIXSHADER)
+        mix_shader_node.location = (100, 0)
+        links.new(
+            mix_shader_node.outputs[BLENDER_SHADERNODES.OUTPUT_MIXSHADER_SHADER],
+            output_node.inputs[BLENDER_SHADERNODES.INPUT_OUTPUTMATERIAL_SURFACE],
+        )
+
+        transparent_bsdf_node = nodes.new(
+            BLENDER_SHADERNODES.SHADERNODE_BSDFTRANSPARENT
+        )
+        transparent_bsdf_node.location = (-200, 100)
+        links.new(
+            transparent_bsdf_node.outputs[
+                BLENDER_SHADERNODES.OUTPUT_BSDFTRANSPARENT_BSDF
+            ],
+            mix_shader_node.inputs[BLENDER_SHADERNODES.INPUT_MIXSHADER_SHADER1],
+        )
+
+        principled_bsdf_node = nodes.new(BLENDER_SHADERNODES.SHADERNODE_BSDFPRINCIPLED)
+        principled_bsdf_node.location = (-200, 0)
+        principled_bsdf_node.width = 200
+        links.new(
+            principled_bsdf_node.outputs[
+                BLENDER_SHADERNODES.OUTPUT_BSDFTRANSPARENT_BSDF
+            ],
+            mix_shader_node.inputs[BLENDER_SHADERNODES.INPUT_MIXSHADER_SHADER2],
+        )
+
+        loaded_textures = loaded_material.textures()
+        for i, loaded_texture in enumerate(loaded_textures):
+            texture_image = self._import_texture(loaded_texture=loaded_texture)
+            if texture_image == None:
+                continue
+
+            loaded_texture_type = loaded_texture.texture_type()
+
+            texture_node = nodes.new(BLENDER_SHADERNODES.SHADERNODE_TEXIMAGE)
+            texture_node.label = str(loaded_texture_type)
+            texture_node.location = (-700, -255 * i)
+            texture_node.image = texture_image
+
+            if loaded_texture_type == TEXTURE_TYPE.Color:
+                links.new(
+                    texture_node.outputs[BLENDER_SHADERNODES.OUTPUT_TEXIMAGE_COLOR],
+                    principled_bsdf_node.inputs[
+                        BLENDER_SHADERNODES.INPUT_BSDFPRINCIPLED_BASECOLOR
+                    ],
+                )
+                links.new(
+                    texture_node.outputs[BLENDER_SHADERNODES.OUTPUT_TEXIMAGE_ALPHA],
+                    mix_shader_node.inputs[BLENDER_SHADERNODES.INPUT_MIXSHADER_FAC],
+                )
+            elif loaded_texture_type == TEXTURE_TYPE.Specular:
+                links.new(
+                    texture_node.outputs[BLENDER_SHADERNODES.OUTPUT_TEXIMAGE_COLOR],
+                    principled_bsdf_node.inputs[
+                        BLENDER_SHADERNODES.INPUT_BSDFPRINCIPLED_SPECULAR
+                    ],
+                )
+                texture_node.image.colorspace_settings.name = (
+                    BLENDER_SHADERNODES.TEXIMAGE_COLORSPACE_LINEAR
+                )
+                texture_node.location = (-700, -255)
+            elif loaded_texture_type == TEXTURE_TYPE.Normal:
                 texture_node.image.colorspace_settings.name = (
                     BLENDER_SHADERNODES.TEXIMAGE_COLORSPACE_LINEAR
                 )
@@ -581,16 +796,9 @@ class Importer:
         )
         texture_image.pixels = loaded_texture.data()
         texture_image.file_format = "TARGA"
-        texture_image.pack()
+        texture_image.alpha_mode = "CHANNEL_PACKED"
 
         return texture_image
-
-
-class TEXTURE_TYPES(metaclass=base_enum.BaseEnum):
-    COLORMAP = "colorMap"
-    DETAILMAP = "detailMap"
-    NORMALMAP = "normalMap"
-    SPECULARMAP = "specularMap"
 
 
 def import_ibsp(asset_path: str, file_path: str) -> None:
@@ -603,7 +811,7 @@ def import_ibsp(asset_path: str, file_path: str) -> None:
 
 
 def import_xmodel(
-    asset_path: str, file_path: str, selected_version: GAME_VERSIONS
+    asset_path: str, file_path: str, selected_version: GAME_VERSION
 ) -> bpy.types.Object | bool:
     importer = Importer(asset_path=asset_path)
     loader = Loader(importer=importer)

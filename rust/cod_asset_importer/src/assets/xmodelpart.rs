@@ -185,6 +185,10 @@ impl XModelPart {
                 xmodel_part.load_v25(&mut file)?;
                 Ok(xmodel_part)
             }
+            Some(XModelVersion::V62) => {
+                xmodel_part.load_v62(&mut file)?;
+                Ok(xmodel_part)
+            }
             None => Err(Error::new(format!(
                 "invalid xmodelpart version {}",
                 version
@@ -325,6 +329,64 @@ impl XModelPart {
         Ok(())
     }
     fn load_v25(&mut self, file: &mut File) -> Result<()> {
+        let bone_header = binary::read_vec::<u16>(file, 2)?;
+        let bone_count = bone_header[0];
+        let root_bone_count = bone_header[1];
+
+        for _ in 0..root_bone_count {
+            self.bones.push(XModelPartBone {
+                name: String::from(""),
+                parent: -1,
+                local_transform: XModelPartBoneTransform {
+                    position: [0.0, 0.0, 0.0],
+                    rotation: [1.0, 0.0, 0.0, 0.0],
+                },
+                world_transform: XModelPartBoneTransform {
+                    position: [0.0, 0.0, 0.0],
+                    rotation: [1.0, 0.0, 0.0, 0.0],
+                },
+            });
+        }
+
+        for _ in 0..bone_count {
+            let parent = binary::read::<i8>(file)?;
+            let position = binary::read_vec::<f32>(file, 3)?;
+            let rotation = binary::read_vec::<i16>(file, 3)?;
+
+            let qx = (rotation[0] as f32) / ROTATION_DIVISOR;
+            let qy = (rotation[1] as f32) / ROTATION_DIVISOR;
+            let qz = (rotation[2] as f32) / ROTATION_DIVISOR;
+            let qw = f32::sqrt((1.0 - (qx * qx) - (qy * qy) - (qz * qz)).max(0.0));
+
+            let bone_transform = XModelPartBoneTransform {
+                position: vec3_from_vec(position).unwrap(),
+                rotation: [qw, qx, qy, qz],
+            };
+
+            self.bones.push(XModelPartBone {
+                name: String::from(""),
+                parent,
+                local_transform: bone_transform,
+                world_transform: bone_transform,
+            })
+        }
+
+        for i in 0..root_bone_count + bone_count {
+            let mut current_bone = self.bones[i as usize].to_owned();
+            let bone_name = binary::read_string(file)?;
+            current_bone.name = bone_name.clone();
+
+            if current_bone.parent > -1 {
+                let parent_bone = self.bones[current_bone.parent as usize].to_owned();
+                current_bone.generate_world_transform_by_parent(parent_bone);
+            }
+
+            self.bones[i as usize] = current_bone;
+        }
+
+        Ok(())
+    }
+    fn load_v62(&mut self, file: &mut File) -> Result<()> {
         let bone_header = binary::read_vec::<u16>(file, 2)?;
         let bone_count = bone_header[0];
         let root_bone_count = bone_header[1];

@@ -3,7 +3,7 @@ mod loaded_assets;
 mod loader;
 mod utils;
 
-use assets::{xmodel::XModelVersion, GameVersion};
+use assets::{xmodel::XModelVersion, GameVersion, material::TextureType};
 use loaded_assets::{
     LoadedBone, LoadedIbsp, LoadedIbspEntity, LoadedMaterial, LoadedModel, LoadedSurface,
     LoadedTexture,
@@ -23,6 +23,7 @@ fn cod_asset_importer(_py: Python, m: &PyModule) -> PyResult<()> {
     m.add_class::<LoadedBone>()?;
     m.add_class::<XModelVersion>()?;
     m.add_class::<GameVersion>()?;
+    m.add_class::<TextureType>()?;
 
     Ok(())
 }

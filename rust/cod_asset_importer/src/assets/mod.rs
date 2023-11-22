@@ -8,12 +8,13 @@ pub mod xmodel;
 pub mod xmodelpart;
 pub mod xmodelsurf;
 
-#[pyclass(module = "cod_asset_importer", name = "GAME_VERSIONS")]
+#[pyclass(module = "cod_asset_importer", name = "GAME_VERSION")]
 #[derive(ValidEnum, Debug, Clone, Copy)]
 #[valid_enum(u16)]
 pub enum GameVersion {
-    CoD1 = 1, // CoD1 & CoDUO
-    CoD2 = 2, // CoD2
-    CoD4 = 4, // CoD4
-    CoD5 = 5, // CoD5
+    CoD, // CoD1 & CoDUO
+    CoD2, // CoD2
+    CoD4, // CoD4
+    CoD5, // CoD5
+    CoDBO1, // CoDBO1
 }

@@ -2,8 +2,10 @@ use crate::{
     assets::{
         ibsp::{Ibsp, IbspEntity, IbspSurface},
         iwi::IWi,
+        material::TextureType,
+        xmodel::XModelVersion,
         xmodelpart::XModelPartBone,
-        xmodelsurf::XModelSurfSurface, xmodel::XModelVersion,
+        xmodelsurf::XModelSurfSurface,
     },
     utils::math::Vec3,
 };
@@ -36,7 +38,7 @@ pub struct LoadedModel {
     angles: Vec3,
     origin: Vec3,
     scale: Vec3,
-    materials: Vec<LoadedMaterial>,
+    materials: HashMap<String, LoadedMaterial>,
     surfaces: Vec<LoadedSurface>,
     bones: Vec<LoadedBone>,
 }
@@ -53,7 +55,7 @@ pub struct LoadedMaterial {
 #[derive(Clone)]
 pub struct LoadedTexture {
     name: String,
-    texture_type: String,
+    texture_type: TextureType,
     width: u16,
     height: u16,
     data: Vec<f32>,
@@ -106,7 +108,7 @@ impl LoadedModel {
         self.scale
     }
 
-    fn materials(&mut self) -> Vec<LoadedMaterial> {
+    fn materials(&mut self) -> HashMap<String, LoadedMaterial> {
         mem::take(&mut self.materials)
     }
 
@@ -140,8 +142,8 @@ impl LoadedTexture {
         &self.name
     }
 
-    fn texture_type(&self) -> &str {
-        &self.texture_type
+    fn texture_type(&self) -> TextureType {
+        self.texture_type
     }
 
     fn width(&self) -> u16 {
@@ -261,7 +263,7 @@ impl LoadedModel {
         angles: Vec3,
         origin: Vec3,
         scale: Vec3,
-        materials: Vec<LoadedMaterial>,
+        materials: HashMap<String, LoadedMaterial>,
         surfaces: Vec<LoadedSurface>,
         bones: Vec<LoadedBone>,
     ) -> Self {
@@ -301,7 +303,7 @@ impl LoadedMaterial {
 }
 
 impl LoadedTexture {
-    pub fn set_texture_type(&mut self, texture_type: String) {
+    pub fn set_texture_type(&mut self, texture_type: TextureType) {
         self.texture_type = texture_type;
     }
     pub fn set_name(&mut self, name: String) {
@@ -309,11 +311,17 @@ impl LoadedTexture {
     }
 }
 
+impl LoadedSurface {
+    pub fn set_material(&mut self, material: String) {
+        self.material = material;
+    }
+}
+
 impl From<IWi> for LoadedTexture {
     fn from(iwi: IWi) -> Self {
         Self {
             name: "".to_string(),
-            texture_type: "".to_string(),
+            texture_type: "".to_string().into(),
             width: iwi.width,
             height: iwi.height,
             data: iwi.data,

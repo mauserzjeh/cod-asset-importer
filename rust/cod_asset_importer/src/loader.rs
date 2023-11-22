@@ -9,14 +9,16 @@ use crate::{
         GameVersion,
     },
     error_log, info_log,
-    loaded_assets::{LoadedBone, LoadedIbsp, LoadedMaterial, LoadedModel, LoadedTexture},
-    utils::{error::Error, Result},
+    loaded_assets::{
+        LoadedBone, LoadedIbsp, LoadedMaterial, LoadedModel, LoadedSurface, LoadedTexture,
+    },
+    utils::{error::Error, path::file_name, Result},
 };
 use crossbeam_utils::sync::WaitGroup;
 use pyo3::{exceptions::PyBaseException, prelude::*};
 use rayon::ThreadPoolBuilder;
 use std::{
-    collections::HashMap,
+    collections::{hash_map::Entry::Vacant, HashMap},
     path::PathBuf,
     sync::{mpsc::channel, Arc, Mutex},
     thread,
@@ -51,7 +53,7 @@ impl Loader {
         let loaded_ibsp = match Self::load_ibsp(PathBuf::from(file_path)) {
             Ok(loaded_ibsp) => loaded_ibsp,
             Err(error) => {
-                error_log!("{}", error);
+                error_log!("[MAP] {} - {}", file_name(PathBuf::from(file_path)), error);
                 return Err(PyBaseException::new_err(error.to_string()));
             }
         };
@@ -61,7 +63,7 @@ impl Loader {
         let entities = loaded_ibsp.entities.clone();
 
         let mut version = XModelVersion::V14;
-        let mut game_version = GameVersion::CoD1;
+        let mut game_version = GameVersion::CoD;
         if loaded_ibsp.version == IbspVersion::V4 as i32 {
             version = XModelVersion::V20;
             game_version = GameVersion::CoD2
@@ -87,12 +89,12 @@ impl Loader {
                             );
                         }
                         Err(error) => {
-                            error_log!("{}", error)
+                            error_log!("[MATERIAL] {} - {}", material_name, error)
                         }
                     }
                 }
                 Err(error) => {
-                    error_log!("{}", error);
+                    error_log!("[MATERIAL] {} - {}", material_name, error);
                 }
             }
         }
@@ -100,7 +102,7 @@ impl Loader {
         match importer_ref.call_method1("ibsp", (loaded_ibsp,)) {
             Ok(_) => (),
             Err(error) => {
-                error_log!("{}", error)
+                error_log!("[MAP] {} - {}", ibsp_name, error)
             }
         }
 
@@ -119,20 +121,19 @@ impl Loader {
             let entity_path = PathBuf::from(asset_path)
                 .join(xmodel::ASSETPATH)
                 .join(entity.name);
-            let game_version = game_version.clone();
 
             pool.spawn(move || {
                 let load_start = Instant::now();
                 let mut loaded_model = match Self::load_xmodel_cached(
                     entity_asset_path.clone(),
                     entity_path,
-                    entity_name,
+                    entity_name.clone(),
                     game_version,
                     &mut cache,
                 ) {
                     Ok(loaded_model) => loaded_model,
                     Err(error) => {
-                        error_log!("{}", error);
+                        error_log!("[MODEL] {} - {}", entity_name, error);
                         return;
                     }
                 };
@@ -159,7 +160,7 @@ impl Loader {
                     info_log!("[MODEL] {} [{:?}]", model_name, model_duration);
                 }
                 Err(error) => {
-                    error_log!("{}", error);
+                    error_log!("[MODEL] {} - {}", model_name, error);
                 }
             }
         }
@@ -191,7 +192,11 @@ impl Loader {
         ) {
             Ok(loaded_model) => loaded_model,
             Err(error) => {
-                error_log!("{}", error);
+                error_log!(
+                    "[MODEL] {} - {}",
+                    file_name(PathBuf::from(file_path)),
+                    error
+                );
                 return Err(PyBaseException::new_err(error.to_string()));
             }
         };
@@ -207,7 +212,7 @@ impl Loader {
                 Ok(())
             }
             Err(error) => {
-                error_log!("{}", error);
+                error_log!("[MODEL] {} - {}", model_name, error);
                 Err(error)
             }
         }
@@ -235,7 +240,7 @@ impl Loader {
         let xmodelpart = match XModelPart::load(xmodelpart_file_path) {
             Ok(xmodelpart) => Some(xmodelpart),
             Err(error) => {
-                error_log!("{}", error);
+                error_log!("[XMODELPART] {} - {}", lod0.name.clone(), error);
                 None
             }
         };
@@ -243,23 +248,28 @@ impl Loader {
         let xmodelsurf_file_path = asset_path.join(xmodelsurf::ASSETPATH).join(lod0.name);
         let xmodelsurf = XModelSurf::load(xmodelsurf_file_path, xmodelpart.clone())?;
 
-        let mut loaded_materials: Vec<LoadedMaterial> = Vec::new();
-        for mat in lod0.materials {
-            match xmodel.version {
-                XModelVersion::V14 => {
-                    loaded_materials.push(LoadedMaterial::new(mat, Vec::new(), xmodel.version))
-                }
-                _ => {
-                    let loaded_material =
-                        match Self::load_material(asset_path.clone(), mat, xmodel.version) {
+        let mut loaded_materials: HashMap<String, LoadedMaterial> = HashMap::new();
+        for mat in lod0.materials.clone() {
+            if let Vacant(entry) = loaded_materials.entry(mat.clone()) {
+                match xmodel.version {
+                    XModelVersion::V14 => {
+                        entry.insert(LoadedMaterial::new(mat, Vec::new(), xmodel.version));
+                    }
+                    _ => {
+                        let loaded_material = match Self::load_material(
+                            asset_path.clone(),
+                            mat.clone(),
+                            xmodel.version,
+                        ) {
                             Ok(material) => material,
                             Err(error) => {
-                                error_log!("{}", error);
+                                error_log!("[MATERIAL] {} - {}", mat, error);
                                 continue;
                             }
                         };
 
-                    loaded_materials.push(loaded_material);
+                        entry.insert(loaded_material);
+                    }
                 }
             }
         }
@@ -271,7 +281,17 @@ impl Loader {
             [0f32; 3],
             [1f32; 3],
             loaded_materials,
-            xmodelsurf.surfaces.into_iter().map(|s| s.into()).collect(),
+            xmodelsurf
+                .surfaces
+                .into_iter()
+                .enumerate()
+                .map(|(i, s)| {
+                    let mut loaded_surface: LoadedSurface = s.into();
+                    loaded_surface.set_material(lod0.materials[i].clone());
+
+                    loaded_surface
+                })
+                .collect(),
             match xmodelpart {
                 Some(xmodelpart) => xmodelpart.bones.into_iter().map(|b| b.into()).collect(),
                 None => Vec::<LoadedBone>::new(),
@@ -308,7 +328,7 @@ impl Loader {
                 {
                     Ok(loaded_model) => loaded_model,
                     Err(error) => {
-                        error_log!("{}", error);
+                        error_log!("[MODEL] {} - {}", model_name, error);
                         return Err(Error::new(error.to_string()));
                     }
                 };
@@ -335,7 +355,7 @@ impl Loader {
             let mut loaded_texture: LoadedTexture = match IWi::load(texture_file_path) {
                 Ok(iwi) => iwi.into(),
                 Err(error) => {
-                    error_log!("{}", error);
+                    error_log!("[IWI] {} - {}", texture.name, error);
                     continue;
                 }
             };

@@ -15,12 +15,14 @@ Blender add-on for importing various Call of Duty assets via the game files.
     - XModel - Compiled models
 - Call of Duty 5 World at War
     - XModel - Compiled models
+- Call of Duty Black Ops
+    - XModel - Compiled models
 
 ## Installation & setup
 First of all, extract all the necessary game specific contents. Make sure to have the exact same folder structure as they have originally.
 
 ### Call of Duty & Call of Duty United Offensive
-Files can be found inside the .pk3 files.
+Files can be found inside the `.pk3` files.
 ```
   .
   ├── maps/
@@ -34,7 +36,7 @@ Files can be found inside the .pk3 files.
 ```
 
 ### Call of Duty 2
-Files can be found inside the .iwd files.
+Files can be found inside the `.iwd` files.
 ```
   .
   ├── images/
@@ -47,7 +49,7 @@ Files can be found inside the .iwd files.
   └── xmodelsurfs/
 ```
 ### Call of Duty 4 Modern Warfare
-Images can be found inside the .iwd files. The rest of the assets can be acquired by installing modtools.
+Images can be found inside the `.iwd` files. The rest of the assets can be acquired by installing modtools.
 ```
   .
   ├── images/
@@ -60,7 +62,20 @@ Images can be found inside the .iwd files. The rest of the assets can be acquire
 ```
 
 ### Call of Duty 5 World at War
-Images can be found inside the .iwd files. The rest of the assets can be acquired by installing modtools.
+Images can be found inside the `.iwd` files. The rest of the assets can be acquired by installing modtools.
+```
+  .
+  ├── images/
+  ├── materials/
+  ├── xanim/
+  ├── xmodel/
+  ├── xmodelalias/
+  ├── xmodelparts/
+  └── xmodelsurfs/
+```
+
+### Call of Duty Black Ops
+Images can be found inside the `.iwd` files. The rest of the assets can be acquired by installing modtools. There are still some missing assets though (mostly materials and images).
 ```
   .
   ├── images/
