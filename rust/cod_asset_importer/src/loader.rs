@@ -9,14 +9,16 @@ use crate::{
         GameVersion,
     },
     error_log, info_log,
-    loaded_assets::{LoadedBone, LoadedIbsp, LoadedMaterial, LoadedModel, LoadedTexture},
+    loaded_assets::{
+        LoadedBone, LoadedIbsp, LoadedMaterial, LoadedModel, LoadedSurface, LoadedTexture,
+    },
     utils::{error::Error, path::file_name, Result},
 };
 use crossbeam_utils::sync::WaitGroup;
 use pyo3::{exceptions::PyBaseException, prelude::*};
 use rayon::ThreadPoolBuilder;
 use std::{
-    collections::HashMap,
+    collections::{hash_map::Entry::Vacant, HashMap},
     path::PathBuf,
     sync::{mpsc::channel, Arc, Mutex},
     thread,
@@ -246,26 +248,28 @@ impl Loader {
         let xmodelsurf_file_path = asset_path.join(xmodelsurf::ASSETPATH).join(lod0.name);
         let xmodelsurf = XModelSurf::load(xmodelsurf_file_path, xmodelpart.clone())?;
 
-        let mut loaded_materials: Vec<LoadedMaterial> = Vec::new();
-        for mat in lod0.materials {
-            match xmodel.version {
-                XModelVersion::V14 => {
-                    loaded_materials.push(LoadedMaterial::new(mat, Vec::new(), xmodel.version))
-                }
-                _ => {
-                    let loaded_material = match Self::load_material(
-                        asset_path.clone(),
-                        mat.clone(),
-                        xmodel.version,
-                    ) {
-                        Ok(material) => material,
-                        Err(error) => {
-                            error_log!("[MATERIAL] {} - {}", mat, error);
-                            continue;
-                        }
-                    };
+        let mut loaded_materials: HashMap<String, LoadedMaterial> = HashMap::new();
+        for mat in lod0.materials.clone() {
+            if let Vacant(entry) = loaded_materials.entry(mat.clone()) {
+                match xmodel.version {
+                    XModelVersion::V14 => {
+                        entry.insert(LoadedMaterial::new(mat, Vec::new(), xmodel.version));
+                    }
+                    _ => {
+                        let loaded_material = match Self::load_material(
+                            asset_path.clone(),
+                            mat.clone(),
+                            xmodel.version,
+                        ) {
+                            Ok(material) => material,
+                            Err(error) => {
+                                error_log!("[MATERIAL] {} - {}", mat, error);
+                                continue;
+                            }
+                        };
 
-                    loaded_materials.push(loaded_material);
+                        entry.insert(loaded_material);
+                    }
                 }
             }
         }
@@ -277,7 +281,17 @@ impl Loader {
             [0f32; 3],
             [1f32; 3],
             loaded_materials,
-            xmodelsurf.surfaces.into_iter().map(|s| s.into()).collect(),
+            xmodelsurf
+                .surfaces
+                .into_iter()
+                .enumerate()
+                .map(|(i, s)| {
+                    let mut loaded_surface: LoadedSurface = s.into();
+                    loaded_surface.set_material(lod0.materials[i].clone());
+
+                    loaded_surface
+                })
+                .collect(),
             match xmodelpart {
                 Some(xmodelpart) => xmodelpart.bones.into_iter().map(|b| b.into()).collect(),
                 None => Vec::<LoadedBone>::new(),

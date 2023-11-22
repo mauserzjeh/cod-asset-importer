@@ -96,7 +96,7 @@ impl Material {
 impl From<String> for TextureType {
     fn from(texture_type: String) -> Self {
         match texture_type.as_str() {
-            "colorMap" => TextureType::Color,
+            "colorMap" | "Diffuse_MapSampler" => TextureType::Color,
             "normalMap" | "Normal_Map" => TextureType::Normal,
             "detailMap" | "Detail_Map" => TextureType::Detail,
             "specularMap" | "Specular_Map" => TextureType::Specular,

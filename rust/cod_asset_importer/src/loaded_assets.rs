@@ -2,8 +2,10 @@ use crate::{
     assets::{
         ibsp::{Ibsp, IbspEntity, IbspSurface},
         iwi::IWi,
+        material::TextureType,
+        xmodel::XModelVersion,
         xmodelpart::XModelPartBone,
-        xmodelsurf::XModelSurfSurface, xmodel::XModelVersion, material::TextureType,
+        xmodelsurf::XModelSurfSurface,
     },
     utils::math::Vec3,
 };
@@ -36,7 +38,7 @@ pub struct LoadedModel {
     angles: Vec3,
     origin: Vec3,
     scale: Vec3,
-    materials: Vec<LoadedMaterial>,
+    materials: HashMap<String, LoadedMaterial>,
     surfaces: Vec<LoadedSurface>,
     bones: Vec<LoadedBone>,
 }
@@ -106,7 +108,7 @@ impl LoadedModel {
         self.scale
     }
 
-    fn materials(&mut self) -> Vec<LoadedMaterial> {
+    fn materials(&mut self) -> HashMap<String, LoadedMaterial> {
         mem::take(&mut self.materials)
     }
 
@@ -261,7 +263,7 @@ impl LoadedModel {
         angles: Vec3,
         origin: Vec3,
         scale: Vec3,
-        materials: Vec<LoadedMaterial>,
+        materials: HashMap<String, LoadedMaterial>,
         surfaces: Vec<LoadedSurface>,
         bones: Vec<LoadedBone>,
     ) -> Self {
@@ -306,6 +308,12 @@ impl LoadedTexture {
     }
     pub fn set_name(&mut self, name: String) {
         self.name = name;
+    }
+}
+
+impl LoadedSurface {
+    pub fn set_material(&mut self, material: String) {
+        self.material = material;
     }
 }
 
