@@ -34,7 +34,7 @@ class Importer:
         mesh_objects = []
 
         materials = loaded_model.materials()
-        for material in materials:
+        for _, material in materials.items():
             append_asset_path = ""
             if model_version == XMODEL_VERSION.V14:
                 append_asset_path = "skins"
@@ -69,8 +69,7 @@ class Importer:
             vertex_color_layer.data.foreach_set("color", surface.colors())
 
             obj = bpy.data.objects.new(model_name, mesh)
-
-            active_material_name = materials[i].name()
+            active_material_name = surface.material()
             if model_version == XMODEL_VERSION.V14:
                 active_material_name = os.path.splitext(active_material_name)[0]
             obj.active_material = bpy.data.materials.get(active_material_name)
@@ -797,7 +796,7 @@ class Importer:
         )
         texture_image.pixels = loaded_texture.data()
         texture_image.file_format = "TARGA"
-        texture_image.pack()
+        texture_image.alpha_mode = "CHANNEL_PACKED"
 
         return texture_image
 
