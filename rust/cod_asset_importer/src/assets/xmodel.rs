@@ -63,11 +63,11 @@ impl XModel {
             match selected_version {
                 GameVersion::CoD => (XModelVersion::V14, XModel::load_v14),
                 GameVersion::CoD2 => (XModelVersion::V20, XModel::load_v20),
-                GameVersion::CoD4 => (XModelVersion::V25, |xmodel, file| {
-                    XModel::load_v25(xmodel, file, 26)
+                GameVersion::CoD4  => (XModelVersion::V25, |xmodel, file | {
+                    XModel::load_v25(xmodel, file, GameVersion::CoD4)
                 }),
-                GameVersion::CoD5 => (XModelVersion::V25, |xmodel, file| {
-                    XModel::load_v25(xmodel, file, 27)
+                GameVersion::CoD5  => (XModelVersion::V25, |xmodel, file | {
+                    XModel::load_v25(xmodel, file, GameVersion::CoD5)
                 }),
                 GameVersion::CoDBO1 => (XModelVersion::V62, XModel::load_v62),
             };
@@ -153,8 +153,13 @@ impl XModel {
         Ok(())
     }
 
-    fn load_v25(&mut self, file: &mut File, skip: i64) -> Result<()> {
-        binary::skip(file, skip)?;
+    fn load_v25(&mut self, file: &mut File, version: GameVersion) -> Result<()> {
+        binary::skip(file, 25)?;
+        binary::read_string(file)?;
+
+        if version == GameVersion::CoD5 {
+            binary::skip(file, 1)?;
+        }
 
         for _ in 0..4 {
             let distance = binary::read::<f32>(file)?;
