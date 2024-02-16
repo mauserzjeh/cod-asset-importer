@@ -158,7 +158,7 @@ impl XModel {
         binary::read_string(file)?;
 
         if version == GameVersion::CoD5 {
-            binary::skip(file, 1)?;
+            binary::read_string(file)?;
         }
 
         for _ in 0..4 {

@@ -47,7 +47,7 @@ typedef struct {
     
     FSkip( 25 ); 
     string s1;
-    FSkip( 1 ); // padding for CoD5
+    string s2; // only for CoD5
 
     local int num_lods = 4;
     LOD lods[num_lods] <optimize=false>;
