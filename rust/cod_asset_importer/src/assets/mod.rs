@@ -9,7 +9,7 @@ pub mod xmodelpart;
 pub mod xmodelsurf;
 
 #[pyclass(module = "cod_asset_importer", name = "GAME_VERSION")]
-#[derive(ValidEnum, Debug, Clone, Copy)]
+#[derive(ValidEnum, Debug, Clone, Copy, PartialEq)]
 #[valid_enum(u16)]
 pub enum GameVersion {
     CoD, // CoD1 & CoDUO
