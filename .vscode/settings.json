@@ -1,8 +1,8 @@
 {
     "python.analysis.extraPaths": [
         "${workspaceFolder}\\python\\cod_asset_importer",
-        "D:\\CODING\\PERSONAL\\blender_autocomplete\\3.4",
-        "D:\\PROGRAMS\\STEAM\\steamapps\\common\\Blender\\3.6\\scripts\\modules"
+        "D:\\CODING\\PERSONAL\\blender_autocomplete\\4.0",
+        "D:\\PROGRAMS\\STEAM\\steamapps\\common\\Blender\\4.0\\scripts\\modules"
     ],
     "rust-analyzer.linkedProjects": [
         ".\\rust\\cod_asset_importer\\Cargo.toml",

@@ -245,7 +245,6 @@ class Importer:
         else:
             self._import_material_v20_v25(loaded_material=loaded_material)
 
-    # TODO
     def _import_material_v14(
         self, loaded_material: LoadedMaterial, has_ext: bool, append_asset_path: str
     ) -> None:
@@ -339,9 +338,9 @@ class Importer:
                     invert_fac_default_value = 1.0
                     break
 
-            invert_node.inputs[
-                BLENDER_SHADERNODES.INPUT_INVERT_FAC
-            ].default_value = invert_fac_default_value
+            invert_node.inputs[BLENDER_SHADERNODES.INPUT_INVERT_FAC].default_value = (
+                invert_fac_default_value
+            )
 
             links.new(
                 invert_node.outputs[BLENDER_SHADERNODES.OUTPUT_INVERT_COLOR],
@@ -354,7 +353,6 @@ class Importer:
         except:
             return
 
-    # TODO
     def _import_material_v20_v25(self, loaded_material: LoadedMaterial) -> None:
         material_name = loaded_material.name()
 
@@ -422,7 +420,7 @@ class Importer:
 
             texture_node = nodes.new(BLENDER_SHADERNODES.SHADERNODE_TEXIMAGE)
             texture_node.label = str(loaded_texture_type)
-            texture_node.location = (-700, -255 * i)
+            texture_node.location = (-900, 600 - (255 * i))
             texture_node.image = texture_image
 
             if loaded_texture_type == TEXTURE_TYPE.Color:
@@ -444,18 +442,27 @@ class Importer:
                     ],
                 )
                 texture_node.image.colorspace_settings.name = (
-                    BLENDER_SHADERNODES.TEXIMAGE_COLORSPACE_LINEAR
+                    BLENDER_SHADERNODES.TEXIMAGE_COLORSPACE_SRGB
                 )
-                texture_node.location = (-700, -255)
+            elif loaded_texture_type == TEXTURE_TYPE.Roughness:
+                links.new(
+                    texture_node.outputs[BLENDER_SHADERNODES.OUTPUT_TEXIMAGE_COLOR],
+                    principled_bsdf_node.inputs[
+                        BLENDER_SHADERNODES.INPUT_BSDFPRINCIPLED_ROUGHNESS
+                    ],
+                )
+                texture_node.image.colorspace_settings.name = (
+                    BLENDER_SHADERNODES.TEXIMAGE_COLORSPACE_SRGB
+                )
             elif loaded_texture_type == TEXTURE_TYPE.Normal:
                 texture_node.image.colorspace_settings.name = (
-                    BLENDER_SHADERNODES.TEXIMAGE_COLORSPACE_LINEAR
+                    BLENDER_SHADERNODES.TEXIMAGE_COLORSPACE_SRGB
                 )
                 texture_node.location = (-1900, -655)
 
                 normal_map_node = nodes.new(BLENDER_SHADERNODES.SHADERNODE_NORMALMAP)
                 normal_map_node.location = (-450, -650)
-                normal_map_node.space = BLENDER_SHADERNODES.NORMALMAP_SPACE_TANGENT
+                normal_map_node.space = BLENDER_SHADERNODES.NORMALMAP_SPACE_OBJECT
                 normal_map_node.inputs[
                     BLENDER_SHADERNODES.INPUT_NORMALMAP_STRENGTH
                 ].default_value = 0.3
@@ -468,11 +475,13 @@ class Importer:
                     ],
                 )
 
-                combine_rgb_node = nodes.new(BLENDER_SHADERNODES.SHADERNODE_COMBINERGB)
+                combine_rgb_node = nodes.new(
+                    BLENDER_SHADERNODES.SHADERNODE_COMBINECOLOR
+                )
                 combine_rgb_node.location = (-650, -750)
                 links.new(
                     combine_rgb_node.outputs[
-                        BLENDER_SHADERNODES.OUTPUT_COMBINERGB_IMAGE
+                        BLENDER_SHADERNODES.OUTPUT_COMBINECOLOR_COLOR
                     ],
                     normal_map_node.inputs[BLENDER_SHADERNODES.INPUT_NORMALMAP_COLOR],
                 )
@@ -482,7 +491,7 @@ class Importer:
                 math_sqrt_node.operation = BLENDER_SHADERNODES.OPERATION_MATH_SQRT
                 links.new(
                     math_sqrt_node.outputs[BLENDER_SHADERNODES.OUTPUT_MATH_VALUE],
-                    combine_rgb_node.inputs[BLENDER_SHADERNODES.INPUT_COMBINERGB_B],
+                    combine_rgb_node.inputs[BLENDER_SHADERNODES.INPUT_COMBINECOLOR_B],
                 )
 
                 math_subtract_node = nodes.new(BLENDER_SHADERNODES.SHADERNODE_MATH)
@@ -541,21 +550,25 @@ class Importer:
                 )
 
                 separate_rgb_node = nodes.new(
-                    BLENDER_SHADERNODES.SHADERNODE_SEPARATERGB
+                    BLENDER_SHADERNODES.SHADERNODE_SEPARATECOLOR
                 )
                 separate_rgb_node.location = (-1500, -450)
                 links.new(
-                    separate_rgb_node.outputs[BLENDER_SHADERNODES.OUTPUT_SEPARATERGB_G],
-                    combine_rgb_node.inputs[BLENDER_SHADERNODES.INPUT_COMBINERGB_G],
+                    separate_rgb_node.outputs[
+                        BLENDER_SHADERNODES.OUTPUT_SEPARATECOLOR_G
+                    ],
+                    combine_rgb_node.inputs[BLENDER_SHADERNODES.INPUT_COMBINECOLOR_G],
                 )
                 links.new(
-                    separate_rgb_node.outputs[BLENDER_SHADERNODES.OUTPUT_SEPARATERGB_G],
+                    separate_rgb_node.outputs[
+                        BLENDER_SHADERNODES.OUTPUT_SEPARATECOLOR_G
+                    ],
                     math_power_node.inputs[BLENDER_SHADERNODES.INPUT_MATH_POWER_BASE],
                 )
                 links.new(
                     texture_node.outputs[BLENDER_SHADERNODES.OUTPUT_TEXIMAGE_COLOR],
                     separate_rgb_node.inputs[
-                        BLENDER_SHADERNODES.INPUT_SEPARATERGB_IMAGE
+                        BLENDER_SHADERNODES.INPUT_SEPARATECOLOR_COLOR
                     ],
                 )
                 links.new(
@@ -564,10 +577,9 @@ class Importer:
                 )
                 links.new(
                     texture_node.outputs[BLENDER_SHADERNODES.OUTPUT_TEXIMAGE_ALPHA],
-                    combine_rgb_node.inputs[BLENDER_SHADERNODES.INPUT_COMBINERGB_R],
+                    combine_rgb_node.inputs[BLENDER_SHADERNODES.INPUT_COMBINECOLOR_R],
                 )
 
-    # TODO
     def _import_material_v62(self, loaded_material: LoadedMaterial) -> None:
         material_name = loaded_material.name()
 
@@ -635,7 +647,7 @@ class Importer:
 
             texture_node = nodes.new(BLENDER_SHADERNODES.SHADERNODE_TEXIMAGE)
             texture_node.label = str(loaded_texture_type)
-            texture_node.location = (-700, -255 * i)
+            texture_node.location = (-900, 600 - (255 * i))
             texture_node.image = texture_image
 
             if loaded_texture_type == TEXTURE_TYPE.Color:
@@ -657,18 +669,27 @@ class Importer:
                     ],
                 )
                 texture_node.image.colorspace_settings.name = (
-                    BLENDER_SHADERNODES.TEXIMAGE_COLORSPACE_LINEAR
+                    BLENDER_SHADERNODES.TEXIMAGE_COLORSPACE_SRGB
                 )
-                texture_node.location = (-700, -255)
+            elif loaded_texture_type == TEXTURE_TYPE.Roughness:
+                links.new(
+                    texture_node.outputs[BLENDER_SHADERNODES.OUTPUT_TEXIMAGE_COLOR],
+                    principled_bsdf_node.inputs[
+                        BLENDER_SHADERNODES.INPUT_BSDFPRINCIPLED_ROUGHNESS
+                    ],
+                )
+                texture_node.image.colorspace_settings.name = (
+                    BLENDER_SHADERNODES.TEXIMAGE_COLORSPACE_SRGB
+                )
             elif loaded_texture_type == TEXTURE_TYPE.Normal:
                 texture_node.image.colorspace_settings.name = (
-                    BLENDER_SHADERNODES.TEXIMAGE_COLORSPACE_LINEAR
+                    BLENDER_SHADERNODES.TEXIMAGE_COLORSPACE_SRGB
                 )
                 texture_node.location = (-1900, -655)
 
                 normal_map_node = nodes.new(BLENDER_SHADERNODES.SHADERNODE_NORMALMAP)
                 normal_map_node.location = (-450, -650)
-                normal_map_node.space = BLENDER_SHADERNODES.NORMALMAP_SPACE_TANGENT
+                normal_map_node.space = BLENDER_SHADERNODES.NORMALMAP_SPACE_OBJECT
                 normal_map_node.inputs[
                     BLENDER_SHADERNODES.INPUT_NORMALMAP_STRENGTH
                 ].default_value = 0.3
@@ -681,11 +702,13 @@ class Importer:
                     ],
                 )
 
-                combine_rgb_node = nodes.new(BLENDER_SHADERNODES.SHADERNODE_COMBINERGB)
+                combine_rgb_node = nodes.new(
+                    BLENDER_SHADERNODES.SHADERNODE_COMBINECOLOR
+                )
                 combine_rgb_node.location = (-650, -750)
                 links.new(
                     combine_rgb_node.outputs[
-                        BLENDER_SHADERNODES.OUTPUT_COMBINERGB_IMAGE
+                        BLENDER_SHADERNODES.OUTPUT_COMBINECOLOR_COLOR
                     ],
                     normal_map_node.inputs[BLENDER_SHADERNODES.INPUT_NORMALMAP_COLOR],
                 )
@@ -695,7 +718,7 @@ class Importer:
                 math_sqrt_node.operation = BLENDER_SHADERNODES.OPERATION_MATH_SQRT
                 links.new(
                     math_sqrt_node.outputs[BLENDER_SHADERNODES.OUTPUT_MATH_VALUE],
-                    combine_rgb_node.inputs[BLENDER_SHADERNODES.INPUT_COMBINERGB_B],
+                    combine_rgb_node.inputs[BLENDER_SHADERNODES.INPUT_COMBINECOLOR_B],
                 )
 
                 math_subtract_node = nodes.new(BLENDER_SHADERNODES.SHADERNODE_MATH)
@@ -754,21 +777,25 @@ class Importer:
                 )
 
                 separate_rgb_node = nodes.new(
-                    BLENDER_SHADERNODES.SHADERNODE_SEPARATERGB
+                    BLENDER_SHADERNODES.SHADERNODE_SEPARATECOLOR
                 )
                 separate_rgb_node.location = (-1500, -450)
                 links.new(
-                    separate_rgb_node.outputs[BLENDER_SHADERNODES.OUTPUT_SEPARATERGB_G],
-                    combine_rgb_node.inputs[BLENDER_SHADERNODES.INPUT_COMBINERGB_G],
+                    separate_rgb_node.outputs[
+                        BLENDER_SHADERNODES.OUTPUT_SEPARATECOLOR_G
+                    ],
+                    combine_rgb_node.inputs[BLENDER_SHADERNODES.INPUT_COMBINECOLOR_G],
                 )
                 links.new(
-                    separate_rgb_node.outputs[BLENDER_SHADERNODES.OUTPUT_SEPARATERGB_G],
+                    separate_rgb_node.outputs[
+                        BLENDER_SHADERNODES.OUTPUT_SEPARATECOLOR_G
+                    ],
                     math_power_node.inputs[BLENDER_SHADERNODES.INPUT_MATH_POWER_BASE],
                 )
                 links.new(
                     texture_node.outputs[BLENDER_SHADERNODES.OUTPUT_TEXIMAGE_COLOR],
                     separate_rgb_node.inputs[
-                        BLENDER_SHADERNODES.INPUT_SEPARATERGB_IMAGE
+                        BLENDER_SHADERNODES.INPUT_SEPARATECOLOR_COLOR
                     ],
                 )
                 links.new(
@@ -777,7 +804,7 @@ class Importer:
                 )
                 links.new(
                     texture_node.outputs[BLENDER_SHADERNODES.OUTPUT_TEXIMAGE_ALPHA],
-                    combine_rgb_node.inputs[BLENDER_SHADERNODES.INPUT_COMBINERGB_R],
+                    combine_rgb_node.inputs[BLENDER_SHADERNODES.INPUT_COMBINECOLOR_R],
                 )
 
     def _import_texture(
