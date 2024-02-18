@@ -8,7 +8,7 @@ class CodAssetImporterMenu(bpy.types.Menu):
 
     def draw(self: bpy.types.Menu, context: bpy.types.Context):
         self.layout.operator(
-            operator=operators.MapImporter.bl_idname, text="Import map"
+            operator=operators.MapImporter.bl_idname, text="Import map",
         )
         self.layout.operator(
             operator=operators.ModelImporter.bl_idname, text="Import model"

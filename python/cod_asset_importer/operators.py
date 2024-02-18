@@ -11,6 +11,7 @@ class MapImporter(bpy.types.Operator):
     bl_idname = "cod_asset_importer.map_importer"
     bl_label = "Import"
     bl_options = {"UNDO"}
+    bl_description = "Import a map file"
 
     filepath: bpy.props.StringProperty(subtype="FILE_PATH")
     filename_ext = ".d3dbsp"
@@ -37,6 +38,7 @@ class ModelImporter(bpy.types.Operator):
     bl_idname = "cod_asset_importer.model_importer"
     bl_label = "Import"
     bl_options = {"UNDO"}
+    bl_description = "Import a model file"
 
     filepath: bpy.props.StringProperty(subtype="FILE_PATH")
     version: bpy.props.EnumProperty(
