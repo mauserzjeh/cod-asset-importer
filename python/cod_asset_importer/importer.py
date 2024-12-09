@@ -266,7 +266,6 @@ class Importer:
             material = bpy.data.materials.new(material_name)
             material.use_nodes = True
             material.blend_method = "HASHED"
-            material.shadow_method = "HASHED"
 
             nodes = material.node_tree.nodes
             links = material.node_tree.links
@@ -360,7 +359,6 @@ class Importer:
         material = bpy.data.materials.new(material_name)
         material.use_nodes = True
         material.blend_method = "HASHED"
-        material.shadow_method = "HASHED"
 
         nodes = material.node_tree.nodes
         links = material.node_tree.links
@@ -587,7 +585,6 @@ class Importer:
         material = bpy.data.materials.new(material_name)
         material.use_nodes = True
         material.blend_method = "HASHED"
-        material.shadow_method = "HASHED"
 
         nodes = material.node_tree.nodes
         links = material.node_tree.links
