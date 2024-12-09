@@ -57,7 +57,6 @@ class Importer:
             mesh.update(calc_edges=True)
             mesh.validate()
 
-            mesh.use_auto_smooth = True
             mesh.normals_split_custom_set_from_vertices(surface.normals())
 
             uv_layer = mesh.uv_layers.new()
@@ -208,7 +207,6 @@ class Importer:
             mesh.update(calc_edges=True)
             mesh.validate()
 
-            mesh.use_auto_smooth = True
             mesh.normals_split_custom_set_from_vertices(surface.normals())
 
             uv_layer = mesh.uv_layers.new()
